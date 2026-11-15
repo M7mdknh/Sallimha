@@ -56,3 +56,22 @@ def test_masking_keeps_dates_and_times_readable():
     rendered = MaskingFormatter("%(asctime)s %(message)s").format(record)
     assert "[phone]" not in rendered
     assert "2026-11-15T11:23:06" in rendered
+
+
+def test_masking_key_colon_phone():
+    assert "0501234567" not in _render("phone:0501234567")
+    assert "966501234567" not in _render("to=+966501234567")
+
+
+def test_masking_date_followed_by_phone():
+    text = _render("on 2026-11-15 0501234567 arrived")
+    assert "0501234567" not in text and "2026-11-15" in text
+
+
+def test_masking_adjacent_phones():
+    text = _render("numbers 0501234567 0559876543")
+    assert "0501234567" not in text and "0559876543" not in text
+
+
+def test_masking_long_digit_run_is_masked_not_leaked():
+    assert "96650123456712345" not in _render("raw 96650123456712345")
