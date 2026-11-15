@@ -1,6 +1,7 @@
 from django.urls import path
 
 from console import views
+from messaging import simulator_api
 
 urlpatterns = [
     path("auth/csrf", views.csrf),
@@ -22,4 +23,7 @@ urlpatterns = [
     path("tickets/<int:ticket_id>/confirm-receipt", views.ConfirmReceipt.as_view()),
     path("tickets/<int:ticket_id>/except-intake", views.ExceptIntake.as_view()),
     path("media/<int:media_id>", views.media_file),
+    path("dev/sim/phones", simulator_api.phones),
+    path("dev/sim/messages", simulator_api.messages),
+    path("dev/sim/send", simulator_api.send),
 ]
