@@ -70,7 +70,7 @@ async function tap(page: Page, title: string) {
 }
 
 async function action(page: Page, label: string, fill: (form: ReturnType<Page["locator"]>) => Promise<void>) {
-  const panel = page.getByRole("region", { name: /تذكرة/ }).or(page.locator(".ticket-panel"));
+  const panel = page.locator(".ticket-panel");
   await panel.getByRole("button", { name: label, exact: true }).first().click();
   const form = panel.locator(".action-form");
   await fill(form);
@@ -130,6 +130,41 @@ test("supervisor finds a parked car, places and clears a hold, and opens an inci
   await expect(page.locator(".notes")).toContainText("طُلبت صور إضافية");
   // Supervisors annotate; only a manager resolves (server-enforced; the control is not offered).
   await expect(page.getByRole("button", { name: "إغلاق البلاغ" })).toHaveCount(0);
+
+  // End of night: the car was not collected. The supervisor proposes; a manager approves (next test).
+  await page.goto(eventPath);
+  await page.getByRole("search").getByLabel(/رقم التذكرة أو جزء من اللوحة/).fill("PLT");
+  await page.getByRole("search").getByRole("button", { name: "بحث" }).click();
+  await page.getByRole("button", { name: /PLT 7788/ }).click();
+  await action(page, "اقتراح غير مُستلمة", async (form) => {
+    await form.getByLabel("الجهة المسؤولة").fill("أمن المكان (تجريبي)");
+    await form.getByLabel("الخطة").fill("تبقى المركبة حتى الصباح ويُتواصل مع الضيف");
+  });
+  await expect(page.locator(".ticket-panel").getByRole("button", { name: "اعتماد غير مُستلمة" })).toHaveCount(0);
+});
+
+test("manager resolves the incident, approves the unclaimed car and releases its key", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "continues the desktop exception flow");
+  test.setTimeout(120_000);
+  await loginAs(page, "manager");
+  await nav(page).getByRole("link", { name: NAV.incidents, exact: true }).click();
+  await page.getByRole("button", { name: /ضرر/ }).first().click();
+  await page.locator(".ticket-panel").getByLabel("النتيجة").fill("خدش سابق موثّق في صور الاستلام");
+  await page.locator(".ticket-panel").getByRole("button", { name: "إغلاق البلاغ" }).click();
+  await expect(page.locator(".ticket-panel")).toContainText("خدش سابق موثّق");
+
+  await nav(page).getByRole("link", { name: NAV.carryover, exact: true }).click();
+  await page.locator(".rows .row-button").first().click();
+  const panel = page.locator(".ticket-panel");
+  await expect(panel).toContainText("77");
+  await action(page, "اعتماد غير مُستلمة", async () => {});
+  await expect(panel.getByText("غير مُستلمة", { exact: true })).toBeVisible();
+  await action(page, "تحرير المفتاح والمركبة", async (form) => {
+    await form.getByLabel("الطريقة").selectOption("collected_verified");
+    await form.getByLabel("ملاحظة").fill("استلمها المالك بعد التحقق من الهوية حضوريًا");
+  });
+  await nav(page).getByRole("link", { name: NAV.carryover, exact: true }).click();
+  await expect(page.getByText("لا توجد مركبات متبقية. المفاتيح كلها محررة.")).toBeVisible();
 });
 
 // Design QA (AT-53): every management page at phone, tablet, 200% zoom (640 CSS px) and desktop widths,

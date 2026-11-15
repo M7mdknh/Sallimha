@@ -8,7 +8,9 @@ docker compose up -d --wait db
 (cd services/api && uv sync --frozen)
 (cd apps/web && npm ci --no-fund --no-audit && npm run build)
 export DATABASE_URL="${DATABASE_URL:-postgres://sallimha:sallimha-local-only@127.0.0.1:55432/sallimha}"
-SEED_ARGS="${SEED_ARGS:---with-activity}" scripts/run-local-backend.sh &
+# Default: a mid-event world (tickets, requests, alerts). `make demo-clean` passes an empty SEED_ARGS for the
+# walkthrough from an empty event.
+SEED_ARGS="${SEED_ARGS---with-activity}" scripts/run-local-backend.sh &
 BACKEND=$!
 trap 'kill $BACKEND 2>/dev/null || true' EXIT INT TERM
 until curl -sf http://127.0.0.1:8100/readyz >/dev/null; do sleep 1; done

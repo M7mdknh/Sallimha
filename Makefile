@@ -3,7 +3,7 @@ API=services/api
 WEB=apps/web
 UV=cd $(API) && uv run
 
-.PHONY: db migrate test lint seed-demo api worker web e2e demo stop contract
+.PHONY: db migrate test lint seed-demo api worker web e2e demo demo-clean demo-code stop contract
 
 db:
 	docker compose up -d --wait db
@@ -35,6 +35,14 @@ e2e:
 
 demo:
 	./scripts/demo.sh
+
+demo-clean:
+	SEED_ARGS= ./scripts/demo.sh
+
+# Current second-factor code for a synthetic demo account (manager, admin or owner). Local/test only.
+WHO ?= manager
+demo-code:
+	$(UV) python manage.py demo_totp $(WHO)
 
 stop:
 	docker compose stop db
