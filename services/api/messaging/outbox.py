@@ -152,6 +152,17 @@ def send_due(now=None, limit: int = 20) -> int:
     for row in _claim(now, limit):
         try:
             payload = render(row, now)
+        except PermanentSendError as exc:
+            _finish(row.id, now, status=MessageOutbox.Status.DEAD, failure_class="permanent", last_error=str(exc)[:200])
+            continue
+        except Exception as exc:  # noqa: BLE001 — nothing was sent yet, so a bounded retry is safe
+            log.exception("outbox row %s failed to render", row.id)
+            dead = row.attempts >= MAX_ATTEMPTS
+            _finish(row.id, now, status=MessageOutbox.Status.DEAD if dead else MessageOutbox.Status.PENDING,
+                    next_attempt_at=now + _backoff(row.attempts), failure_class="exhausted" if dead else "",
+                    last_error=type(exc).__name__[:200])
+            continue
+        try:
             result = transport.send(payload)
         except TransientSendError as exc:
             if row.attempts >= MAX_ATTEMPTS:
@@ -164,12 +175,9 @@ def send_due(now=None, limit: int = 20) -> int:
             _finish(row.id, now, status=MessageOutbox.Status.DEAD, failure_class="permanent", last_error=str(exc)[:200])
         except UnknownSendOutcome as exc:
             _finish(row.id, now, status=MessageOutbox.Status.DELIVERY_UNKNOWN, last_error=str(exc)[:200])
-        except Exception as exc:  # noqa: BLE001 — a bug for one row must not abort the whole pass
-            log.exception("outbox row %s failed unexpectedly", row.id)
-            status = MessageOutbox.Status.DEAD if row.attempts >= MAX_ATTEMPTS else MessageOutbox.Status.PENDING
-            _finish(row.id, now, status=status, next_attempt_at=now + _backoff(row.attempts),
-                    failure_class="exhausted" if status == MessageOutbox.Status.DEAD else "",
-                    last_error=f"{type(exc).__name__}"[:200])
+        except Exception as exc:  # noqa: BLE001 — the provider may already have the message: never resend blindly
+            log.exception("outbox row %s: unexpected error during send", row.id)
+            _finish(row.id, now, status=MessageOutbox.Status.DELIVERY_UNKNOWN, last_error=type(exc).__name__[:200])
         else:
             _finish(row.id, now, status=MessageOutbox.Status.SENT, sent_at=now, sent_via=payload.mode,
                     provider_message_id=result.provider_message_id)

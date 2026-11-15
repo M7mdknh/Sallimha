@@ -107,8 +107,7 @@ class CloudApiTransport:
             headers={"Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}", "Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310
-                body = json.loads(response.read())
+            response = urllib.request.urlopen(request, timeout=10)  # noqa: S310
         except urllib.error.HTTPError as exc:
             if exc.code == 429 or exc.code >= 500:
                 raise TransientSendError(f"http {exc.code}") from exc
@@ -116,8 +115,16 @@ class CloudApiTransport:
         except TimeoutError as exc:
             raise UnknownSendOutcome("timeout after request") from exc
         except urllib.error.URLError as exc:
-            raise TransientSendError("network") from exc
-        return SendResult(provider_message_id=body["messages"][0]["id"])
+            if isinstance(exc.reason, ConnectionRefusedError | OSError) and not isinstance(exc.reason, TimeoutError):
+                raise TransientSendError("network: request not delivered") from exc
+            raise UnknownSendOutcome("network error after request") from exc
+        # The request reached the provider: any failure from here on has an unknown outcome.
+        try:
+            with response:
+                body = json.loads(response.read())
+            return SendResult(provider_message_id=body["messages"][0]["id"])
+        except Exception as exc:  # noqa: BLE001
+            raise UnknownSendOutcome("unreadable provider response") from exc
 
     def fetch_media(self, media_id: str) -> tuple[bytes, str]:
         raise PermanentSendError("Cloud media download not implemented until staging (BLOCKED)")
