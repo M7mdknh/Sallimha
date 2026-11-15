@@ -80,9 +80,10 @@ def change_role(actor, staff, role: str) -> Staff:
             raise DomainError("last_super_admin")
         before = staff.role
         staff.role = role
+        staff.session_epoch += 1  # every existing session must sign in again with the new privileges
         if ROLE_RANK[role] >= ROLE_RANK[Role.MANAGER] and ROLE_RANK[before] < ROLE_RANK[Role.MANAGER]:
-            staff.mfa_secret_enc, staff.mfa_enrolled_at, staff.mfa_last_step = "", None, None  # fresh enrolment
-        staff.save(update_fields=["role", "mfa_secret_enc", "mfa_enrolled_at", "mfa_last_step"])
+            staff.mfa_secret_enc, staff.mfa_enrolled_at, staff.mfa_last_step = "", None, None  # admin must issue
+        staff.save(update_fields=["role", "session_epoch", "mfa_secret_enc", "mfa_enrolled_at", "mfa_last_step"])
         _audit("staff.role", actor, staff, before=before, after=role)
     return staff
 
@@ -99,7 +100,8 @@ def deactivate(actor, staff, reason: str) -> Staff:
             raise DomainError("last_super_admin")
         staff.enabled = False
         staff.deactivated_at = timezone.now()
-        staff.save(update_fields=["enabled", "deactivated_at"])
+        staff.session_epoch += 1
+        staff.save(update_fields=["enabled", "deactivated_at", "session_epoch"])
         if staff.user_id:
             get_user_model().objects.filter(pk=staff.user_id).update(is_active=False)
         for task in Task.objects.filter(assignee=staff, status__in=LIVE_TASK_STATUSES).select_related("event"):
@@ -119,3 +121,18 @@ def reactivate(actor, staff) -> Staff:
     _audit("staff.reactivate", actor, staff)
     staff.refresh_from_db()
     return staff
+
+
+def issue_mfa_enrolment(actor, staff) -> str:
+    """Admin-issued TOTP enrolment (or reset after a lockout). Returns the provisioning URI once, for
+    out-of-band delivery; existing sessions of that person are invalidated."""
+    from console import mfa
+
+    if not has_role(actor, Role.ADMIN) or not _may_manage(actor, staff):
+        raise DomainError("forbidden")
+    if ROLE_RANK[staff.role] < ROLE_RANK[Role.MANAGER]:
+        raise DomainError("mfa_not_required")
+    Staff.objects.filter(pk=staff.pk).update(session_epoch=staff.session_epoch + 1)
+    uri = mfa.issue_secret(staff)
+    _audit("staff.mfa_issue", actor, staff)
+    return uri

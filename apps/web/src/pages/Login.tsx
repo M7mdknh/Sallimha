@@ -9,8 +9,7 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"password" | "otp" | "enrol">("password");
-  const [otpUri, setOtpUri] = useState("");
+  const [step, setStep] = useState<"password" | "otp">("password");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -21,8 +20,7 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
     try {
       const result = await api.login({ username, password, ...(step === "password" ? {} : { otp }) });
       if (result.mfa_required) {
-        setStep(result.mfa_enrolment ? "enrol" : "otp");
-        setOtpUri(result.otpauth_uri ?? "");
+        setStep("otp");
       } else if (result.ok) {
         onSignedIn();
       }
@@ -53,12 +51,7 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
             </>
           ) : (
             <>
-              <p className="muted">{step === "enrol" ? t("enrolHint") : t("otpHint")}</p>
-              {step === "enrol" && otpUri ? (
-                <p className="otp-uri">
-                  <bdi dir="ltr" className="sl-identifier">{otpUri}</bdi>
-                </p>
-              ) : null}
+              <p className="muted">{t("otpHint")}</p>
               <label className="field">
                 <span>{t("otp")}</span>
                 <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" value={otp} onChange={(e) => setOtp(e.target.value)} required dir="ltr" />

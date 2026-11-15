@@ -13,7 +13,7 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from core.crypto import keyed_hash
+from core.crypto import encrypt_text, keyed_hash
 from ops.models import (
     Event,
     EventAssignment,
@@ -26,6 +26,9 @@ from ops.models import (
     Venue,
 )
 
+# Synthetic TOTP secrets for the local demo only (manager and above must use a second factor).
+# `manage.py demo_totp manager` prints the current code. Never use these outside local/test.
+DEMO_TOTP_SECRETS = {"manager": "SALLIMHADEMOMANAGERX2345", "admin": "SALLIMHADEMOADMINXX23456"}
 DEMO_PASSWORDS = {"manager": "sallimha-demo-manager", "supervisor": "sallimha-demo-supervisor",
                   "admin": "sallimha-demo-admin"}
 VALETS = [("ماجد (تجريبي)", "+966550000101"), ("سارة (تجريبي)", "+966550000102"),
@@ -61,8 +64,10 @@ class Command(BaseCommand):
             ("admin", Role.ADMIN, "مسؤول النظام (تجريبي)", "+966550000003"),
         ):
             user = users.objects.create_user(username=username, password=DEMO_PASSWORDS[username])
-            people[username] = Staff.objects.create(org=org, full_name=name, phone_e164=phone,
-                                                    phone_hash=keyed_hash(phone, "phone"), role=role, user=user)
+            people[username] = Staff.objects.create(
+                org=org, full_name=name, phone_e164=phone, phone_hash=keyed_hash(phone, "phone"), role=role,
+                user=user, mfa_secret_enc=encrypt_text(DEMO_TOTP_SECRETS[username]) if username in DEMO_TOTP_SECRETS
+                else "")
         supervisor = people["supervisor"]
         EventAssignment.objects.create(event=event, staff=supervisor, assigned_by=people["manager"])
         for name, phone in VALETS:

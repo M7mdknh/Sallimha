@@ -1229,10 +1229,6 @@ components:
           $ref: '#/components/schemas/RoleEnum'
         mfa_required:
           type: boolean
-        mfa_enrolment:
-          type: boolean
-        otpauth_uri:
-          type: string
       required:
       - ok
     MeResponse:

@@ -33,6 +33,9 @@ class Staff(models.Model):
     mfa_secret_enc = models.TextField(blank=True)
     mfa_enrolled_at = models.DateTimeField(null=True, blank=True)
     mfa_last_step = models.BigIntegerField(null=True, blank=True)  # last accepted TOTP time step (no replay)
+    mfa_failures = models.PositiveSmallIntegerField(default=0)
+    mfa_locked_at = models.DateTimeField(null=True, blank=True)  # locked until an admin re-issues enrolment
+    session_epoch = models.PositiveIntegerField(default=0)  # bumped to invalidate every session of this person
     created_at = models.DateTimeField(auto_now_add=True)
     deactivated_at = models.DateTimeField(null=True, blank=True)
 

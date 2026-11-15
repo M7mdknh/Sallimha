@@ -60,6 +60,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.CorrelationIdMiddleware",
+    "core.middleware.ServiceUnavailableMiddleware",
 ]
 
 ROOT_URLCONF = "sallimha.urls"

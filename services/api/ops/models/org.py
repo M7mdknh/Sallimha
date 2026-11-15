@@ -55,3 +55,14 @@ class Event(models.Model):
     closed_by = models.ForeignKey(
         "ops.Staff", null=True, blank=True, on_delete=models.PROTECT, related_name="closed_events"
     )
+
+
+class OperatingConfig(models.Model):
+    """Admin-managed settings per organization (docs/01 Preserved capabilities). Changes are audited; issued
+    offers keep their deadlines. Retention 0 means never delete (preserved original meaning)."""
+
+    org = models.OneToOneField(Organization, on_delete=models.PROTECT, related_name="config")
+    timings = models.JSONField(default=dict)
+    retention_days = models.JSONField(default=dict)  # guest_contact | intake_photos | incident_evidence
+    template_overrides = models.JSONField(default=dict)  # template key -> {"ar": ..., "en": ...}
+    updated_at = models.DateTimeField(auto_now=True)

@@ -13,6 +13,10 @@ def login_as(staff, client=None):
     staff.save(update_fields=["user"])
     client = client or APIClient()
     client.force_login(user)
+    session = client.session
+    session["epoch"] = staff.session_epoch
+    session["mfa_ok"] = True  # these API tests act as a session that completed its sign-in (incl. TOTP)
+    session.save()
     return client
 
 

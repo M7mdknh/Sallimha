@@ -494,8 +494,6 @@ export interface components {
             ok: boolean;
             role?: components["schemas"]["RoleEnum"];
             mfa_required?: boolean;
-            mfa_enrolment?: boolean;
-            otpauth_uri?: string;
         };
         MeResponse: {
             id: number;

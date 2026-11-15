@@ -15,10 +15,8 @@ def create_event(actor, venue, name: str, starts_at, timings: dict | None = None
     require(actor, Role.MANAGER)
     if venue.org_id != actor.org_id or not name.strip():
         raise DomainError("invalid_input")
-    from ops.services.config import current_timings
-
     event = Event.objects.create(org=venue.org, venue=venue, name=name.strip()[:160], starts_at=starts_at,
-                                 timings=timings or current_timings(venue.org))
+                                 timings=timings or {})
     audit("event.create", actor_id=actor.id, actor_label=actor_label(actor), channel="console", entity_type="event",
           entity_id=event.id, event_id=event.id)
     return event

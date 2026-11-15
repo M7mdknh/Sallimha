@@ -44,7 +44,10 @@ _FAILED = (AssignmentAttempt.Outcome.EXPIRED, AssignmentAttempt.Outcome.DECLINED
 
 
 def timings(event) -> dict:
-    return {**DEFAULT_TIMINGS, **(event.timings or {})}
+    """Defaults ← organization configuration (admin) ← per-event overrides. Issued offers keep stored deadlines."""
+    from ops.services.config import current_timings
+
+    return {**current_timings(event.org), **(event.timings or {})}
 
 
 def _t(ticket) -> str:

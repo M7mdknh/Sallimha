@@ -33,8 +33,11 @@ class IsConsoleStaff(BasePermission):
     def has_permission(self, request, view):
         user = request.user
         staff = getattr(user, "staff", None) if user and user.is_authenticated else None
-        return bool(staff and staff.enabled and ROLE_RANK[staff.role] >= ROLE_RANK[Role.SUPERVISOR]
-                    and request.session.get("mfa_ok", True))
+        if not (staff and staff.enabled and ROLE_RANK[staff.role] >= ROLE_RANK[Role.SUPERVISOR]):
+            return False
+        if request.session.get("epoch") != staff.session_epoch:
+            return False  # role changed, deactivated or MFA reset since this session signed in
+        return ROLE_RANK[staff.role] < ROLE_RANK[Role.MANAGER] or request.session.get("mfa_ok") is True
 
 
 def events_for(actor):

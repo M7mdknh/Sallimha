@@ -45,8 +45,6 @@ class LoginResponse(serializers.Serializer):
     ok = serializers.BooleanField()
     role = serializers.ChoiceField(choices=ROLES, required=False)
     mfa_required = serializers.BooleanField(required=False)
-    mfa_enrolment = serializers.BooleanField(required=False)
-    otpauth_uri = serializers.CharField(required=False)
 
 
 class MeResponse(serializers.Serializer):

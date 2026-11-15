@@ -139,20 +139,21 @@ def login_step(request, data, authenticate, login):
     staff = getattr(user, "staff", None) if user else None
     if user is None or staff is None or not staff.enabled:
         return Response({"code": "invalid_credentials"}, status=400)
-    if staff.rank >= ROLE_RANK[Role.MANAGER]:
+    privileged = staff.rank >= ROLE_RANK[Role.MANAGER]
+    if privileged:
         outcome = mfa.check(staff, data.get("otp") or "", now)
-        if outcome == "enrol":
-            return Response({"ok": False, "mfa_required": True, "mfa_enrolment": True,
-                             "otpauth_uri": mfa.provisioning_uri(staff)})
         if outcome == "required":
             return Response({"ok": False, "mfa_required": True})
-        if outcome == "invalid":
-            return Response({"code": "mfa_invalid"}, status=400)  # the reserved attempt stays counted
+        if outcome != "ok":
+            code = {"not_enrolled": "mfa_enrolment_required", "locked": "mfa_locked"}.get(outcome, "mfa_invalid")
+            return Response({"code": code}, status=400)  # the reserved attempt stays counted
     _release(pair, reset=True)
     _release(by_ip, reset=False)
     _release(by_user, reset=False)
     LoginKnownNetwork.objects.update_or_create(key_hash=known, defaults={"last_success_at": now})
     login(request, user)
-    request.session["mfa_ok"] = True
+    staff.refresh_from_db()
+    request.session["epoch"] = staff.session_epoch
+    request.session["mfa_ok"] = True  # privileged roles only reach here after a verified TOTP code
     audit("auth.login", actor_id=staff.id, actor_label=f"{staff.role}:{staff.id}", channel="console")
     return Response({"ok": True, "role": staff.role})

@@ -98,8 +98,16 @@ def render(row: MessageOutbox, now) -> OutboundPayload:
     buttons = [(b[0], button_title(b[1], row.language, b[2] if len(b) > 2 else None)) for b in row.buttons]
     return OutboundPayload(
         outbox_id=row.id, to_phone=to_phone, mode=choose_mode(row, now), template=row.template,
-        language=row.language, text=render_text(row.template, row.language, params), params=params, buttons=buttons,
+        language=row.language, text=render_text(row.template, row.language, params, _overrides(row)), params=params,
+        buttons=buttons,
     )
+
+
+def _overrides(row: MessageOutbox) -> dict:
+    from ops.services.config import template_overrides
+
+    org = row.staff.org if row.staff_id else (row.ticket.event.org if row.ticket_id else None)
+    return template_overrides(org) if org is not None else {}
 
 
 def recover_expired_leases(now) -> int:

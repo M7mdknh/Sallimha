@@ -248,8 +248,9 @@ REQUEST_STATUS = {
 }
 
 
-def render_text(template: str, language: str, params: dict) -> str:
-    entry = MESSAGES[template]
+def render_text(template: str, language: str, params: dict, overrides: dict | None = None) -> str:
+    """Approved wording overrides (admin configuration) change text only, never actions."""
+    entry = (overrides or {}).get(template) or MESSAGES[template]
     return entry.get(language, entry["ar"]).format(**params)
 
 
