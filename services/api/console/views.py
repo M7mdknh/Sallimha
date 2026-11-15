@@ -3,6 +3,7 @@
 Every endpoint validates input and shapes output with console.serializers; the OpenAPI document and the
 web app's TypeScript types are generated from those serializers (contracts/openapi.yaml)."""
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.http import FileResponse, Http404
 from django.middleware.csrf import get_token
@@ -75,7 +76,8 @@ def logout_view(request):
 @permission_classes([IsConsoleStaff])
 def me(request):
     staff = actor_of(request)
-    return out(s.MeResponse, {"id": staff.id, "name": staff.full_name, "role": staff.role, "language": staff.language})
+    return out(s.MeResponse, {"id": staff.id, "name": staff.full_name, "role": staff.role, "language": staff.language,
+                              "simulator": settings.SIMULATOR_ENABLED})
 
 
 @extend_schema(responses={200: s.EventSummary(many=True)})

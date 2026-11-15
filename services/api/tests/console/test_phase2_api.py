@@ -131,3 +131,49 @@ def test_event_create_rejects_another_orgs_venue_as_not_found(ops):
     resp = post(login_as(ops.manager), "/api/events", {"venue_id": foreign.id, "name": "x",
                                                        "starts_at": "2026-11-20T18:00:00Z"})
     assert resp.status_code == 404
+
+
+def test_admin_operations_round_trip(ops, settings):
+    from django.utils import timezone
+
+    from messaging import outbox
+    from messaging.models import MessageOutbox, SimulatorControl
+
+    adm, mgr = login_as(ops.admin), login_as(ops.manager)
+    SimulatorControl.set_next("permanent")
+    dead = outbox.enqueue("valet.available_ok", staff=ops.valets[0], template="valet.available_ok", params={},
+                          dedupe_key="api-dead")
+    outbox.send_due(timezone.now())
+    listing = adm.get("/api/ops/dead-letters").json()
+    assert [r["id"] for r in listing] == [dead.id] and listing[0]["recipient"] == ops.valets[0].full_name
+    assert post(adm, f"/api/ops/dead-letters/{dead.id}/replay").json() == {"ok": True}
+    assert MessageOutbox.objects.get(pk=dead.pk).status != MessageOutbox.Status.DEAD
+
+    ticket = park(ops.valets[0], ops.event, hook=41)
+    post(login_as(ops.supervisor), f"/api/tickets/{ticket.id}/propose-unclaimed",
+         {"custodian": "Security", "plan": "Overnight"})
+    post(mgr, f"/api/tickets/{ticket.id}/approve-unclaimed")
+    [row] = mgr.get("/api/carryover").json()
+    assert row["ticket_id"] == ticket.id and row["status"] == "APPROVED" and row["hook"] == 41
+    assert row["event"] == ops.event.name and row["location"].startswith("A")
+
+    assert post(adm, "/api/config/retention", {"retention_days": {"guest_contact": 30}}).status_code == 200
+    assert adm.get("/api/config").json()["retention_days"]["guest_contact"] == 30
+    assert set(post(adm, "/api/retention/apply").json()) == {"guest_contact", "intake_photos", "incident_evidence"}
+
+    copy = {"ar": "تم ركن مركبتك يا ضيفنا. تذكرتك {ticket}.", "en": "Parked. Ticket {ticket}."}
+    assert post(adm, "/api/config/templates", {"overrides": {"guest.parked": copy}}).status_code == 200
+    assert adm.get("/api/config").json()["template_overrides"] == {"guest.parked": copy}
+    assert post(adm, "/api/config/templates", {"overrides": {"guest.parked": None}}).status_code == 200
+    assert adm.get("/api/config").json()["template_overrides"] == {}
+
+    leaver = make_staff(ops.org, Role.VALET)
+    post(mgr, f"/api/staff/{leaver.id}/deactivate", {"reason": "Season ended"})
+    assert post(mgr, f"/api/staff/{leaver.id}/reactivate").status_code == 200
+
+
+def test_me_reports_simulator_availability(ops, settings):
+    sup = login_as(ops.supervisor)
+    assert sup.get("/api/auth/me").json()["simulator"] is True
+    settings.SIMULATOR_ENABLED = False
+    assert sup.get("/api/auth/me").json()["simulator"] is False

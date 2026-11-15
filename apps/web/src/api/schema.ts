@@ -1182,6 +1182,8 @@ export interface components {
             name: string;
             role: components["schemas"]["RoleEnum"];
             language: string;
+            /** @description True only in local/test builds; the UI hides it otherwise */
+            simulator: boolean;
         };
         MediaBrief: {
             id: number;
@@ -1368,8 +1370,9 @@ export interface components {
             en: string;
         };
         TemplatesRequestRequest: {
+            /** @description null restores the catalogue wording for that message */
             overrides: {
-                [key: string]: components["schemas"]["TemplateCopyRequest"];
+                [key: string]: components["schemas"]["TemplateCopyRequest"] | null;
             };
         };
         TicketDetail: {

@@ -3290,11 +3290,15 @@ components:
           $ref: '#/components/schemas/RoleEnum'
         language:
           type: string
+        simulator:
+          type: boolean
+          description: True only in local/test builds; the UI hides it otherwise
       required:
       - id
       - language
       - name
       - role
+      - simulator
     MediaBrief:
       type: object
       properties:
@@ -3757,7 +3761,10 @@ components:
         overrides:
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/TemplateCopyRequest'
+            allOf:
+            - $ref: '#/components/schemas/TemplateCopyRequest'
+            nullable: true
+          description: null restores the catalogue wording for that message
       required:
       - overrides
     TicketDetail:

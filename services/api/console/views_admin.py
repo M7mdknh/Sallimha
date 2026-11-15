@@ -350,7 +350,7 @@ class ConfigTemplates(Command):
     def post(self, request):
         actor = actor_of(request)
         overrides = validated(s.TemplatesRequest, request.data)["overrides"]
-        config.update_templates(actor, actor.org, {k: dict(v) for k, v in overrides.items()})
+        config.update_templates(actor, actor.org, {k: dict(v) if v is not None else None for k, v in overrides.items()})
         return out(s.OkResponse, {"ok": True})
 
 

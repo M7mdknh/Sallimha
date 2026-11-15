@@ -54,6 +54,7 @@ class MeResponse(serializers.Serializer):
     name = serializers.CharField()
     role = serializers.ChoiceField(choices=ROLES)
     language = serializers.CharField()
+    simulator = serializers.BooleanField(help_text="True only in local/test builds; the UI hides it otherwise")
 
 
 # --- events and live view -------------------------------------------------------------------------
@@ -529,7 +530,8 @@ class RetentionRequest(serializers.Serializer):
 
 
 class TemplatesRequest(serializers.Serializer):
-    overrides = serializers.DictField(child=TemplateCopy())
+    overrides = serializers.DictField(child=TemplateCopy(allow_null=True),
+                                      help_text="null restores the catalogue wording for that message")
 
 
 class WhatsAppIntegration(serializers.Serializer):

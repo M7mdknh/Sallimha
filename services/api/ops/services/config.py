@@ -80,14 +80,17 @@ def _safe_template(template: str) -> bool:
 
 
 def update_templates(actor, org, overrides: dict) -> dict:
-    """Wording only: placeholders must match the catalogue, and buttons keep their actions (AT-47)."""
+    """Wording only: placeholders must match the catalogue, and buttons keep their actions (AT-47).
+    A None value removes that override, restoring the catalogue wording."""
     from messaging.catalogue import MESSAGES
 
     require(actor, Role.ADMIN)
     if actor.org_id != org.id:
         raise DomainError("forbidden")
     for key, copy in overrides.items():
-        if key not in MESSAGES or set(copy) != {"ar", "en"}:
+        if key in MESSAGES and copy is None:
+            continue
+        if key not in MESSAGES or not isinstance(copy, dict) or set(copy) != {"ar", "en"}:
             raise DomainError("invalid_setting")
         for lang in ("ar", "en"):
             text = str(copy[lang])
@@ -96,7 +99,8 @@ def update_templates(actor, org, overrides: dict) -> dict:
     with transaction.atomic():
         cfg = OperatingConfig.objects.select_for_update(no_key=True).get(pk=get_config(org).pk)
         before = {k: cfg.template_overrides.get(k) for k in overrides}
-        cfg.template_overrides = {**cfg.template_overrides, **overrides}
+        merged = {**cfg.template_overrides, **overrides}
+        cfg.template_overrides = {k: v for k, v in merged.items() if v is not None}
         cfg.save(update_fields=["template_overrides", "updated_at"])
         _audit("config.templates", actor, org, before, overrides)
     return cfg.template_overrides
