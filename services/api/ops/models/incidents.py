@@ -80,3 +80,37 @@ class AssistedVerification(models.Model):
     method = models.CharField(max_length=20, choices=Method.choices)
     reason = models.CharField(max_length=200)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class CarryoverCase(models.Model):
+    """Unclaimed vehicle kept in custody after the operating session (docs/01 §8). Closing an event does not
+    end the operator's custody; the key hook stays reserved until an explicit, audited release."""
+
+    class Status(models.TextChoices):
+        PROPOSED = "PROPOSED"
+        APPROVED = "APPROVED"
+        RELEASED = "RELEASED"
+
+    class ReleaseMethod(models.TextChoices):
+        COLLECTED_VERIFIED = "collected_verified"
+        MOVED_TO_STORAGE = "moved_to_storage"
+        OTHER = "other"
+
+    ticket = models.ForeignKey("ops.Ticket", on_delete=models.PROTECT, related_name="carryover_cases")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PROPOSED)
+    custodian = models.CharField(max_length=160)
+    plan = models.TextField()
+    proposed_by = models.ForeignKey("ops.Staff", on_delete=models.PROTECT, related_name="+")
+    proposed_at = models.DateTimeField(auto_now_add=True)
+    approved_by = models.ForeignKey("ops.Staff", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    approved_at = models.DateTimeField(null=True, blank=True)
+    released_by = models.ForeignKey("ops.Staff", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    released_at = models.DateTimeField(null=True, blank=True)
+    release_method = models.CharField(max_length=24, choices=ReleaseMethod.choices, blank=True)
+    release_note = models.TextField(blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["ticket"], condition=~Q(status="RELEASED"),
+                                    name="one_open_carryover_per_ticket"),
+        ]
