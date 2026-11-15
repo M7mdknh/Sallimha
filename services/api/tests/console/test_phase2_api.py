@@ -115,3 +115,19 @@ def test_event_create_and_close(ops):
     assert post(mgr, f"/api/events/{created.json()['id']}/close").status_code == 200
     assert post(login_as(ops.supervisor), "/api/events", {"venue_id": venues[0]["id"], "name": "x",
                                                           "starts_at": "2026-11-20T18:00:00Z"}).status_code == 403
+
+
+def test_ticket_export_neutralises_spreadsheet_formulas(ops):
+    ticket = park(ops.valets[0], ops.event)
+    Ticket.objects.filter(pk=ticket.pk).update(vehicle_plate='=HYPERLINK("http://x","y")')
+    body = login_as(ops.manager).get(f"/api/events/{ops.event.id}/export/tickets.csv").content.decode()
+    assert "'=HYPERLINK" in body and ',=HYPERLINK' not in body
+
+
+def test_event_create_rejects_another_orgs_venue_as_not_found(ops):
+    from tests.factories import make_org, make_venue
+
+    foreign = make_venue(make_org("Other Org"), name="Elsewhere")
+    resp = post(login_as(ops.manager), "/api/events", {"venue_id": foreign.id, "name": "x",
+                                                       "starts_at": "2026-11-20T18:00:00Z"})
+    assert resp.status_code == 404

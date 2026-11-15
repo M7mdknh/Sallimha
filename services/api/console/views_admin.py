@@ -15,7 +15,6 @@ from console import serializers as s
 from console.common import IsConsoleStaff, actor_of, domain_response, idempotent_post, out, scoped_event, validated
 from console.views import REFUSALS, command_schema
 from core.audit import audit
-from core.errors import DomainError
 from core.views_health import whatsapp_status
 from ops.models import Incident, KeyStation, Role, Staff, Venue
 from ops.permissions import actor_label, require
@@ -189,7 +188,7 @@ class CreateEvent(Command):
         data = validated(s.CreateEventRequest, request.data)
         venue = Venue.objects.filter(pk=data["venue_id"], org_id=actor.org_id).first()
         if venue is None:
-            raise DomainError("invalid_input")
+            raise Http404
         return out(s.IdResponse, {"id": events.create_event(actor, venue, data["name"], data["starts_at"]).id})
 
 
