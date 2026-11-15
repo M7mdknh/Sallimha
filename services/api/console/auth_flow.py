@@ -114,9 +114,9 @@ def login_step(request, data, authenticate, login):
     username = data["username"]
     password = data["password"]
     raw_ip = client_ip(request)
-    address, bucket = client_address(raw_ip), ip_bucket(raw_ip)
-    pair, by_ip, by_user = _pair_key(username, address), _ip_key(bucket), _user_key(username)
-    known = _known_key(username, address)
+    bucket = ip_bucket(raw_ip)  # IPv4 per address (embedded forms unwrapped); native IPv6 per /64
+    pair, by_ip, by_user = _pair_key(username, bucket), _ip_key(bucket), _user_key(username)
+    known = _known_key(username, bucket)
     # Reserve before checking the password: concurrent attempts each consume a slot atomically.
     pair_count, ip_count, user_count = _reserve(pair, now), _reserve(by_ip, now), _reserve(by_user, now)
     # Account-level control without a lockout: failures for this username from other networks tighten the

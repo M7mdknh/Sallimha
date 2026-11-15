@@ -167,3 +167,9 @@ def test_non_dev_requires_explicit_proxy_setting():
     ok = subprocess.run([sys.executable, "-c", "import sallimha.settings"], env={**env, "TRUSTED_PROXY_COUNT": "1"},
                         capture_output=True, text=True, check=False)
     assert ok.returncode == 0, ok.stderr
+
+
+def test_rotating_ipv6_within_64_shares_the_pair_limit(account):
+    for i in range(1, auth_flow.MAX_FAILURES + 1):
+        assert _login("sup1", "wrong", ip=f"2001:db8:9:9::{i:x}").status_code == 400
+    assert _login("sup1", "wrong", ip="2001:db8:9:9::abcd").status_code == 429
