@@ -51,22 +51,31 @@ def csrf(request):
     return out(s.CsrfResponse, {"csrfToken": get_token(request)})
 
 
-@extend_schema(request=s.LoginRequest, responses={200: s.LoginResponse, 400: s.ErrorResponse, 429: s.ErrorResponse},
-               auth=[])
+def _enforce_csrf(request) -> None:
+    """DRF skips CSRF for anonymous requests; sign-in and sign-out must not be forgeable from another site."""
+    from rest_framework.authentication import SessionAuthentication
+
+    SessionAuthentication().enforce_csrf(request)
+
+
+@extend_schema(request=s.LoginRequest, responses={200: s.LoginResponse, 400: s.ErrorResponse, 403: s.ErrorResponse,
+                                                   429: s.ErrorResponse}, auth=[])
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @domain_response
 def login_view(request):
     from console import auth_flow
 
+    _enforce_csrf(request)
     data = validated(s.LoginRequest, request.data)
     return auth_flow.login_step(request, data, authenticate, login)
 
 
-@extend_schema(request=None, responses={200: s.OkResponse})
+@extend_schema(request=None, responses={200: s.OkResponse, 403: s.ErrorResponse})
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def logout_view(request):
+    _enforce_csrf(request)
     logout(request)
     return out(s.OkResponse, {"ok": True})
 

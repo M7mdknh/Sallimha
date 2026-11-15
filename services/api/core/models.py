@@ -27,6 +27,8 @@ class AuditEvent(models.Model):
 class IdempotencyRecord(models.Model):
     scope = models.CharField(max_length=80)
     key = models.CharField(max_length=128)
+    # SHA-256 of the canonical request body: a key reused for a different body is refused, not replayed.
+    fingerprint = models.CharField(max_length=64, blank=True, default="")
     response = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
 

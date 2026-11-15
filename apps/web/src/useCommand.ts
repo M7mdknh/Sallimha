@@ -23,6 +23,9 @@ export function useCommand() {
       onSuccess?.(result);
       return true;
     } catch (err) {
+      // The server already applied an earlier attempt under this key with different input: show it, and use a
+      // fresh key for whatever the person decides next (after refreshing).
+      if (err instanceof ApiError && err.code === "idempotency_mismatch") key.current = newKey();
       setProblem(error(err instanceof ApiError ? err.code : "generic"));
       return false;
     } finally {

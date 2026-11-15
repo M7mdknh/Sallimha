@@ -1,7 +1,8 @@
 # Local development helpers. See README "Local development".
 API=services/api
 WEB=apps/web
-UV=cd $(API) && uv run
+# Local commands run as SALLIMHA_ENV=local unless the caller sets it (settings refuse an unset value).
+UV=cd $(API) && SALLIMHA_ENV=$${SALLIMHA_ENV:-local} uv run
 
 .PHONY: db migrate test lint seed-demo api worker web e2e demo demo-clean demo-code stop contract
 

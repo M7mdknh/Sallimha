@@ -1,6 +1,8 @@
 """Shared console API plumbing: actor resolution, scoping, idempotency and error mapping."""
 
 import functools
+import hashlib
+import json
 
 from django.http import Http404
 from rest_framework.exceptions import APIException, PermissionDenied
@@ -8,7 +10,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
 from core.errors import DomainError
-from core.idempotency import idempotent
+from core.idempotency import IdempotencyMismatch, idempotent
 from ops.models import ROLE_RANK, Event, EventAssignment, Role, Ticket
 from ops.permissions import can_access_event
 
@@ -106,6 +108,8 @@ def idempotent_post(fn):
             raise PreconditionRequired()
         actor = actor_of(request)
         scope = f"staff:{actor.id}:{request.path}"
+        body = json.dumps(request.data, sort_keys=True, separators=(",", ":"), default=str)
+        fingerprint = hashlib.sha256(body.encode()).hexdigest()
 
         def run() -> dict:
             response = fn(view, request, *args, **kwargs)
@@ -114,9 +118,11 @@ def idempotent_post(fn):
             return {"status": response.status_code, "data": response.data}
 
         try:
-            stored, _replayed = idempotent(scope, key, run)
+            stored, _replayed = idempotent(scope, key, run, fingerprint=fingerprint)
         except _Refused as refused:
             return refused.response
+        except IdempotencyMismatch:
+            return Response({"code": "idempotency_mismatch"}, status=409)
         return Response(stored["data"], status=stored["status"])
 
     return wrapper

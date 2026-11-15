@@ -141,3 +141,15 @@ def test_ready_code_revoked_on_phone_correction(ops):
     assert handover.verify_collection(task.assignee, ticket, old_code)[0] == "wrong"
     assert CollectionCode.objects.filter(ticket=ticket, revoked_at__isnull=True).count() == 1
     assert RetrievalRequest.objects.get(pk=req.pk).state == "ACCEPTED"
+
+
+def test_unacknowledged_custody_transfer_can_still_be_resolved(ops):
+    """Review 2026-11-16: if the receiver never confirms, the supervisor records where the car and key are."""
+    ticket, req, task = accepted(ops)
+    receiver = next(v for v in ops.valets if v != task.assignee)
+    custody.transfer_custody(ops.supervisor, task, receiver, "Zone A 12", "with valet", "radio")
+    req.refresh_from_db()
+    resolution = custody.withdraw_accepted_with_custody_resolution(ops.supervisor, req, zone_code="A", detail="12",
+                                                                   hook_number=45, reason="receiver unreachable")
+    assert resolution.acknowledged_by == ops.supervisor
+    assert not Task.objects.filter(ticket=ticket, status__in=["RESERVED", "OFFERED", "ACCEPTED"]).exists()

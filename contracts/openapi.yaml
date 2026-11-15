@@ -97,6 +97,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '429':
           content:
             application/json:
@@ -117,6 +123,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
   /api/auth/me:
     get:

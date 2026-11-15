@@ -107,6 +107,7 @@ function useMutation() {
       pending.current.delete(id);
       after();
     } catch (err) {
+      if (err instanceof ApiError && err.code === "idempotency_mismatch") pending.current.delete(id);
       setProblem(error(err instanceof ApiError ? err.code : "generic"));
     }
   }

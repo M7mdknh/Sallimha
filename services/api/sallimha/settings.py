@@ -6,6 +6,7 @@ supplied; staging and production refuse to start without real secrets.
 """
 
 import os
+import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -14,7 +15,13 @@ from django.core.exceptions import ImproperlyConfigured
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = BASE_DIR.parent.parent
 
-ENVIRONMENT = os.environ.get("SALLIMHA_ENV", "local")
+# Must be named explicitly: an unset value used to fall back to "local", which would quietly enable the
+# simulator, the fake transport and the development secrets on a misconfigured server. The test runner is the
+# one exception (it always runs as "test").
+ENVIRONMENTS = {"local", "test", "staging", "production"}
+ENVIRONMENT = os.environ.get("SALLIMHA_ENV") or ("test" if "pytest" in sys.modules else "")
+if ENVIRONMENT not in ENVIRONMENTS:
+    raise ImproperlyConfigured("SALLIMHA_ENV must be one of local, test, staging or production")
 IS_DEV = ENVIRONMENT in {"local", "test"}
 
 

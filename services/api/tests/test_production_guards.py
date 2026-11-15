@@ -39,11 +39,21 @@ def test_seed_demo_refuses_outside_dev(settings, db):
         call_command("seed_demo")
 
 
-def test_simulator_routes_not_registered_when_disabled():
-    result = subprocess.run(
-        [sys.executable, "-c",
-         "import django, os; django.setup(); from django.urls import get_resolver; "
-         "print(any('dev/sim' in str(p.pattern) for p in get_resolver().url_patterns[-1].url_patterns))"],
-        env={**os.environ, "SIMULATOR_ENABLED": "0", "DJANGO_SETTINGS_MODULE": "sallimha.settings"},
-        capture_output=True, text=True, check=False)
-    assert result.stdout.strip() == "False", result.stderr
+@pytest.mark.parametrize("enabled,expected", [("0", "404"), ("1", "ok")])
+def test_simulator_routes_not_registered_when_disabled(enabled, expected):
+    """Resolves the real URL (the earlier check only inspected the last include and could pass vacuously)."""
+    code = ("import django; django.setup(); from django.urls import resolve, Resolver404\n"
+            "try:\n    resolve('/api/dev/sim/phones'); print('ok')\nexcept Resolver404:\n    print('404')")
+    result = subprocess.run([sys.executable, "-c", code],
+                            env={**os.environ, "SALLIMHA_ENV": "test", "SIMULATOR_ENABLED": enabled,
+                                 "DJANGO_SETTINGS_MODULE": "sallimha.settings"},
+                            capture_output=True, text=True, check=False)
+    assert result.stdout.strip() == expected, result.stderr
+
+
+@pytest.mark.parametrize("value", [None, "", "prod", "Production"])
+def test_environment_must_be_named_explicitly(value):
+    """R3: an unset or unknown SALLIMHA_ENV used to mean 'local' (simulator, fake transport, dev secrets)."""
+    env = {} if value is None else {"SALLIMHA_ENV": value}
+    result = _import_settings(**env)
+    assert result.returncode != 0 and "SALLIMHA_ENV" in result.stderr

@@ -101,6 +101,7 @@ function ActionForm({ action, ticketId, team, holds, disabled, onDone }: { actio
       key.current = newKey();
       onDone();
     } catch (err) {
+      if (err instanceof ApiError && err.code === "idempotency_mismatch") key.current = newKey();
       setProblem(error(err instanceof ApiError ? err.code : "generic"));
     } finally {
       setBusy(false);

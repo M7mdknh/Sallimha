@@ -86,6 +86,9 @@ handover, and relocation. Runbooks: [docs/runbooks/](docs/runbooks/README.md).
 | `make e2e` | Playwright suite (desktop and 360 px mobile); set `PW_CHANNEL=chrome` to use an installed Chrome |
 | `make contract` | Regenerate `contracts/openapi.yaml` (fails on any schema warning) and the console's TypeScript types |
 
+Django refuses to start unless `SALLIMHA_ENV` is `local`, `test`, `staging` or `production`; the Makefile and
+scripts set `local` for you. For a manual command: `cd services/api && SALLIMHA_ENV=local uv run python manage.py …`.
+
 CI (`.github/workflows/ci.yml`) runs the backend suite, the contract drift check, the web build and the
 Playwright suite on every push.
 
