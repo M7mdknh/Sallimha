@@ -33,3 +33,11 @@ def test_reject_short_or_non_numeric(raw):
 
 def test_mask_keeps_cc_and_last4():
     assert parse_phone("0501234567").masked == "+966 5••••4567"
+
+
+def test_mask_hides_most_digits_of_short_national_numbers():
+    from core.phone import mask_e164
+
+    masked = mask_e164("+97312345678", 973)  # 8-digit national number
+    digits_shown = sum(ch.isdigit() for ch in masked.split(" ", 1)[1])
+    assert digits_shown <= 2

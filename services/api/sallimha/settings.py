@@ -157,7 +157,12 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "filters": {"mask": {"()": "core.logging.MaskingFilter"}},
-    "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}},
+    "formatters": {
+        "plain": {
+            "()": "core.logging.MaskingFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        }
+    },
     "handlers": {"console": {"class": "logging.StreamHandler", "filters": ["mask"], "formatter": "plain"}},
     "root": {"handlers": ["console"], "level": os.environ.get("LOG_LEVEL", "INFO")},
 }

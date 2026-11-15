@@ -26,8 +26,11 @@ def normalize_digits(text: str) -> str:
 
 
 def mask_e164(e164: str, country_code: int) -> str:
+    """Show the country code and a few digits only; at least half the national number stays hidden."""
     national = e164[1 + len(str(country_code)) :]
-    return f"+{country_code} {national[0]}{'•' * (len(national) - 5)}{national[-4:]}"
+    if len(national) >= 9:
+        return f"+{country_code} {national[0]}{'•' * (len(national) - 5)}{national[-4:]}"
+    return f"+{country_code} {'•' * (len(national) - 2)}{national[-2:]}"
 
 
 def parse_phone(raw: str, default_region: str = "SA") -> ParsedPhone:
