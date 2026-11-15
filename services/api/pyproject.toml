@@ -31,7 +31,7 @@ addopts = "-q --strict-markers"
 filterwarnings = ["error::DeprecationWarning:django.*"]
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py314"
 
 [tool.ruff.lint]
