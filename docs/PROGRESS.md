@@ -2,6 +2,43 @@
 
 Newest first. Status vocabulary: PASS / PASS (SIMULATED) / FAIL / BLOCKED / NOT RUN. Results obtained with the local fake WhatsApp transport are **SIMULATED** and are not real integration evidence.
 
+## 2026-11-16 — Phase 1 finished, contract gap closed, Phase 2 built (Gate 2 and Gate 3 locally)
+Branch `build/phase-0-2`. Backend suite: **359 passed**. Playwright: desktop 1280 px + mobile 360 px, see Gate 3
+evidence for the final count. Nothing deployed; WhatsApp is SIMULATED throughout.
+
+Authentication (the two open findings from the paused session, both **fixed**):
+- Login throttling uses atomic upsert counters in PostgreSQL (safe under concurrent requests and across workers):
+  per (account, network) pair, per network for spraying, and an account-under-attack tightening that never hard-locks
+  the real user from a known network. Generic responses kept. 14 regression tests (concurrency, targeted lockout
+  abuse, expiry, success). Later Security Guidance findings fixed test-first: proxy misattribution (HIGH →
+  `TRUSTED_PROXY_COUNT` required outside dev), IPv6 /64 bucketing, IPv4-mapped/NAT64/6to4/Teredo unwrapping.
+- MFA (TOTP) for manager and above: admin-issued enrolment only (no trust-on-first-use), replay protection,
+  lock after five failures, session epoch invalidation on role change, deactivation and re-enrolment.
+
+Phase 1 completion:
+- Console UI: login (password → code), live view (attention first, requests, team, shifts), ticket panel with
+  exception actions, development simulator; Arabic RTL / English LTR; 360 px layouts; loading, error and stale
+  states (stale data disables every action). Brand tokens and fonts as approved.
+- Worker restart test (SIGKILL + restart on real PostgreSQL) and Gate 2 evidence: [evidence/gate-2.md](evidence/gate-2.md).
+- Simulator and demo seeding cannot run outside local/test: settings refuse `SIMULATOR_ENABLED` and the fake
+  transport, `demo_totp` refuses, the simulator routes are not registered, and the console hides the link.
+
+API contract gap: every endpoint has request and response serializers; `contracts/openapi.yaml` is generated with
+`--fail-on-warn`, committed and checked for drift in CI; the console's TypeScript types are generated from it and
+also drift-checked. Tests assert every route documents its request and 200 response.
+
+Phase 2 (Tasks 2.1–2.7): incidents (supervisor opens/annotates, manager resolves), safety holds, assisted request and
+handover, relocation, unclaimed proposal/approval with venue key hooks kept until explicit release, carryover
+register, staff directory with bounded role grants and deactivation, MFA issue, configuration (timings, retention,
+message wording with reset), retention preview/apply with hold protection, dead letters and unknown-outcome sends
+with explicit replay, opening check, outage handling (503 without false success), event create/close, reports and
+CSV exports (no phones for managers; audited admin-only phone export; formula-injection guard). Full role-based
+console (AT-59) and design QA matrix (AT-53). Evidence: [evidence/gate-3.md](evidence/gate-3.md).
+Runbook drafts: [runbooks/](runbooks/README.md). Local demo: README "Local demo".
+
+Limits: real WhatsApp BLOCKED (inputs in [staging-inputs.md](staging-inputs.md)); `FIELD_ENCRYPTION_KEY`/`HASH_KEY`
+rotation not supported yet; backup restore not rehearsed (needs hosting); runbook owners not named.
+
 ## 2026-11-15 — Phase 1 core slices (Tasks 1.0–1.7)
 Branch `build/phase-0-2`. Backend suite: **241 passed** on Django 6.1.3 / PostgreSQL 18.7 (local Docker), plus 4 Playwright brand tests.
 
@@ -44,10 +81,10 @@ Blockers / limits:
 ## 2026-11-15 — Session paused (usage limit) — state and remaining work
 Done since the last entry: console API (Task 1.8, 256+ tests), login lockout, dev simulator API and synthetic demo seed (Task 1.9 backend). Branch `build/phase-0-2` is pushed.
 
-**Open security findings (from the Security Guidance commit review of f58a19b, both MEDIUM, not yet fixed):**
+**Open security findings at that time (Security Guidance review of f58a19b, both MEDIUM) — since fixed, see the 2026-11-16 entry:**
 1. Login lockout check-then-insert race lets parallel attempts exceed the 5-failure cap → record the attempt before `authenticate()` and check the count after inserting.
 2. The username-only lockout key lets anyone lock out a known user → hard-lock on (IP, user) only; use delays or an IP-only limit for spraying.
 
-**Remaining Phase 1 work:** Task 1.9 console UI (login, live view, ticket panel, simulator page, Playwright e2e for RTL/360 px/stale banner/simulated full flow); Task 1.10 worker-process restart test and Gate 2 evidence table.
-**Phase 2 (not started):** incidents and holds, assisted handover, relocation, unclaimed carryover and key release, MFA and role grants, configuration/retention/dead-letter view/opening check, reports and exports, full role-based console UI, runbook drafts, `make demo` script.
-**Not done yet:** final whole-branch review; Impeccable detector run on the UI (no UI screens exist yet).
+**Remaining Phase 1 work (at that time; done since):** Task 1.9 console UI (login, live view, ticket panel, simulator page, Playwright e2e for RTL/360 px/stale banner/simulated full flow); Task 1.10 worker-process restart test and Gate 2 evidence table.
+**Phase 2 (not started at that time; built since):** incidents and holds, assisted handover, relocation, unclaimed carryover and key release, MFA and role grants, configuration/retention/dead-letter view/opening check, reports and exports, full role-based console UI, runbook drafts, `make demo` script.
+**Not done at that time:** final whole-branch review; Impeccable detector run on the UI.
