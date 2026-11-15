@@ -21,13 +21,15 @@ export function Shell({ me, eventId, children }: { me: Me; eventId?: number; chi
   const { t, lang } = useT();
   const path = usePath();
   const links = navLinks(me, eventId);
-  // The most specific matching link is current, so /events/1/incidents does not also mark Live.
+  // The most specific matching link is current, so /events/1/incidents does not also mark Live. An event
+  // report belongs to Events (management), not to the live view.
+  const matchPath = /^\/events\/\d+\/report/.test(path) ? "/manage" : path;
   const current = links.map(([href]) => href)
-    .filter((href) => path === href || path.startsWith(`${href}/`))
+    .filter((href) => matchPath === href || matchPath.startsWith(`${href}/`))
     .sort((a, b) => b.length - a.length)[0];
   return (
     <div className="app">
-      <header className="topbar">
+      <header className={`topbar ${links.length > 4 ? "nav-row" : ""}`}>
         <a href="/" className="brand" onClick={(e) => { e.preventDefault(); navigate("/"); }}>
           <img src="/brand/assets/mark-on-plum.svg" alt="" width={32} height={32} />
           <span className="brand-name">{t("appName")}</span>

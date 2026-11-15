@@ -34,7 +34,7 @@ p { margin: 0; }
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   border: 1px solid transparent; background: transparent; cursor: pointer; font-weight: 700;
   transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
-  white-space: nowrap;
+  white-space: nowrap; text-decoration: none;
 }
 .btn:disabled { cursor: not-allowed; opacity: 0.55; }
 .btn-primary { background: var(--sl-purple); color: var(--sl-surface); }
@@ -158,7 +158,8 @@ p { margin: 0; }
   width: 100%; min-height: 44px; padding: 8px 12px; border-radius: var(--sl-radius-input);
   border: 1px solid var(--sl-control-border); background: var(--sl-surface);
 }
-.field textarea { resize: vertical; }
+.field textarea { resize: vertical; line-height: 1.7; }
+.wording textarea { height: 9.5em; }
 .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline-offset: 1px; }
 .check { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
 .check input { width: 22px; height: 22px; accent-color: var(--sl-purple); }
@@ -217,7 +218,11 @@ h3 { font-size: 16px; line-height: 1.5; color: var(--sl-plum); margin: 4px 0 0; 
 .table tbody th { font-weight: 700; color: var(--sl-ink); }
 .table td { font-variant-numeric: tabular-nums; }
 
-/* Narrow screens: the navigation becomes its own scrollable row so the page never scrolls sideways. */
+/* Long role menus, and every menu on narrow screens, get their own scrollable row under the brand and account
+   controls, so the header never wraps unevenly and the page never scrolls sideways. */
+.topbar.nav-row .nav { order: 3; flex: 1 0 100%; overflow-x: auto; scrollbar-width: thin; margin-inline: -16px;
+  padding-inline: 12px; }
+.topbar.nav-row .nav-link { white-space: nowrap; }
 @media (max-width: 1023px) {
   .nav { order: 3; flex: 1 0 100%; overflow-x: auto; scrollbar-width: thin; margin-inline: -16px; padding-inline: 12px; }
   .nav-link { white-space: nowrap; }

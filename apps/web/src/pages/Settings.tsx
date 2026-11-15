@@ -9,7 +9,7 @@ import { usePoll } from "../usePoll";
 
 type Config = Schemas["ConfigResponse"];
 
-function NumberGroup({ title, prefix, values, extra, disabled, save, children }: { title: StringKey; prefix: string;
+function NumberGroup({ title, hint, prefix, values, extra, disabled, save, children }: { title: StringKey; hint?: StringKey; prefix: string;
   values: Record<string, number>; extra?: (key: string) => React.ReactNode; disabled: boolean;
   save: (values: Record<string, number>, key: string) => Promise<unknown>; children?: React.ReactNode }) {
   const { t } = useT();
@@ -26,6 +26,7 @@ function NumberGroup({ title, prefix, values, extra, disabled, save, children }:
   return (
     <section className="card" aria-labelledby={`${prefix}-h`}>
       <h2 id={`${prefix}-h`}><Icon name="clock" /> {t(title)}</h2>
+      {hint ? <p className="muted">{t(hint)}</p> : null}
       <form className="form-grid" onSubmit={submit} noValidate>
         {Object.keys(values).map((k) => (
           <label key={k} className="field">
@@ -92,7 +93,7 @@ function Templates({ config, disabled, onDone }: { config: Config; disabled: boo
     <section className="card" aria-labelledby="tpl-h">
       <h2 id="tpl-h"><Icon name="message" /> {t("templates")}</h2>
       <p className="muted">{t("templatesHint")}</p>
-      <form className="form-grid" noValidate onSubmit={(e) => {
+      <form className="form-grid wording" noValidate onSubmit={(e) => {
         e.preventDefault();
         void run((key) => api.saveTemplates({ [selected]: { ar: draft.ar, en: draft.en } }, key), onDone);
       }}>
@@ -137,7 +138,7 @@ export function Settings() {
           <>
             <NumberGroup title="timings" prefix="timing" values={c.timings} disabled={poll.stale}
               save={(v, key) => api.saveTimings(v, key).then(poll.refresh)} />
-            <NumberGroup title="retention" prefix="ret" values={c.retention_days} disabled={poll.stale}
+            <NumberGroup title="retention" hint="retentionHint" prefix="ret" values={c.retention_days} disabled={poll.stale}
               extra={(k) => `${t("eligible")}: ${c.retention_preview[k as keyof typeof c.retention_preview]?.eligible ?? 0}`}
               save={(v, key) => api.saveRetention(v, key).then(poll.refresh)}>
               <ApplyRetention disabled={poll.stale} onDone={poll.refresh} />
