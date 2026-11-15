@@ -153,6 +153,7 @@ if SIMULATOR_ENABLED and not IS_DEV:
     raise ImproperlyConfigured("SIMULATOR_ENABLED is only allowed in local/test environments")
 
 WORKER_HEARTBEAT_STALE_SECONDS = 15
+TRUSTED_PROXY_COUNT = int(os.environ.get("TRUSTED_PROXY_COUNT", "0"))
 
 LOGGING = {
     "version": 1,

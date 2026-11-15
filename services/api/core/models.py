@@ -34,8 +34,13 @@ class IdempotencyRecord(models.Model):
         constraints = [models.UniqueConstraint(fields=["scope", "key"], name="uniq_idempotency_scope_key")]
 
 
-class LoginAttempt(models.Model):
-    """Failed console logins for lockout (keyed hashes only; no usernames or IPs stored in clear)."""
+class LoginThrottle(models.Model):
+    """Atomic per-key failure counters for console login (keyed hashes only; no usernames or IPs in clear).
 
-    key_hash = models.CharField(max_length=64, db_index=True)
-    attempted_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    Keys: (IP, username) pair — hard limit; IP alone — password-spraying limit. There is deliberately no
+    username-only hard lock, so nobody can lock an account out by submitting its username from elsewhere.
+    """
+
+    key_hash = models.CharField(max_length=64, unique=True)
+    window_start = models.DateTimeField()
+    failures = models.PositiveIntegerField(default=0)
