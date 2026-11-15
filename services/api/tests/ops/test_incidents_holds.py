@@ -110,3 +110,11 @@ def test_poor_rating_opens_complaint_incident(ops):
                                                delivered_by=ops.valets[0])
     record_rating(ticket.bindings.get(), ticket, "POOR", "wamid.poor.1")
     assert Incident.objects.get(ticket=ticket).category == "complaint"
+
+
+def test_note_on_stale_copy_never_reopens_resolved_incident(ops):
+    """Security review regression: annotate must not regress RESOLVED via a stale in-memory status."""
+    stale = incidents.open_incident(ops.supervisor, ops.event, "damage", "Scratch")
+    incidents.resolve(ops.manager, Incident.objects.get(pk=stale.pk), "Pre-existing")
+    incidents.annotate(ops.supervisor, stale, "Late note")
+    assert Incident.objects.get(pk=stale.pk).status == Incident.Status.RESOLVED

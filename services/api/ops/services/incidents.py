@@ -33,8 +33,8 @@ def annotate(actor, incident, text: str) -> IncidentNote:
     if not text.strip():
         raise DomainError("description_required")
     note = IncidentNote.objects.create(incident=incident, author=actor, text=text.strip()[:2000])
-    if incident.status == Incident.Status.OPEN:
-        Incident.objects.filter(pk=incident.pk).update(status=Incident.Status.IN_REVIEW)
+    # Conditional in the database: a stale copy can never move a RESOLVED incident back to review.
+    Incident.objects.filter(pk=incident.pk, status=Incident.Status.OPEN).update(status=Incident.Status.IN_REVIEW)
     _audit("incident.note", actor, incident)
     return note
 
