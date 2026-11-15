@@ -43,6 +43,8 @@ def request_retrieval(binding, ticket, *, via: str = "guest_whatsapp", actor=Non
         if ticket.state not in (Ticket.State.RECEIVED, Ticket.State.PARKED, Ticket.State.RETRIEVING,
                                 Ticket.State.READY):
             raise DomainError("ticket_closed")
+        if ticket.carryover_cases.exclude(status="RELEASED").exists():
+            raise DomainError("carryover_open")
         existing = open_request(ticket)
         reply_key = source_id or f"{int(now.timestamp() * 1000)}"
         if existing is not None:

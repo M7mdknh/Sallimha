@@ -39,8 +39,9 @@ def approve_unclaimed(actor, case, now=None) -> CarryoverCase:
     with transaction.atomic():
         ticket = Ticket.objects.select_for_update(no_key=True).get(pk=case.ticket_id)
         case = CarryoverCase.objects.select_for_update(no_key=True).get(pk=case.pk)
-        if case.status != CarryoverCase.Status.PROPOSED or ticket.state != Ticket.State.PARKED:
-            raise DomainError("invalid_state")
+        if case.status != CarryoverCase.Status.PROPOSED or ticket.state != Ticket.State.PARKED or \
+                ticket.requests.filter(state__in=OPEN_REQUEST_STATES).exists():
+            raise DomainError("invalid_state")  # rechecked under the ticket lock (no request may slip in)
         case.status = CarryoverCase.Status.APPROVED
         case.approved_by = actor
         case.approved_at = now

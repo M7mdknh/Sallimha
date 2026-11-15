@@ -75,3 +75,19 @@ def test_event_close_allowed_after_reconciliation(ops):
     ops.event.refresh_from_db()
     assert ops.event.status == Event.Status.CLOSED and ops.event.closed_by == ops.manager
     assert CarryoverCase.objects.filter(ticket=ticket, status="APPROVED").exists()  # carryover remains visible
+
+
+def test_open_carryover_case_blocks_new_requests_and_approval_rechecks(ops):
+    """Security review regression: no request may slip in around an unclaimed proposal."""
+    from ops.models import RetrievalRequest
+    from ops.services import retrieval
+    ticket = park(ops.valets[0], ops.event)
+    case = carryover.propose_unclaimed(ops.supervisor, ticket, custodian="Security", plan="Hold")
+    with pytest.raises(DomainError) as err:
+        retrieval.request_retrieval(ticket.bindings.get(), ticket)
+    assert err.value.code == "carryover_open"
+    RetrievalRequest.objects.create(event=ops.event, ticket=ticket, state="QUEUED", requested_at=ticket.created_at,
+                                    requested_via="guest_whatsapp")  # simulates a request that raced the proposal
+    with pytest.raises(DomainError) as err:
+        carryover.approve_unclaimed(ops.manager, case)
+    assert err.value.code == "invalid_state"

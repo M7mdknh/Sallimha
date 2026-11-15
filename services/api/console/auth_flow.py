@@ -14,9 +14,11 @@ from django.db import connection
 from django.utils import timezone
 from rest_framework.response import Response
 
+from console import mfa
 from core.audit import audit
 from core.crypto import keyed_hash
 from core.models import LoginKnownNetwork
+from ops.models import ROLE_RANK, Role
 
 MAX_FAILURES = 5              # per (IP, username) within WINDOW
 UNDER_ATTACK_PAIR_MAX = 2     # per (IP, username) while the account sees distributed failures
@@ -137,6 +139,15 @@ def login_step(request, data, authenticate, login):
     staff = getattr(user, "staff", None) if user else None
     if user is None or staff is None or not staff.enabled:
         return Response({"code": "invalid_credentials"}, status=400)
+    if staff.rank >= ROLE_RANK[Role.MANAGER]:
+        outcome = mfa.check(staff, data.get("otp") or "", now)
+        if outcome == "enrol":
+            return Response({"ok": False, "mfa_required": True, "mfa_enrolment": True,
+                             "otpauth_uri": mfa.provisioning_uri(staff)})
+        if outcome == "required":
+            return Response({"ok": False, "mfa_required": True})
+        if outcome == "invalid":
+            return Response({"code": "mfa_invalid"}, status=400)  # the reserved attempt stays counted
     _release(pair, reset=True)
     _release(by_ip, reset=False)
     _release(by_user, reset=False)
