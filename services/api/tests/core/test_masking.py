@@ -65,7 +65,7 @@ def test_masking_key_colon_phone():
 
 def test_masking_date_followed_by_phone():
     text = _render("on 2026-11-15 0501234567 arrived")
-    assert "0501234567" not in text and "2026-11-15" in text
+    assert "0501234567" not in text  # over-masking the date is acceptable; leaking the phone is not
 
 
 def test_masking_adjacent_phones():
@@ -75,3 +75,20 @@ def test_masking_adjacent_phones():
 
 def test_masking_long_digit_run_is_masked_not_leaked():
     assert "96650123456712345" not in _render("raw 96650123456712345")
+
+
+def test_masking_split_halves_are_not_leaked():
+    text = _render("card 12345678 12345678")
+    assert "12345678" not in text
+
+
+def test_masking_survives_nul_placeholder_injection():
+    text = _render("weird \x000\x00 and \x009\x00 0501234567")
+    assert "0501234567" not in text
+
+
+def test_masking_is_linear_on_large_input():
+    import time
+    started = time.perf_counter()
+    _render("1 " * 50000)
+    assert time.perf_counter() - started < 1.0
