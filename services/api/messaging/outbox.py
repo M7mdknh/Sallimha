@@ -164,6 +164,12 @@ def send_due(now=None, limit: int = 20) -> int:
             _finish(row.id, now, status=MessageOutbox.Status.DEAD, failure_class="permanent", last_error=str(exc)[:200])
         except UnknownSendOutcome as exc:
             _finish(row.id, now, status=MessageOutbox.Status.DELIVERY_UNKNOWN, last_error=str(exc)[:200])
+        except Exception as exc:  # noqa: BLE001 — a bug for one row must not abort the whole pass
+            log.exception("outbox row %s failed unexpectedly", row.id)
+            status = MessageOutbox.Status.DEAD if row.attempts >= MAX_ATTEMPTS else MessageOutbox.Status.PENDING
+            _finish(row.id, now, status=status, next_attempt_at=now + _backoff(row.attempts),
+                    failure_class="exhausted" if status == MessageOutbox.Status.DEAD else "",
+                    last_error=f"{type(exc).__name__}"[:200])
         else:
             _finish(row.id, now, status=MessageOutbox.Status.SENT, sent_at=now, sent_via=payload.mode,
                     provider_message_id=result.provider_message_id)

@@ -1,23 +1,30 @@
-"""Console API: live monitoring, shift operations and exception handling (no routine-dispatch control)."""
+"""Console API: live monitoring, shift operations and exception handling (no routine-dispatch control).
+
+Every endpoint validates input and shapes output with console.serializers; the OpenAPI document and the
+web app's TypeScript types are generated from those serializers (contracts/openapi.yaml)."""
 
 from django.contrib.auth import authenticate, login, logout
 from django.http import FileResponse, Http404
 from django.middleware.csrf import get_token
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from console import live
+from console import serializers as s
 from console.common import (
     IsConsoleStaff,
     actor_of,
     domain_response,
     events_for,
     idempotent_post,
+    out,
     scoped_event,
     scoped_ticket,
+    validated,
 )
 from core.audit import audit
 from core.errors import DomainError
@@ -26,49 +33,67 @@ from ops.permissions import actor_label
 from ops.services import custody, intake, retrieval, shifts
 from ops.services.media import read_private
 
+IDEMPOTENCY = OpenApiParameter("Idempotency-Key", OpenApiTypes.STR, OpenApiParameter.HEADER, required=True,
+                               description="Unique per intended action; a repeat replays the stored result")
+REFUSALS = {400: s.ErrorResponse, 403: s.ErrorResponse, 404: OpenApiResponse(description="Not found or out of scope"),
+            409: s.ErrorResponse, 428: s.ErrorResponse}
 
+
+def command_schema(request, response, **kw):
+    return extend_schema(request=request, responses={200: response, **REFUSALS}, parameters=[IDEMPOTENCY], **kw)
+
+
+@extend_schema(responses={200: s.CsrfResponse}, auth=[])
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def csrf(request):
-    return Response({"csrfToken": get_token(request)})
+    return out(s.CsrfResponse, {"csrfToken": get_token(request)})
 
 
+@extend_schema(request=s.LoginRequest, responses={200: s.LoginResponse, 400: s.ErrorResponse, 429: s.ErrorResponse},
+               auth=[])
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@domain_response
 def login_view(request):
     from console import auth_flow
 
-    return auth_flow.login_step(request, authenticate, login)
+    data = validated(s.LoginRequest, request.data)
+    return auth_flow.login_step(request, data, authenticate, login)
 
 
+@extend_schema(request=None, responses={200: s.OkResponse})
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def logout_view(request):
     logout(request)
-    return Response({"ok": True})
+    return out(s.OkResponse, {"ok": True})
 
 
+@extend_schema(responses={200: s.MeResponse})
 @api_view(["GET"])
 @permission_classes([IsConsoleStaff])
 def me(request):
     staff = actor_of(request)
-    return Response({"id": staff.id, "name": staff.full_name, "role": staff.role, "language": staff.language})
+    return out(s.MeResponse, {"id": staff.id, "name": staff.full_name, "role": staff.role, "language": staff.language})
 
 
+@extend_schema(responses={200: s.EventSummary(many=True)})
 @api_view(["GET"])
 @permission_classes([IsConsoleStaff])
 def events(request):
     actor = actor_of(request)
     rows = events_for(actor).select_related("venue").order_by("status", "-starts_at")
-    return Response([{"id": e.id, "name": e.name, "venue": e.venue.name, "status": e.status,
-                      "starts_at": e.starts_at} for e in rows])
+    return out(s.EventSummary, [{"id": e.id, "name": e.name, "venue": e.venue.name, "status": e.status,
+                                 "starts_at": e.starts_at} for e in rows])
 
 
+@extend_schema(responses={200: s.LiveSnapshot, 404: OpenApiResponse(description="Not found or out of scope")})
 @api_view(["GET"])
 @permission_classes([IsConsoleStaff])
 def event_live(request, event_id):
     actor = actor_of(request)
-    return Response(live.snapshot(scoped_event(actor, event_id), timezone.now()))
+    return out(s.LiveSnapshot, live.snapshot(scoped_event(actor, event_id), timezone.now()))
 
 
 class ConsoleCommand(APIView):
@@ -76,19 +101,22 @@ class ConsoleCommand(APIView):
 
 
 class StartShift(ConsoleCommand):
+    @command_schema(s.StartShiftRequest, s.ShiftResponse)
     @idempotent_post
     @domain_response
     def post(self, request, event_id):
         actor = actor_of(request)
         event = scoped_event(actor, event_id)
-        staff = Staff.objects.filter(pk=request.data.get("staff_id"), org_id=actor.org_id).first()
+        data = validated(s.StartShiftRequest, request.data)
+        staff = Staff.objects.filter(pk=data["staff_id"], org_id=actor.org_id).first()
         if staff is None:
             raise Http404
         shift = shifts.start_shift(actor, event, staff)
-        return Response({"id": shift.id, "staff_id": staff.id})
+        return out(s.ShiftResponse, {"id": shift.id, "staff_id": staff.id})
 
 
 class EndShift(ConsoleCommand):
+    @command_schema(None, s.ShiftResponse)
     @idempotent_post
     @domain_response
     def post(self, request, shift_id):
@@ -98,10 +126,11 @@ class EndShift(ConsoleCommand):
             raise Http404
         scoped_event(actor, shift.event_id)
         shifts.end_shift(actor, shift)
-        return Response({"id": shift.id, "ended": True})
+        return out(s.ShiftResponse, {"id": shift.id, "ended": True})
 
 
 class AckAlert(ConsoleCommand):
+    @command_schema(None, s.AlertAckResponse)
     @idempotent_post
     @domain_response
     def post(self, request, alert_id):
@@ -116,25 +145,22 @@ class AckAlert(ConsoleCommand):
             alert.save(update_fields=["acknowledged_at", "acknowledged_by"])
             audit("alert.ack", actor_id=actor.id, actor_label=actor_label(actor), channel="console",
                   entity_type="alert", entity_id=alert.id, event_id=alert.event_id)
-        return Response({"id": alert.id, "acknowledged": True})
+        return out(s.AlertAckResponse, {"id": alert.id, "acknowledged": True})
 
 
+@extend_schema(responses={200: s.TicketDetail, 404: OpenApiResponse(description="Not found or out of scope")})
 @api_view(["GET"])
 @permission_classes([IsConsoleStaff])
 def ticket_detail(request, ticket_id):
     actor = actor_of(request)
-    return Response(live.ticket_detail(scoped_ticket(actor, ticket_id), actor))
-
-
-def _text(request, name, required=True) -> str:
-    value = str(request.data.get(name, "") or "").strip()
-    if required and not value:
-        raise DomainError(f"{name}_required")
-    return value
+    return out(s.TicketDetail, live.ticket_detail(scoped_ticket(actor, ticket_id), actor))
 
 
 class TicketCommand(ConsoleCommand):
-    def run(self, actor, ticket, request) -> dict:  # pragma: no cover - interface
+    request_serializer = None
+    response_serializer = None
+
+    def run(self, actor, ticket, data) -> dict:  # pragma: no cover - interface
         raise NotImplementedError
 
     @idempotent_post
@@ -142,78 +168,95 @@ class TicketCommand(ConsoleCommand):
     def post(self, request, ticket_id):
         actor = actor_of(request)
         ticket = scoped_ticket(actor, ticket_id)
-        return Response(self.run(actor, ticket, request))
+        data = validated(self.request_serializer, request.data) if self.request_serializer else {}
+        return out(self.response_serializer, self.run(actor, ticket, data))
 
 
+def ticket_command(request_serializer, response_serializer):
+    """Class decorator: binds the contract serializers and documents the endpoint."""
+
+    def decorate(cls):
+        cls.request_serializer = request_serializer
+        cls.response_serializer = response_serializer
+        cls.post = command_schema(request_serializer, response_serializer)(TicketCommand.post)
+        return cls
+
+    return decorate
+
+
+@ticket_command(s.CancelRequest, s.TicketStateResponse)
 class CancelTicket(TicketCommand):
-    def run(self, actor, ticket, request):
-        ticket = intake.cancel_ticket(actor, ticket, _text(request, "reason"),
-                                      guest_has_vehicle_and_keys=bool(request.data.get("guest_has_vehicle_and_keys")))
+    def run(self, actor, ticket, data):
+        ticket = intake.cancel_ticket(actor, ticket, data["reason"],
+                                      guest_has_vehicle_and_keys=data["guest_has_vehicle_and_keys"])
         return {"id": ticket.id, "state": ticket.state}
 
 
+@ticket_command(s.ReasonRequest, s.RequestStateResponse)
 class WithdrawRequest(TicketCommand):
-    def run(self, actor, ticket, request):
+    def run(self, actor, ticket, data):
         req = retrieval.open_request(ticket)
         if req is None:
             raise DomainError("no_open_request")
-        req = retrieval.withdraw_request(actor, req, _text(request, "reason"))
+        req = retrieval.withdraw_request(actor, req, data["reason"])
         return {"request_id": req.id, "state": req.state}
 
 
+@ticket_command(s.WithdrawWithCustodyRequest, s.TransferResponse)
 class WithdrawWithCustody(TicketCommand):
-    def run(self, actor, ticket, request):
+    def run(self, actor, ticket, data):
         req = retrieval.open_request(ticket)
         if req is None:
             raise DomainError("no_open_request")
-        try:
-            hook = int(request.data.get("hook_number"))
-        except (TypeError, ValueError) as exc:
-            raise DomainError("hook_invalid") from exc
         transfer = custody.withdraw_accepted_with_custody_resolution(
-            actor, req, zone_code=_text(request, "zone_code"), detail=_text(request, "detail", required=False),
-            hook_number=hook, reason=_text(request, "reason"))
+            actor, req, zone_code=data["zone_code"], detail=data.get("detail", ""), hook_number=data["hook_number"],
+            reason=data["reason"])
         return {"transfer_id": transfer.id, "state": "WITHDRAWN"}
 
 
+@ticket_command(s.CustodyTransferRequest, s.TransferResponse)
 class TransferCustody(TicketCommand):
-    def run(self, actor, ticket, request):
+    def run(self, actor, ticket, data):
         task = ticket.tasks.filter(type="RETRIEVAL", status="ACCEPTED").first()
-        to_staff = Staff.objects.filter(pk=request.data.get("to_staff_id"), org_id=actor.org_id).first()
+        to_staff = Staff.objects.filter(pk=data["to_staff_id"], org_id=actor.org_id).first()
         if task is None or to_staff is None:
             raise DomainError("invalid_state")
-        transfer = custody.transfer_custody(actor, task, to_staff, _text(request, "vehicle_location"),
-                                            _text(request, "key_location"), _text(request, "reason"))
+        transfer = custody.transfer_custody(actor, task, to_staff, data["vehicle_location"], data["key_location"],
+                                            data["reason"])
         return {"transfer_id": transfer.id}
 
 
+@ticket_command(s.IntakeTransferRequest, s.TransferResponse)
 class TransferIntake(TicketCommand):
-    def run(self, actor, ticket, request):
-        to_staff = Staff.objects.filter(pk=request.data.get("to_staff_id"), org_id=actor.org_id).first()
+    def run(self, actor, ticket, data):
+        to_staff = Staff.objects.filter(pk=data["to_staff_id"], org_id=actor.org_id).first()
         if to_staff is None:
             raise DomainError("receiver_unavailable")
-        transfer = intake.transfer_intake(actor, ticket, to_staff, _text(request, "reason"))
-        return {"transfer_id": transfer.id}
+        return {"transfer_id": intake.transfer_intake(actor, ticket, to_staff, data["reason"]).id}
 
 
+@ticket_command(s.CorrectPhoneRequest, s.CorrectPhoneResponse)
 class CorrectPhone(TicketCommand):
-    def run(self, actor, ticket, request):
-        binding = retrieval.correct_guest_phone(actor, ticket, _text(request, "phone"), _text(request, "reason"))
+    def run(self, actor, ticket, data):
+        binding = retrieval.correct_guest_phone(actor, ticket, data["phone"], data["reason"])
         return {"masked": binding.phone_masked, "revision": binding.revision}
 
 
+@ticket_command(s.ConfirmReceiptRequest, s.ContactStateResponse)
 class ConfirmReceipt(TicketCommand):
-    def run(self, actor, ticket, request):
-        ticket = intake.confirm_guest_receipt(actor, ticket, bool(request.data.get("received")))
+    def run(self, actor, ticket, data):
+        ticket = intake.confirm_guest_receipt(actor, ticket, data["received"])
         return {"id": ticket.id, "contact_state": ticket.contact_state}
 
 
+@ticket_command(s.ExceptIntakeRequest, s.IdResponse)
 class ExceptIntake(TicketCommand):
-    def run(self, actor, ticket, request):
-        ticket = intake.except_intake_requirement(actor, ticket, _text(request, "kind"), _text(request, "reason"))
-        return {"id": ticket.id}
+    def run(self, actor, ticket, data):
+        return {"id": intake.except_intake_requirement(actor, ticket, data["kind"], data["reason"]).id}
 
 
+@extend_schema(responses={(200, "image/*"): OpenApiTypes.BINARY,
+                          404: OpenApiResponse(description="Not found or out of scope")})
 @api_view(["GET"])
 @permission_classes([IsConsoleStaff])
 def media_file(request, media_id):

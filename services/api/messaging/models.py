@@ -132,9 +132,12 @@ class SimulatorControl(models.Model):
 
     @classmethod
     def take(cls) -> str | None:
-        row = cls.objects.select_for_update(skip_locked=True, no_key=True).order_by("id").first()
-        if row is None:
-            return None
-        mode = row.mode
-        row.delete()
-        return mode
+        from django.db import transaction
+
+        with transaction.atomic():
+            row = cls.objects.select_for_update(skip_locked=True, no_key=True).order_by("id").first()
+            if row is None:
+                return None
+            mode = row.mode
+            row.delete()
+            return mode

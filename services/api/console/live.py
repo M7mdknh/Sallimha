@@ -87,9 +87,33 @@ def snapshot(event, now) -> dict:
     }
 
 
+def allowed_actions(ticket, req, binding) -> list[str]:
+    """UI hint only; every action is re-authorized and re-validated by the server."""
+    actions = []
+    if ticket.state == Ticket.State.RECEIVED and ticket.parking_started_at is None:
+        actions += ["cancel", "except_intake", "intake_transfer"]
+    if ticket.state == Ticket.State.RECEIVED and binding is not None and \
+            ticket.contact_state != Ticket.Contact.CONFIRMED_IN_PERSON:
+        actions.append("confirm_receipt")
+    if req is not None and req.state in ("WAITING_FOR_PARKING", "QUEUED", "OFFERED"):
+        actions.append("withdraw")
+    if req is not None and req.state == "ACCEPTED":
+        actions += ["withdraw_with_custody", "custody_transfer"]
+    if ticket.state in (Ticket.State.RECEIVED, Ticket.State.PARKED, Ticket.State.RETRIEVING, Ticket.State.READY) \
+            and binding is not None:
+        actions.append("correct_phone")
+    from ops.services import holds, incidents
+
+    actions += holds.allowed_actions(ticket) + incidents.allowed_actions(ticket)
+    return actions
+
+
 def ticket_detail(ticket, actor) -> dict:
+    from ops.services import holds, incidents
+
     binding = ticket.bindings.filter(revoked_at__isnull=True).first()
     req = RetrievalRequest.objects.filter(ticket=ticket).order_by("-id").first()
+    live_task = Task.objects.filter(ticket=ticket, status__in=LIVE_TASK_STATUSES).select_related("assignee").first()
     from core.models import AuditEvent
 
     timeline = AuditEvent.objects.filter(entity_type="ticket", entity_id=ticket.id).order_by("occurred_at")
@@ -99,9 +123,13 @@ def ticket_detail(ticket, actor) -> dict:
         "vehicle": _vehicle(ticket), "plate": ticket.vehicle_plate, "location": _location(ticket),
         "hook": _hook(ticket), "registered_by": ticket.registered_by.full_name,
         "parked_by": ticket.parked_by.full_name if ticket.parked_by_id else None,
+        "assignee": live_task.assignee.full_name if live_task else None,
         "parking_started": ticket.parking_started_at is not None,
         "request": {"id": req.id, "state": req.state, "requested_at": req.requested_at} if req else None,
         "media": [{"id": m.id, "received_at": m.received_at, "kind": m.kind}
                   for m in Media.objects.filter(ticket=ticket, deleted_at__isnull=True).order_by("id")],
+        "holds": holds.brief(ticket),
+        "incidents": incidents.brief(ticket),
         "timeline": [{"at": e.occurred_at, "action": e.action, "actor": e.actor_label} for e in timeline],
+        "allowed_actions": allowed_actions(ticket, req if req and req.state in OPEN_REQUEST_STATES else None, binding),
     }

@@ -3,10 +3,10 @@ API=services/api
 WEB=apps/web
 UV=cd $(API) && uv run
 
-.PHONY: db migrate test lint seed-demo api worker web e2e demo stop
+.PHONY: db migrate test lint seed-demo api worker web e2e demo stop contract
 
 db:
-	docker compose up -d db
+	docker compose up -d --wait db
 
 migrate: db
 	$(UV) python manage.py migrate
@@ -38,3 +38,7 @@ demo:
 
 stop:
 	docker compose stop db
+
+contract:
+	$(UV) python manage.py spectacular --validate --fail-on-warn --file ../../contracts/openapi.yaml
+	cd contracts && npm ci && npm run gen

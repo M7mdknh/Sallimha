@@ -58,13 +58,34 @@ def scoped_ticket(actor, ticket_id) -> Ticket:
     return ticket
 
 
+class InvalidInput(Exception):
+    def __init__(self, errors):
+        super().__init__("invalid_input")
+        self.errors = errors
+
+
+def validated(serializer_class, data) -> dict:
+    serializer = serializer_class(data=data)
+    if not serializer.is_valid():
+        raise InvalidInput(serializer.errors)
+    return serializer.validated_data
+
+
+def out(serializer_class, payload, status: int = 200) -> Response:
+    """Shape a response through its contract serializer, so the wire format always matches the schema."""
+    many = isinstance(payload, list)
+    return Response(serializer_class(payload, many=many).data, status=status)
+
+
 def domain_response(fn):
-    """Map DomainError to 409 (forbidden → 403) with a stable code for the UI."""
+    """Map DomainError to 409 (forbidden → 403) and invalid input to 400, each with a stable code."""
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         try:
             return fn(*args, **kwargs)
+        except InvalidInput as err:
+            return Response({"code": "invalid_input", "fields": err.errors}, status=400)
         except DomainError as err:
             status = 403 if err.code == "forbidden" else 409
             return Response({"code": err.code}, status=status)

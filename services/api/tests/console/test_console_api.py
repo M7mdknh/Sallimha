@@ -152,3 +152,23 @@ def test_media_streams_only_within_scope(ops, as_supervisor):
     assert "no-store" in resp["Cache-Control"]
     other_sup = make_staff(ops.org, Role.SUPERVISOR)
     assert login_as(other_sup).get(f"/api/media/{media.id}").status_code == 404
+
+
+def test_live_and_detail_responses_satisfy_contract(ops, as_supervisor):
+    from console import serializers as cs
+    ticket, req = parked_with_request(ops.valets[0], ops.event)
+    live_body = as_supervisor.get(f"/api/events/{ops.event.id}/live").json()
+    detail_body = as_supervisor.get(f"/api/tickets/{ticket.id}").json()
+    events_body = as_supervisor.get("/api/events/").json()
+    for serializer, body, many in ((cs.LiveSnapshot, live_body, False), (cs.TicketDetail, detail_body, False),
+                                   (cs.EventSummary, events_body, True)):
+        check = serializer(data=body, many=many)
+        assert check.is_valid(), check.errors
+    assert "withdraw" in detail_body["allowed_actions"]
+
+
+def test_invalid_input_is_400_with_field_errors(ops, as_supervisor):
+    ticket = register_and_confirm(ops.valets[0], ops.event, "+966509090909")
+    resp = post(as_supervisor, f"/api/tickets/{ticket.id}/cancel", {"guest_has_vehicle_and_keys": "maybe"})
+    assert resp.status_code == 400 and resp.json()["code"] == "invalid_input"
+    assert {"reason", "guest_has_vehicle_and_keys"} <= set(resp.json()["fields"])

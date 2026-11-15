@@ -37,8 +37,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="flush the database first")
+        parser.add_argument("--with-activity", action="store_true",
+                            help="also create a synthetic mid-event state (offers, an accepted retrieval, alerts)")
 
-    def handle(self, *args, reset=False, **options):
+    def handle(self, *args, reset=False, with_activity=False, **options):
         if not settings.IS_DEV:
             raise CommandError("seed_demo is only allowed in local/test environments")
         if reset:
@@ -69,4 +71,44 @@ class Command(BaseCommand):
             EventAssignment.objects.create(event=event, staff=valet, assigned_by=supervisor)
             Shift.objects.create(event=event, staff=valet, started_at=timezone.now(), started_by=supervisor,
                                  availability=Shift.Availability.AVAILABLE, idle_since=timezone.now())
+        if with_activity:
+            _activity(event)
         self.stdout.write(self.style.SUCCESS(f"Seeded synthetic demo event {event.id} with {len(VALETS)} valets."))
+
+
+SYNTHETIC_JPEG = b"\xff\xd8\xff\xe0" + b"SALLIMHA-SYNTHETIC-PHOTO" * 8
+
+
+def _activity(event):
+    """Mid-event state built through the real services (all synthetic, guest numbers are fictional)."""
+    from ops.models import RetrievalRequest
+    from ops.services import dispatch, intake, retrieval
+
+    v1, v2, v3 = Staff.objects.filter(role=Role.VALET, org=event.org).order_by("id")
+
+    def park(valet, phone, plate, zone, spot, hook):
+        ticket = intake.register_vehicle(valet)
+        intake.confirm_guest_phone(valet, ticket, phone)
+        intake.confirm_guest_receipt(valet, ticket, True)
+        intake.record_vehicle(valet, ticket, plate)
+        for _ in range(4):
+            intake.attach_intake_media(valet, ticket, SYNTHETIC_JPEG, "image/jpeg")
+        intake.start_parking(valet, ticket)
+        intake.record_location(valet, ticket, zone, spot)
+        return intake.complete_parking(valet, ticket, hook)
+
+    a = park(v1, "+966500000201", "KSA 4821 لكزس رمادية", "A", "7", 11)
+    b = park(v3, "+966500000202", "RJA 1190 تاهو سوداء", "B", "3", 12)
+    retrieval.request_retrieval(a.bindings.get(), a, now=timezone.now() - timedelta(minutes=5))
+    retrieval.request_retrieval(b.bindings.get(), b)
+    for task in dispatch.dispatch_event(event.id):
+        if task.assignee == v3:
+            from messaging.models import MessageOutbox
+
+            offer = MessageOutbox.objects.get(kind="valet.offer", task=task)
+            dispatch.accept_task(v3, next(btn[0] for btn in offer.buttons if btn[1] == "accept"))
+    c = intake.register_vehicle(v2)
+    intake.confirm_guest_phone(v2, c, "+966500000203")
+    intake.confirm_guest_receipt(v2, c, False)
+    dispatch.raise_alerts(timezone.now())
+    assert RetrievalRequest.objects.filter(event=event).count() == 2

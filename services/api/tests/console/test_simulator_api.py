@@ -43,3 +43,13 @@ def test_seed_demo_creates_synthetic_world(db):
     assert Event.objects.filter(name__contains="تجريبي").exists()
     assert Staff.objects.filter(role="VALET").count() >= 3
     assert Staff.objects.filter(user__username="supervisor").exists()
+
+
+def test_seed_demo_with_activity_builds_mid_event_state(db):
+    from django.core.management import call_command
+
+    from ops.models import Alert, RetrievalRequest, Ticket
+    call_command("seed_demo", "--reset", "--with-activity")
+    assert set(RetrievalRequest.objects.values_list("state", flat=True)) == {"OFFERED", "ACCEPTED"}
+    assert Ticket.objects.filter(state="RECEIVED", contact_state="UNCONFIRMED").exists()
+    assert {"guest_contact_unconfirmed", "wait_warning"} <= set(Alert.objects.values_list("kind", flat=True))

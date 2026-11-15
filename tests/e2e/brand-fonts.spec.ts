@@ -4,8 +4,12 @@ test("Arabic is the default and all four brand faces load without overflow", asy
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  // Request every self-hosted face explicitly: proves each file is served and parses, whatever the page uses.
   const faces = await page.evaluate(async () => {
-    await document.fonts.ready;
+    for (const spec of ['400 16px "Noto Sans Arabic"', '700 16px "Noto Sans Arabic"', '400 16px "Noto Sans"',
+      '700 16px "Noto Sans"']) {
+      await document.fonts.load(spec, "سلّمها Sallimha");
+    }
     return [...document.fonts].map((f) => `${f.family}|${f.weight}|${f.status}`).sort();
   });
   expect(faces).toEqual([

@@ -1,0 +1,1654 @@
+openapi: 3.0.3
+info:
+  title: Sallimha console API
+  version: 0.1.0
+paths:
+  /api/alerts/{alert_id}/ack:
+    post:
+      operationId: alerts_ack_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: alert_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - alerts
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertAckResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/auth/csrf:
+    get:
+      operationId: auth_csrf_retrieve
+      tags:
+      - auth
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfResponse'
+          description: ''
+  /api/auth/login:
+    post:
+      operationId: auth_login_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/auth/logout:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      security:
+      - sessionCookie: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+          description: ''
+  /api/auth/me:
+    get:
+      operationId: auth_me_retrieve
+      tags:
+      - auth
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+          description: ''
+  /api/dev/sim/messages:
+    get:
+      operationId: dev_sim_messages_list
+      parameters:
+      - in: query
+        name: phone
+        schema:
+          type: string
+        required: true
+      tags:
+      - dev-simulator
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimMessage'
+          description: ''
+  /api/dev/sim/phones:
+    get:
+      operationId: dev_sim_phones_list
+      tags:
+      - dev-simulator
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimPhone'
+          description: ''
+  /api/dev/sim/send:
+    post:
+      operationId: dev_sim_send_create
+      tags:
+      - dev-simulator
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimSendRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SimSendRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SimSendRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimSendResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/events/:
+    get:
+      operationId: events_list
+      tags:
+      - events
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventSummary'
+          description: ''
+  /api/events/{event_id}/live:
+    get:
+      operationId: events_live_retrieve
+      parameters:
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiveSnapshot'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/events/{event_id}/shifts:
+    post:
+      operationId: events_shifts_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartShiftRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StartShiftRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StartShiftRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShiftResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/media/{media_id}:
+    get:
+      operationId: media_retrieve
+      description: Private evidence, streamed only after scope checks; never a public
+        URL.
+      parameters:
+      - in: path
+        name: media_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - media
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/shifts/{shift_id}/end:
+    post:
+      operationId: shifts_end_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: shift_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - shifts
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShiftResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}:
+    get:
+      operationId: tickets_retrieve
+      parameters:
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDetail'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/tickets/{ticket_id}/cancel:
+    post:
+      operationId: tickets_cancel_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/confirm-receipt:
+    post:
+      operationId: tickets_confirm_receipt_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/correct-phone:
+    post:
+      operationId: tickets_correct_phone_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/custody-transfer:
+    post:
+      operationId: tickets_custody_transfer_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/except-intake:
+    post:
+      operationId: tickets_except_intake_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/intake-transfer:
+    post:
+      operationId: tickets_intake_transfer_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/withdraw:
+    post:
+      operationId: tickets_withdraw_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/withdraw-with-custody:
+    post:
+      operationId: tickets_withdraw_with_custody_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+components:
+  schemas:
+    AlertAckResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        acknowledged:
+          type: boolean
+      required:
+      - acknowledged
+      - id
+    AttentionItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        created_at:
+          type: string
+          format: date-time
+        ticket:
+          type: string
+          nullable: true
+        ticket_id:
+          type: integer
+          nullable: true
+      required:
+      - created_at
+      - id
+      - kind
+      - severity
+      - ticket
+      - ticket_id
+    ContactStateEnum:
+      enum:
+      - UNCONFIRMED
+      - CONFIRMED_IN_PERSON
+      - CORRECTION_REQUIRED
+      - ASSISTED_FALLBACK
+      type: string
+      description: |-
+        * `UNCONFIRMED` - UNCONFIRMED
+        * `CONFIRMED_IN_PERSON` - CONFIRMED_IN_PERSON
+        * `CORRECTION_REQUIRED` - CORRECTION_REQUIRED
+        * `ASSISTED_FALLBACK` - ASSISTED_FALLBACK
+    CsrfResponse:
+      type: object
+      properties:
+        csrfToken:
+          type: string
+      required:
+      - csrfToken
+    DirectionEnum:
+      enum:
+      - in
+      - out
+      type: string
+      description: |-
+        * `in` - in
+        * `out` - out
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Stable refusal code for the UI (e.g. confirmation_required)
+        fields:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+      - code
+    EventBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/EventStatusEnum'
+        venue:
+          type: string
+      required:
+      - id
+      - name
+      - status
+      - venue
+    EventStatusEnum:
+      enum:
+      - OPEN
+      - CLOSED
+      type: string
+      description: |-
+        * `OPEN` - OPEN
+        * `CLOSED` - CLOSED
+    EventSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        venue:
+          type: string
+        status:
+          $ref: '#/components/schemas/EventStatusEnum'
+        starts_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - name
+      - starts_at
+      - status
+      - venue
+    ExceptIntakeRequestKindEnum:
+      enum:
+      - photos
+      - vehicle
+      type: string
+      description: |-
+        * `photos` - photos
+        * `vehicle` - vehicle
+    ExceptIntakeRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+        kind:
+          $ref: '#/components/schemas/ExceptIntakeRequestKindEnum'
+      required:
+      - kind
+      - reason
+    Health:
+      type: object
+      properties:
+        worker:
+          $ref: '#/components/schemas/WorkerEnum'
+        whatsapp:
+          $ref: '#/components/schemas/WhatsappEnum'
+      required:
+      - whatsapp
+      - worker
+    HoldBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+        reason:
+          type: string
+        blocks_dispatch:
+          type: boolean
+        blocks_handover:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - blocks_dispatch
+      - blocks_handover
+      - created_at
+      - id
+      - reason
+    IdResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+      - id
+    IncidentBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+        status:
+          $ref: '#/components/schemas/IncidentStatusEnum'
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - category
+      - created_at
+      - id
+      - status
+    IncidentStatusEnum:
+      enum:
+      - OPEN
+      - IN_REVIEW
+      - RESOLVED
+      type: string
+      description: |-
+        * `OPEN` - OPEN
+        * `IN_REVIEW` - IN_REVIEW
+        * `RESOLVED` - RESOLVED
+    LiveRequest:
+      type: object
+      properties:
+        request_id:
+          type: integer
+        ticket_id:
+          type: integer
+        ticket:
+          type: string
+        vehicle:
+          type: string
+        state:
+          $ref: '#/components/schemas/RequestStateEnum'
+        ticket_state:
+          $ref: '#/components/schemas/TicketStateEnum'
+        requested_at:
+          type: string
+          format: date-time
+        elapsed_s:
+          type: integer
+        assignee:
+          type: string
+          nullable: true
+        location:
+          type: string
+        hook:
+          type: integer
+          nullable: true
+        failed_offers:
+          type: integer
+      required:
+      - assignee
+      - elapsed_s
+      - failed_offers
+      - hook
+      - location
+      - request_id
+      - requested_at
+      - state
+      - ticket
+      - ticket_id
+      - ticket_state
+      - vehicle
+    LiveSnapshot:
+      type: object
+      properties:
+        event:
+          $ref: '#/components/schemas/EventBrief'
+        generated_at:
+          type: string
+          format: date-time
+        health:
+          $ref: '#/components/schemas/Health'
+        attention:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttentionItem'
+        counts:
+          type: object
+          additionalProperties:
+            type: integer
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/LiveRequest'
+        team:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMember'
+        not_started:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffBrief'
+      required:
+      - attention
+      - counts
+      - event
+      - generated_at
+      - health
+      - not_started
+      - requests
+      - team
+    LoginRequestRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        password:
+          type: string
+          minLength: 1
+          maxLength: 512
+        otp:
+          type: string
+          maxLength: 10
+      required:
+      - password
+      - username
+    LoginResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        mfa_required:
+          type: boolean
+        mfa_enrolment:
+          type: boolean
+        otpauth_uri:
+          type: string
+      required:
+      - ok
+    MeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        language:
+          type: string
+      required:
+      - id
+      - language
+      - name
+      - role
+    MediaBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+        received_at:
+          type: string
+          format: date-time
+        kind:
+          $ref: '#/components/schemas/MediaBriefKindEnum'
+      required:
+      - id
+      - kind
+      - received_at
+    MediaBriefKindEnum:
+      enum:
+      - INTAKE
+      - INCIDENT
+      type: string
+      description: |-
+        * `INTAKE` - INTAKE
+        * `INCIDENT` - INCIDENT
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required:
+      - ok
+    RequestStateEnum:
+      enum:
+      - WAITING_FOR_PARKING
+      - QUEUED
+      - OFFERED
+      - ACCEPTED
+      - COMPLETED
+      - WITHDRAWN
+      type: string
+      description: |-
+        * `WAITING_FOR_PARKING` - WAITING_FOR_PARKING
+        * `QUEUED` - QUEUED
+        * `OFFERED` - OFFERED
+        * `ACCEPTED` - ACCEPTED
+        * `COMPLETED` - COMPLETED
+        * `WITHDRAWN` - WITHDRAWN
+    RoleEnum:
+      enum:
+      - VALET
+      - SUPERVISOR
+      - MANAGER
+      - ADMIN
+      - SUPER_ADMIN
+      type: string
+      description: |-
+        * `VALET` - VALET
+        * `SUPERVISOR` - SUPERVISOR
+        * `MANAGER` - MANAGER
+        * `ADMIN` - ADMIN
+        * `SUPER_ADMIN` - SUPER_ADMIN
+    SeverityEnum:
+      enum:
+      - warning
+      - critical
+      type: string
+      description: |-
+        * `warning` - warning
+        * `critical` - critical
+    ShiftResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        staff_id:
+          type: integer
+        ended:
+          type: boolean
+      required:
+      - id
+    SimMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        direction:
+          $ref: '#/components/schemas/DirectionEnum'
+        body:
+          type: string
+        buttons:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        kind:
+          type: string
+        provider_message_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - body
+      - buttons
+      - created_at
+      - direction
+      - id
+      - kind
+      - provider_message_id
+    SimPhone:
+      type: object
+      properties:
+        phone:
+          type: string
+        label:
+          type: string
+        role:
+          type: string
+      required:
+      - label
+      - phone
+      - role
+    SimSendRequestRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+          pattern: ^\+\d{8,15}$
+        text:
+          type: string
+          maxLength: 1000
+        button_payload:
+          type: string
+          minLength: 1
+          maxLength: 256
+        button_title:
+          type: string
+          minLength: 1
+          maxLength: 40
+        context_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        photo:
+          type: boolean
+      required:
+      - phone
+    SimSendResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        simulated:
+          type: boolean
+      required:
+      - ok
+      - simulated
+    StaffBrief:
+      type: object
+      properties:
+        staff_id:
+          type: integer
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+      required:
+      - name
+      - role
+      - staff_id
+    StartShiftRequestRequest:
+      type: object
+      properties:
+        staff_id:
+          type: integer
+      required:
+      - staff_id
+    TeamMember:
+      type: object
+      properties:
+        staff_id:
+          type: integer
+        shift_id:
+          type: integer
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        status:
+          $ref: '#/components/schemas/TeamStatusEnum'
+        break_pending:
+          type: boolean
+        task:
+          allOf:
+          - $ref: '#/components/schemas/TeamTask'
+          nullable: true
+        idle_since:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - break_pending
+      - idle_since
+      - name
+      - role
+      - shift_id
+      - staff_id
+      - status
+      - task
+    TeamStatusEnum:
+      enum:
+      - available
+      - busy
+      - unavailable
+      type: string
+      description: |-
+        * `available` - available
+        * `busy` - busy
+        * `unavailable` - unavailable
+    TeamTask:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        ticket:
+          type: string
+        ticket_id:
+          type: integer
+        status:
+          type: string
+      required:
+      - status
+      - ticket
+      - ticket_id
+      - type
+    TicketDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticket:
+          type: string
+        event_id:
+          type: integer
+        state:
+          $ref: '#/components/schemas/TicketStateEnum'
+        contact_state:
+          $ref: '#/components/schemas/ContactStateEnum'
+        phone_masked:
+          type: string
+          nullable: true
+        vehicle:
+          type: string
+        plate:
+          type: string
+        location:
+          type: string
+        hook:
+          type: integer
+          nullable: true
+        registered_by:
+          type: string
+        parked_by:
+          type: string
+          nullable: true
+        assignee:
+          type: string
+          nullable: true
+        parking_started:
+          type: boolean
+        request:
+          allOf:
+          - $ref: '#/components/schemas/TicketRequestBrief'
+          nullable: true
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaBrief'
+        holds:
+          type: array
+          items:
+            $ref: '#/components/schemas/HoldBrief'
+        incidents:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentBrief'
+        timeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimelineEntry'
+        allowed_actions:
+          type: array
+          items:
+            type: string
+          description: Exception actions the server will accept now
+      required:
+      - allowed_actions
+      - assignee
+      - contact_state
+      - event_id
+      - holds
+      - hook
+      - id
+      - incidents
+      - location
+      - media
+      - parked_by
+      - parking_started
+      - phone_masked
+      - plate
+      - registered_by
+      - request
+      - state
+      - ticket
+      - timeline
+      - vehicle
+    TicketRequestBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+        state:
+          $ref: '#/components/schemas/RequestStateEnum'
+        requested_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - requested_at
+      - state
+    TicketStateEnum:
+      enum:
+      - RECEIVED
+      - PARKED
+      - RETRIEVING
+      - READY
+      - DELIVERED
+      - CANCELLED
+      - UNCLAIMED
+      type: string
+      description: |-
+        * `RECEIVED` - RECEIVED
+        * `PARKED` - PARKED
+        * `RETRIEVING` - RETRIEVING
+        * `READY` - READY
+        * `DELIVERED` - DELIVERED
+        * `CANCELLED` - CANCELLED
+        * `UNCLAIMED` - UNCLAIMED
+    TimelineEntry:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        action:
+          type: string
+        actor:
+          type: string
+      required:
+      - action
+      - actor
+      - at
+    TypeEnum:
+      enum:
+      - INTAKE
+      - RETRIEVAL
+      - RELOCATION
+      type: string
+      description: |-
+        * `INTAKE` - INTAKE
+        * `RETRIEVAL` - RETRIEVAL
+        * `RELOCATION` - RELOCATION
+    WhatsappEnum:
+      enum:
+      - simulated
+      - configured
+      - not_configured
+      type: string
+      description: |-
+        * `simulated` - simulated
+        * `configured` - configured
+        * `not_configured` - not_configured
+    WorkerEnum:
+      enum:
+      - ok
+      - stale
+      - missing
+      - unknown
+      type: string
+      description: |-
+        * `ok` - ok
+        * `stale` - stale
+        * `missing` - missing
+        * `unknown` - unknown
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: sessionid
+      description: Same-origin Django session; unsafe methods also need the X-CSRFToken
+        header.

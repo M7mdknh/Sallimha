@@ -1,26 +1,68 @@
-import { setLang, useLang } from "./i18n";
+import { useCallback, useEffect, useState } from "react";
+
+import { ApiError, api, type Me } from "./api/client";
+import { Shell } from "./components/Shell";
+import { LoadFailed, SkeletonRows } from "./components/States";
+import { Events } from "./pages/Events";
+import { Live } from "./pages/Live";
+import { Login } from "./pages/Login";
+import { Simulator } from "./pages/Simulator";
+import { navigate, usePath } from "./router";
+
+type Session = { status: "loading" } | { status: "anonymous" } | { status: "error" } | { status: "ready"; me: Me };
 
 export function App() {
-  const lang = useLang();
+  const path = usePath();
+  const [session, setSession] = useState<Session>({ status: "loading" });
+
+  const load = useCallback(async () => {
+    try {
+      setSession({ status: "ready", me: await api.me() });
+    } catch (err) {
+      setSession(err instanceof ApiError && err.status !== 0 ? { status: "anonymous" } : { status: "error" });
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    if (session.status === "anonymous" && path !== "/login") navigate("/login", true);
+    if (session.status === "ready" && path === "/login") navigate("/", true);
+  }, [session.status, path]);
+
+  if (session.status === "loading") return <main className="page"><SkeletonRows /></main>;
+  if (session.status === "error") return <main className="page"><LoadFailed onRetry={load} /></main>;
+  if (session.status === "anonymous") return <Login onSignedIn={load} />;
+
+  const live = path.match(/^\/events\/(\d+)(?:\/tickets\/(\d+))?/);
+  const eventId = live ? Number(live[1]) : undefined;
+  let page = <Events />;
+  if (live) rememberEvent(eventId!);
+  if (live) page = <Live eventId={eventId!} ticketId={live[2] ? Number(live[2]) : undefined} />;
+  else if (path === "/dev/simulator") page = <Simulator />;
   return (
-    <>
-      <header className="app-header">
-        <img
-          src={lang === "ar" ? "/brand/assets/logo-ar.svg" : "/brand/assets/logo-en.svg"}
-          alt={lang === "ar" ? "سلّمها" : "Sallimha"}
-          width={160}
-          height={48}
-        />
-        <button className="lang-switch" type="button" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
-          {lang === "ar" ? "English" : "العربية"}
-        </button>
-      </header>
-      <main className="page">
-        <h1>{lang === "ar" ? "لوحة التشغيل" : "Operations console"}</h1>
-        <p className="muted">
-          {lang === "ar" ? "خدمة صفّ المركبات" : "Valet, handled."} <strong>Sallimha</strong>
-        </p>
-      </main>
-    </>
+    <Shell me={session.me} eventId={eventId ?? lastEvent()}>
+      {page}
+    </Shell>
   );
+}
+
+// Remember the event last opened so the "Live operations" link survives a visit to the simulator.
+function lastEvent(): number | undefined {
+  try {
+    const value = window.sessionStorage.getItem("sallimha.event");
+    return value ? Number(value) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function rememberEvent(eventId: number) {
+  try {
+    window.sessionStorage.setItem("sallimha.event", String(eventId));
+  } catch {
+    // storage unavailable: the link falls back to the events list
+  }
 }

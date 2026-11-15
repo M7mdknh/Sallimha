@@ -139,7 +139,20 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "UNAUTHENTICATED_USER": None,
 }
-SPECTACULAR_SETTINGS = {"TITLE": "Sallimha console API", "VERSION": "0.1.0"}
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Sallimha console API",
+    "VERSION": "0.1.0",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "TicketStateEnum": "console.serializers.TICKET_STATES",
+        "RequestStateEnum": "console.serializers.REQUEST_STATES",
+        "ContactStateEnum": "console.serializers.CONTACT_STATES",
+        "EventStatusEnum": "console.serializers.EVENT_STATUSES",
+        "TeamStatusEnum": "console.serializers.TEAM_STATUSES",
+        "IncidentStatusEnum": "console.serializers.INCIDENT_STATUSES",
+        "RoleEnum": "console.serializers.ROLES",
+    },
+}
 
 # WhatsApp transport. "fake" is the local simulator; its results are SIMULATED.
 WHATSAPP_TRANSPORT = os.environ.get("WHATSAPP_TRANSPORT", "fake" if IS_DEV else "cloud")

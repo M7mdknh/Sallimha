@@ -9,6 +9,9 @@ ROLES = Role.values
 TICKET_STATES = ["RECEIVED", "PARKED", "RETRIEVING", "READY", "DELIVERED", "CANCELLED", "UNCLAIMED"]
 REQUEST_STATES = ["WAITING_FOR_PARKING", "QUEUED", "OFFERED", "ACCEPTED", "COMPLETED", "WITHDRAWN"]
 CONTACT_STATES = ["UNCONFIRMED", "CONFIRMED_IN_PERSON", "CORRECTION_REQUIRED", "ASSISTED_FALLBACK"]
+EVENT_STATUSES = ["OPEN", "CLOSED"]
+TEAM_STATUSES = ["available", "busy", "unavailable"]
+INCIDENT_STATUSES = ["OPEN", "IN_REVIEW", "RESOLVED"]
 
 
 # --- shared ---------------------------------------------------------------------------------------
@@ -59,14 +62,14 @@ class EventSummary(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     venue = serializers.CharField()
-    status = serializers.ChoiceField(choices=["OPEN", "CLOSED"])
+    status = serializers.ChoiceField(choices=EVENT_STATUSES)
     starts_at = serializers.DateTimeField()
 
 
 class EventBrief(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
-    status = serializers.ChoiceField(choices=["OPEN", "CLOSED"])
+    status = serializers.ChoiceField(choices=EVENT_STATUSES)
     venue = serializers.CharField()
 
 
@@ -111,7 +114,7 @@ class TeamMember(serializers.Serializer):
     shift_id = serializers.IntegerField()
     name = serializers.CharField()
     role = serializers.ChoiceField(choices=ROLES)
-    status = serializers.ChoiceField(choices=["available", "busy", "unavailable"])
+    status = serializers.ChoiceField(choices=TEAM_STATUSES)
     break_pending = serializers.BooleanField()
     task = TeamTask(allow_null=True)
     idle_since = serializers.DateTimeField(allow_null=True)
@@ -165,7 +168,7 @@ class HoldBrief(serializers.Serializer):
 class IncidentBrief(serializers.Serializer):
     id = serializers.IntegerField()
     category = serializers.CharField()
-    status = serializers.ChoiceField(choices=["OPEN", "IN_REVIEW", "RESOLVED"])
+    status = serializers.ChoiceField(choices=INCIDENT_STATUSES)
     created_at = serializers.DateTimeField()
 
 
@@ -297,7 +300,7 @@ class SimSendRequest(serializers.Serializer):
     button_payload = serializers.CharField(required=False, max_length=256)
     button_title = serializers.CharField(required=False, max_length=40)
     context_id = serializers.CharField(required=False, max_length=128)
-    photo = serializers.BooleanField(required=False, default=False)
+    photo = serializers.BooleanField(required=False)
 
 
 class SimSendResponse(serializers.Serializer):
