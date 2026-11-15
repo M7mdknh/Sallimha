@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import path
 
 from console import views
@@ -23,7 +24,11 @@ urlpatterns = [
     path("tickets/<int:ticket_id>/confirm-receipt", views.ConfirmReceipt.as_view()),
     path("tickets/<int:ticket_id>/except-intake", views.ExceptIntake.as_view()),
     path("media/<int:media_id>", views.media_file),
-    path("dev/sim/phones", simulator_api.phones),
-    path("dev/sim/messages", simulator_api.messages),
-    path("dev/sim/send", simulator_api.send),
 ]
+
+if settings.SIMULATOR_ENABLED:  # local/test only; settings refuse it elsewhere
+    urlpatterns += [
+        path("dev/sim/phones", simulator_api.phones),
+        path("dev/sim/messages", simulator_api.messages),
+        path("dev/sim/send", simulator_api.send),
+    ]

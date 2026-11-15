@@ -151,6 +151,8 @@ WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
 SIMULATOR_ENABLED = os.environ.get("SIMULATOR_ENABLED", "1" if IS_DEV else "0") == "1"
 if SIMULATOR_ENABLED and not IS_DEV:
     raise ImproperlyConfigured("SIMULATOR_ENABLED is only allowed in local/test environments")
+if WHATSAPP_TRANSPORT == "fake" and not IS_DEV:
+    raise ImproperlyConfigured("WHATSAPP_TRANSPORT=fake is only allowed in local/test environments")
 
 WORKER_HEARTBEAT_STALE_SECONDS = 15
 TRUSTED_PROXY_COUNT = int(os.environ.get("TRUSTED_PROXY_COUNT", "0"))
