@@ -40,3 +40,14 @@ Blockers / limits:
 
 ## 2026-11-15 — Initial review (no application code)
 - Repository was empty apart from the handoff pack; inspection, matrix, ADRs and plan written and approved.
+
+## 2026-11-15 — Session paused (usage limit) — state and remaining work
+Done since the last entry: console API (Task 1.8, 256+ tests), login lockout, dev simulator API and synthetic demo seed (Task 1.9 backend). Branch `build/phase-0-2` is pushed.
+
+**Open security findings (from the Security Guidance commit review of f58a19b, both MEDIUM, not yet fixed):**
+1. Login lockout check-then-insert race lets parallel attempts exceed the 5-failure cap → record the attempt before `authenticate()` and check the count after inserting.
+2. The username-only lockout key lets anyone lock out a known user → hard-lock on (IP, user) only; use delays or an IP-only limit for spraying.
+
+**Remaining Phase 1 work:** Task 1.9 console UI (login, live view, ticket panel, simulator page, Playwright e2e for RTL/360 px/stale banner/simulated full flow); Task 1.10 worker-process restart test and Gate 2 evidence table.
+**Phase 2 (not started):** incidents and holds, assisted handover, relocation, unclaimed carryover and key release, MFA and role grants, configuration/retention/dead-letter view/opening check, reports and exports, full role-based console UI, runbook drafts, `make demo` script.
+**Not done yet:** final whole-branch review; Impeccable detector run on the UI (no UI screens exist yet).
