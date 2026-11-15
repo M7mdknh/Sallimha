@@ -1025,6 +1025,13 @@ export interface components {
         };
         DeadLetter: {
             id: number;
+            /**
+             * @description DELIVERY_UNKNOWN: the recipient may already have it
+             *
+             *     * `DEAD` - DEAD
+             *     * `DELIVERY_UNKNOWN` - DELIVERY_UNKNOWN
+             */
+            status: components["schemas"]["OutboxAttentionStatusEnum"];
             kind: string;
             recipient: string;
             ticket: string | null;
@@ -1236,6 +1243,12 @@ export interface components {
             carryover_unresolved: number;
             dead_letters: number;
         };
+        /**
+         * @description * `DEAD` - DEAD
+         *     * `DELIVERY_UNKNOWN` - DELIVERY_UNKNOWN
+         * @enum {string}
+         */
+        OutboxAttentionStatusEnum: "DEAD" | "DELIVERY_UNKNOWN";
         ReasonRequestRequest: {
             reason: string;
         };

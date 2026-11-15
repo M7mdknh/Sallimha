@@ -14,6 +14,7 @@ TEAM_STATUSES = ["available", "busy", "unavailable"]
 INCIDENT_STATUSES = ["OPEN", "IN_REVIEW", "RESOLVED"]
 CARRYOVER_STATUSES = ["PROPOSED", "APPROVED", "RELEASED"]
 WHATSAPP_STATUSES = ["simulated", "configured", "not_configured"]
+OUTBOX_ATTENTION_STATUSES = ["DEAD", "DELIVERY_UNKNOWN"]
 
 
 # --- shared ---------------------------------------------------------------------------------------
@@ -470,6 +471,8 @@ class OpeningCheck(serializers.Serializer):
 
 class DeadLetter(serializers.Serializer):
     id = serializers.IntegerField()
+    status = serializers.ChoiceField(choices=OUTBOX_ATTENTION_STATUSES,
+                                     help_text="DELIVERY_UNKNOWN: the recipient may already have it")
     kind = serializers.CharField()
     recipient = serializers.CharField()
     ticket = serializers.CharField(allow_null=True)

@@ -271,7 +271,7 @@ class DeadLetters(Command):
         actor = actor_of(request)
         require(actor, Role.ADMIN)
         rows = opening.dead_letters(actor.org).select_related("staff", "ticket")
-        return out(s.DeadLetter, [{"id": r.id, "kind": r.kind,
+        return out(s.DeadLetter, [{"id": r.id, "status": r.status, "kind": r.kind,
                                    "recipient": r.staff.full_name if r.staff_id else "guest", "ticket": _t(r.ticket),
                                    "failure_class": r.failure_class, "last_error": r.last_error,
                                    "created_at": r.created_at} for r in rows])

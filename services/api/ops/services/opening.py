@@ -38,10 +38,11 @@ def opening_check(event) -> dict:
 
 
 def dead_letters(org):
-    """Dead letters belonging to one organization only (staff recipient or ticket in its events)."""
+    """Messages needing an operator, for one organization only (staff recipient or ticket in its events):
+    DEAD (never delivered) and DELIVERY_UNKNOWN (the provider may have it; never resent automatically)."""
     from django.db.models import Q
 
-    return (MessageOutbox.objects.filter(status=MessageOutbox.Status.DEAD)
+    return (MessageOutbox.objects.filter(status__in=[MessageOutbox.Status.DEAD, MessageOutbox.Status.DELIVERY_UNKNOWN])
             .filter(Q(staff__org=org) | Q(ticket__event__org=org)).distinct().order_by("id"))
 
 
@@ -53,5 +54,6 @@ def replay_dead_letter(actor, row) -> bool:
     with transaction.atomic():
         replayed = outbox.replay(row.id)
         audit("outbox.replay", actor_id=actor.id, actor_label=actor_label(actor), channel="console",
-              entity_type="outbox", entity_id=row.id, summary={"replayed": replayed, "kind": row.kind})
+              entity_type="outbox", entity_id=row.id,
+              summary={"replayed": replayed, "kind": row.kind, "from_status": row.status})
     return replayed

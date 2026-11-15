@@ -193,3 +193,32 @@ def test_ticket_finder_by_number_or_plate_is_event_scoped(ops):
 
     foreign = make_event(make_venue(make_org("Other Org")))
     assert sup.get(f"/api/events/{foreign.id}/tickets", {"q": "1"}).status_code == 404
+
+
+def test_unknown_outcome_sends_are_visible_and_resent_only_on_explicit_replay(ops):
+    """docs/03: ambiguous sends are never resent automatically; the operator decides, once, audited."""
+    from django.utils import timezone
+
+    from core.models import AuditEvent
+    from messaging import outbox
+    from messaging.models import MessageOutbox, SimulatedMessage, SimulatorControl
+
+    adm = login_as(ops.admin)
+    SimulatorControl.set_next("unknown")
+    row = outbox.enqueue("valet.available_ok", staff=ops.valets[0], template="valet.available_ok", params={},
+                        dedupe_key="api-unknown")
+    outbox.send_due(timezone.now())
+    assert MessageOutbox.objects.get(pk=row.pk).status == MessageOutbox.Status.DELIVERY_UNKNOWN
+    sent = SimulatedMessage.objects.filter(direction="out", outbox_id=row.pk)
+    assert sent.count() == 1  # the simulated provider received it; only the response was lost
+    outbox.send_due(timezone.now())
+    assert sent.count() == 1  # the worker never resends it on its own
+
+    [listed] = adm.get("/api/ops/dead-letters").json()
+    assert listed["id"] == row.id and listed["status"] == "DELIVERY_UNKNOWN"
+    assert post(adm, f"/api/ops/dead-letters/{row.id}/replay").json() == {"ok": True}
+    # Re-queued: it no longer awaits an operator, so a second, separate replay finds nothing to do.
+    assert post(adm, f"/api/ops/dead-letters/{row.id}/replay").status_code == 404
+    outbox.send_due(timezone.now())
+    assert sent.count() == 2  # resent once, by explicit operator decision (a duplicate is the known cost)
+    assert AuditEvent.objects.filter(action="outbox.replay", entity_id=row.id).exists()

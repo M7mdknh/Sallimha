@@ -2896,6 +2896,14 @@ components:
       properties:
         id:
           type: integer
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OutboxAttentionStatusEnum'
+          description: |-
+            DELIVERY_UNKNOWN: the recipient may already have it
+
+            * `DEAD` - DEAD
+            * `DELIVERY_UNKNOWN` - DELIVERY_UNKNOWN
         kind:
           type: string
         recipient:
@@ -2917,6 +2925,7 @@ components:
       - kind
       - last_error
       - recipient
+      - status
       - ticket
     DirectionEnum:
       enum:
@@ -3413,6 +3422,14 @@ components:
       - whatsapp
       - worker
       - zones
+    OutboxAttentionStatusEnum:
+      enum:
+      - DEAD
+      - DELIVERY_UNKNOWN
+      type: string
+      description: |-
+        * `DEAD` - DEAD
+        * `DELIVERY_UNKNOWN` - DELIVERY_UNKNOWN
     ReasonRequestRequest:
       type: object
       properties:

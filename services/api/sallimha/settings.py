@@ -154,6 +154,7 @@ SPECTACULAR_SETTINGS = {
         "RoleEnum": "console.serializers.ROLES",
         "CarryoverStatusEnum": "console.serializers.CARRYOVER_STATUSES",
         "WhatsAppStatusEnum": "console.serializers.WHATSAPP_STATUSES",
+        "OutboxAttentionStatusEnum": "console.serializers.OUTBOX_ATTENTION_STATUSES",
     },
 }
 

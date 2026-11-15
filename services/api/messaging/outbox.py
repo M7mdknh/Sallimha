@@ -194,11 +194,13 @@ def send_due(now=None, limit: int = 20) -> int:
 
 
 def replay(outbox_id: int, now=None) -> bool:
-    """Operator replay of a dead letter. Idempotent: only a DEAD row is re-queued."""
+    """Operator replay of a DEAD or DELIVERY_UNKNOWN row (the latter may duplicate a message the provider
+    already accepted, which is why only an operator may choose it). Idempotent: a re-queued row is not
+    re-queued again."""
     now = now or timezone.now()
     with transaction.atomic():
         row = MessageOutbox.objects.select_for_update(no_key=True).get(pk=outbox_id)
-        if row.status != MessageOutbox.Status.DEAD:
+        if row.status not in (MessageOutbox.Status.DEAD, MessageOutbox.Status.DELIVERY_UNKNOWN):
             return False
         row.status = MessageOutbox.Status.PENDING
         row.next_attempt_at = now
