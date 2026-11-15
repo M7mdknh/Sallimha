@@ -1,0 +1,77 @@
+{
+  "method": "WCAG sRGB relative luminance; computed for solid colors only",
+  "pairs": [
+    {
+      "foreground": "surface",
+      "background": "purple",
+      "ratio": 7.58,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "surface",
+      "background": "plum",
+      "ratio": 16.32,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "plum",
+      "background": "gold",
+      "ratio": 6.72,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "ink",
+      "background": "paper",
+      "ratio": 14.46,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "muted",
+      "background": "paper",
+      "ratio": 5.71,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "muted",
+      "background": "surface",
+      "ratio": 6.26,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "success",
+      "background": "surface",
+      "ratio": 6.14,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "warning",
+      "background": "surface",
+      "ratio": 5.87,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "danger",
+      "background": "surface",
+      "ratio": 6.51,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "info",
+      "background": "surface",
+      "ratio": 6.48,
+      "normal_text_AA": true
+    },
+    {
+      "foreground": "gold",
+      "background": "surface",
+      "ratio": 2.43,
+      "normal_text_AA": false
+    },
+    {
+      "foreground": "control-border",
+      "background": "surface",
+      "ratio": 4.09,
+      "normal_text_AA": false
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+/* Sallimha v1.0 — proposed tokens. Copy fonts with their license. */
+@font-face {font-family:'Noto Sans Arabic';src:url('./fonts/NotoSansArabic-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap;}
+@font-face {font-family:'Noto Sans Arabic';src:url('./fonts/NotoSansArabic-Bold.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap;}
+@font-face {font-family:'Noto Sans';src:url('./fonts/NotoSans-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap;}
+@font-face {font-family:'Noto Sans';src:url('./fonts/NotoSans-Bold.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap;}
+:root {
+  --sl-plum: #251B35;
+  --sl-purple: #62429B;
+  --sl-gold: #C6A15B;
+  --sl-paper: #F7F4EE;
+  --sl-surface: #FFFFFF;
+  --sl-ink: #25202D;
+  --sl-muted: #655D70;
+  --sl-border: #DCD5E3;
+  --sl-control-border: #857990;
+  --sl-success: #216E53;
+  --sl-warning: #8A5B00;
+  --sl-danger: #B42332;
+  --sl-info: #245EA8;
+  --sl-radius-input:8px; --sl-radius-card:12px; --sl-radius-dialog:16px;
+  --sl-font-ar:"Noto Sans Arabic",sans-serif; --sl-font-en:"Noto Sans",sans-serif;
+}
+body {background:var(--sl-paper);color:var(--sl-ink);font-family:var(--sl-font-en);font-size:16px;line-height:1.5;}
+[lang="ar"] {font-family:var(--sl-font-ar);line-height:1.65;letter-spacing:normal;}
+:focus-visible {outline:2px solid var(--sl-purple);outline-offset:3px;}
+.sl-primary {background:var(--sl-purple);color:var(--sl-surface);min-height:44px;border-radius:var(--sl-radius-input);}
+.sl-identifier {direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums;}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
