@@ -38,3 +38,6 @@ media/
 .DS_Store
 .idea/
 .vscode/
+
+# Generated brand copy for the web console
+apps/web/public/brand/

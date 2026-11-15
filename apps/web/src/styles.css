@@ -1,0 +1,19 @@
+/* Console layout on top of /brand/tokens.css (approved v1.0.1). Semantic tokens only. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body { min-height: 100vh; }
+button, input, select, textarea { font: inherit; }
+img { max-width: 100%; height: auto; }
+
+.app-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 16px; background: var(--sl-surface); border-block-end: 1px solid var(--sl-border);
+}
+.app-header img { display: block; height: 40px; width: auto; }
+.lang-switch {
+  min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: var(--sl-radius-input);
+  background: transparent; color: var(--sl-plum); border: 1px solid var(--sl-control-border); cursor: pointer;
+}
+.page { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+.page h1 { font-size: 28px; line-height: 1.4; margin: 0 0 8px; color: var(--sl-plum); font-weight: 700; }
+.muted { color: var(--sl-muted); font-size: 14px; line-height: 1.6; }
