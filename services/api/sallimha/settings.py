@@ -30,9 +30,9 @@ def _secret(name: str, dev_default: str) -> str:
 SECRET_KEY = _secret("DJANGO_SECRET_KEY", "dev-only-insecure-secret-key-not-for-staging-or-production")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1" if IS_DEV else "0") == "1"
 ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
-CSRF_TRUSTED_ORIGINS = [
-    o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:5180,http://127.0.0.1:5180").split(",") if o
-]
+_DEFAULT_ORIGINS = "http://localhost:5180,http://127.0.0.1:5180"
+_ORIGINS = os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", _DEFAULT_ORIGINS)
+CSRF_TRUSTED_ORIGINS = [o for o in _ORIGINS.split(",") if o]
 
 # Fernet key (urlsafe base64, 32 bytes) for field encryption; HMAC key for keyed hashes.
 FIELD_ENCRYPTION_KEY = _secret("FIELD_ENCRYPTION_KEY", "ZGV2LW9ubHktZmllbGQta2V5LTMyLWJ5dGVzLWxvbmc=")
