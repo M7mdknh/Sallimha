@@ -155,7 +155,12 @@ if WHATSAPP_TRANSPORT == "fake" and not IS_DEV:
     raise ImproperlyConfigured("WHATSAPP_TRANSPORT=fake is only allowed in local/test environments")
 
 WORKER_HEARTBEAT_STALE_SECONDS = 15
-TRUSTED_PROXY_COUNT = int(os.environ.get("TRUSTED_PROXY_COUNT", "0"))
+# Number of trusted reverse proxies appending X-Forwarded-For. Must be explicit outside local/test: a wrong
+# value makes every client look like the proxy and breaks login throttling (Security Guidance, HIGH).
+_PROXIES = os.environ.get("TRUSTED_PROXY_COUNT")
+if _PROXIES is None and not IS_DEV:
+    raise ImproperlyConfigured("TRUSTED_PROXY_COUNT must be set explicitly outside local/test (0 = no proxy)")
+TRUSTED_PROXY_COUNT = int(_PROXIES or "0")
 
 LOGGING = {
     "version": 1,

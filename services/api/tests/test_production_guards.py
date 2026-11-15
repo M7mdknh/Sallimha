@@ -12,7 +12,7 @@ def _import_settings(**env):
     base = {k: v for k, v in os.environ.items() if not k.startswith(("SIMULATOR", "WHATSAPP", "SALLIMHA"))}
     base.update({"DJANGO_SECRET_KEY": "x" * 50, "FIELD_ENCRYPTION_KEY": "ZGV2LW9ubHktZmllbGQta2V5LTMyLWJ5dGVzLWxvbmc=",
                  "HASH_KEY": "h", "WHATSAPP_APP_SECRET": "s",
-                 "DATABASE_URL": "postgres://u:p@127.0.0.1:5432/x"}, **env)
+                 "DATABASE_URL": "postgres://u:p@127.0.0.1:5432/x", "TRUSTED_PROXY_COUNT": "1"}, **env)
     return subprocess.run([sys.executable, "-c", "import sallimha.settings as s; print(s.SIMULATOR_ENABLED, "
                            "s.WHATSAPP_TRANSPORT)"], env=base, capture_output=True, text=True, cwd=os.getcwd(),
                           check=False)

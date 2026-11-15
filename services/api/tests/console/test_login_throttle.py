@@ -115,3 +115,37 @@ def test_concurrent_attempts_cannot_exceed_cap():
         t.join()
     assert statuses.count(400) == auth_flow.MAX_FAILURES
     assert statuses.count(429) == n - auth_flow.MAX_FAILURES
+
+
+def test_ipv6_addresses_are_bucketed_by_64(account):
+    for i in range(1, 6):
+        _login("sup1", "wrong", ip=f"2001:db8:1:2::{i}")
+    assert _login("sup1", PASSWORD, ip="2001:db8:1:2::99").status_code == 429
+    assert _login("sup1", PASSWORD, ip="2001:db8:1:3::1").status_code == 200
+
+
+def test_account_under_distributed_attack_tightens_but_never_locks_owner(account):
+    for i in range(auth_flow.ACCOUNT_ALERT_THRESHOLD + 1):
+        _login("sup1", "wrong", ip=f"198.18.0.{i + 1}")
+    assert AuditEvent.objects.filter(action="auth.account_under_attack").exists()
+    attacker_ip = "198.18.1.200"
+    for _ in range(auth_flow.UNDER_ATTACK_PAIR_MAX):
+        assert _login("sup1", "wrong", ip=attacker_ip).status_code == 400
+    assert _login("sup1", "wrong", ip=attacker_ip).status_code == 429
+    assert _login("sup1", PASSWORD, ip="198.18.2.7").status_code == 200
+
+
+def test_non_dev_requires_explicit_proxy_setting():
+    import os
+    import subprocess
+    import sys
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("SIMULATOR", "WHATSAPP", "SALLIMHA", "TRUSTED"))}
+    env.update({"SALLIMHA_ENV": "production", "DJANGO_SECRET_KEY": "x" * 50, "HASH_KEY": "h",
+                "FIELD_ENCRYPTION_KEY": "ZGV2LW9ubHktZmllbGQta2V5LTMyLWJ5dGVzLWxvbmc=", "WHATSAPP_APP_SECRET": "s",
+                "DATABASE_URL": "postgres://u:p@127.0.0.1:5432/x"})
+    missing = subprocess.run([sys.executable, "-c", "import sallimha.settings"], env=env, capture_output=True,
+                             text=True, check=False)
+    assert missing.returncode != 0 and "TRUSTED_PROXY_COUNT" in missing.stderr
+    ok = subprocess.run([sys.executable, "-c", "import sallimha.settings"], env={**env, "TRUSTED_PROXY_COUNT": "1"},
+                        capture_output=True, text=True, check=False)
+    assert ok.returncode == 0, ok.stderr

@@ -6,6 +6,7 @@ atomic upsert in PostgreSQL, so N parallel requests cannot all pass a check-then
 blocks its owner. Responses are generic: unknown user and wrong password look identical.
 """
 
+import ipaddress
 from datetime import timedelta
 
 from django.conf import settings
@@ -16,8 +17,10 @@ from rest_framework.response import Response
 from core.audit import audit
 from core.crypto import keyed_hash
 
-MAX_FAILURES = 5          # per (IP, username) within WINDOW
-IP_MAX_FAILURES = 30      # per IP across usernames within WINDOW (password spraying)
+MAX_FAILURES = 5              # per (IP, username) within WINDOW
+UNDER_ATTACK_PAIR_MAX = 2     # per (IP, username) while the account sees distributed failures
+ACCOUNT_ALERT_THRESHOLD = 10  # failures for one username from other networks within WINDOW
+IP_MAX_FAILURES = 30          # per IP (IPv6 /64) across usernames within WINDOW (password spraying)
 WINDOW = timedelta(minutes=15)
 
 _RESERVE = """
@@ -39,12 +42,27 @@ def client_ip(request) -> str:
     return request.META.get("REMOTE_ADDR", "")
 
 
+def ip_bucket(ip: str) -> str:
+    """IPv6 clients are grouped by /64 so rotating addresses inside one allocation does not evade limits."""
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:
+        return ip
+    if address.version == 6:
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return str(address)
+
+
 def _pair_key(username: str, ip: str) -> str:
     return keyed_hash(f"ip:{ip}|user:{username.lower()}", "login")
 
 
 def _ip_key(ip: str) -> str:
     return keyed_hash(f"ip:{ip}", "login")
+
+
+def _user_key(username: str) -> str:
+    return keyed_hash(f"user:{username.lower()}", "login")
 
 
 def _reserve(key: str, now) -> int:
@@ -67,13 +85,20 @@ def login_step(request, authenticate, login):
     now = timezone.now()
     username = str(request.data.get("username", ""))[:150]
     password = str(request.data.get("password", ""))
-    ip = client_ip(request)
-    pair, by_ip = _pair_key(username, ip), _ip_key(ip)
+    ip = ip_bucket(client_ip(request))
+    pair, by_ip, by_user = _pair_key(username, ip), _ip_key(ip), _user_key(username)
     # Reserve before checking the password: concurrent attempts each consume a slot atomically.
-    pair_count, ip_count = _reserve(pair, now), _reserve(by_ip, now)
-    if pair_count > MAX_FAILURES or ip_count > IP_MAX_FAILURES:
+    pair_count, ip_count, user_count = _reserve(pair, now), _reserve(by_ip, now), _reserve(by_user, now)
+    # Account-level control without a lockout: failures for this username from other networks tighten the
+    # per-network limit and are audited, but the owner can always try from their own network.
+    under_attack = user_count - pair_count >= ACCOUNT_ALERT_THRESHOLD
+    if under_attack and _reserve(keyed_hash(f"alerted:{username.lower()}", "login"), now) == 1:
+        audit("auth.account_under_attack", actor_id=None, actor_label="anonymous", channel="console",
+              summary={"key": by_user[:12]})
+    pair_limit = UNDER_ATTACK_PAIR_MAX if under_attack else MAX_FAILURES
+    if pair_count > pair_limit or ip_count > IP_MAX_FAILURES:
         audit("auth.locked", actor_id=None, actor_label="anonymous", channel="console",
-              summary={"scope": "pair" if pair_count > MAX_FAILURES else "ip", "key": pair[:12]})
+              summary={"scope": "pair" if pair_count > pair_limit else "ip", "key": pair[:12]})
         return Response({"code": "too_many_attempts"}, status=429)
     user = authenticate(request, username=username, password=password)
     staff = getattr(user, "staff", None) if user else None
@@ -81,6 +106,7 @@ def login_step(request, authenticate, login):
         return Response({"code": "invalid_credentials"}, status=400)
     _release(pair, reset=True)
     _release(by_ip, reset=False)
+    _release(by_user, reset=False)
     login(request, user)
     request.session["mfa_ok"] = True
     audit("auth.login", actor_id=staff.id, actor_label=f"{staff.role}:{staff.id}", channel="console")
