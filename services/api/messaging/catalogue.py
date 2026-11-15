@@ -200,6 +200,18 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ar": "لم أفهم. اختر من الأزرار، أو أرسل «مساعدة».",
         "en": "I did not understand. Use the buttons, or send “Help”.",
     },
+    "valet.photo_no_incident": {
+        "ar": "لا توجد بلاغات مفتوحة على مهامك؛ لم تُحفظ الصورة. اطلب من المشرف فتح بلاغ أولاً.",
+        "en": "There is no open incident on your tasks; the photo was not saved. Ask the supervisor to open one first.",
+    },
+    "valet.photo_choose_incident": {
+        "ar": "اختر البلاغ الذي تخصه هذه الصورة:",
+        "en": "Choose the incident this photo belongs to:",
+    },
+    "valet.photo_attached": {
+        "ar": "حُفظت الصورة في البلاغ {incident}.",
+        "en": "Photo saved to incident {incident}.",
+    },
     "valet.cancelled": {
         "ar": "أُلغيت تذكرة {ticket} وأُنهيت مهمة الاستلام.",
         "en": "Ticket {ticket} was cancelled and the intake task closed.",
@@ -224,6 +236,7 @@ BUTTONS: dict[str, dict[str, str]] = {
     "delivered": {"ar": "تم التسليم", "en": "Delivered"},
     "ack_custody": {"ar": "استلمت العهدة", "en": "Custody received"},
     "select_ticket": {"ar": "تذكرة {ticket}", "en": "Ticket {ticket}"},
+    "select_incident": {"ar": "بلاغ {incident}", "en": "Incident {incident}"},
 }
 
 REQUEST_STATUS = {

@@ -44,8 +44,10 @@ def mark_used(token: ActionToken, now=None) -> None:
     token.save(update_fields=["used_at"])
 
 
-def revoke(*, ticket=None, task=None, binding=None, purposes=None, now=None) -> int:
+def revoke(*, ticket=None, task=None, binding=None, staff=None, purposes=None, now=None) -> int:
     qs = ActionToken.objects.filter(revoked_at__isnull=True, used_at__isnull=True)
+    if staff is not None:
+        qs = qs.filter(staff=staff)
     if ticket is not None:
         qs = qs.filter(ticket=ticket)
     if task is not None:

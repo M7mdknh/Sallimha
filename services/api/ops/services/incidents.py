@@ -72,3 +72,19 @@ def brief(ticket) -> list[dict]:
 
 def allowed_actions(ticket) -> list[str]:
     return ["open_incident"]
+
+
+def attach_photo(staff, incident_id: int, data: bytes, content_type: str, provider_media_id: str = "") -> Incident:
+    """Evidence photo from a valet for an incident they explicitly selected (AT-36)."""
+    from ops.models import Media
+    from ops.services.media import store_private
+
+    incident = Incident.objects.select_related("ticket").get(pk=incident_id)
+    if incident.status == Incident.Status.RESOLVED or incident.ticket is None:
+        raise DomainError("invalid_state")
+    key, digest = store_private(data, content_type, f"incident/{incident.event_id}/{incident.id}")
+    Media.objects.create(ticket=incident.ticket, incident_id=incident.id, kind=Media.Kind.INCIDENT, storage_key=key,
+                         sha256=digest, content_type=content_type, size=len(data), uploaded_by=staff,
+                         received_at=timezone.now(), provider_media_id=provider_media_id[:128])
+    _audit("incident.photo", staff, incident)
+    return incident

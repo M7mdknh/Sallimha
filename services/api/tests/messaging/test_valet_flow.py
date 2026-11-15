@@ -123,3 +123,23 @@ def test_offer_decline_via_whatsapp(world, valet):
     tap(valet.phone_e164, button(last(valet, kind="valet.offer"), "decline"))
     assert RetrievalRequest.objects.get(pk=req.pk).state == "QUEUED"
     assert last(valet).template == "valet.offer_released"
+
+
+def test_photo_outside_intake_requires_explicit_incident(world, valet):
+    """AT-36: never attached to an arbitrary 'latest incident'."""
+    from ops.models import Media
+    from ops.services import incidents
+    from tests.ops.intake_helpers import park
+    ticket = park(valet, world.event)
+    photo(valet.phone_e164)
+    assert last(valet).template == "valet.photo_no_incident"
+    first = incidents.open_incident(world.supervisor, world.event, "damage", "Scratch", ticket=ticket)
+    second = incidents.open_incident(world.supervisor, world.event, "key_issue", "Key tag torn", ticket=ticket)
+    photo(valet.phone_e164)
+    choice = last(valet)
+    assert choice.template == "valet.photo_choose_incident" and len(choice.buttons) == 2
+    assert not Media.objects.filter(kind="INCIDENT").exists()
+    tap(valet.phone_e164, next(b[0] for b in choice.buttons if b[2]["incident"] == f"#{second.id}"))
+    media = Media.objects.get(kind="INCIDENT")
+    assert media.incident_id == second.id and media.ticket == ticket
+    assert first.id != media.incident_id

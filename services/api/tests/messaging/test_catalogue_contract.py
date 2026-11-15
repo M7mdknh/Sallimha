@@ -22,7 +22,7 @@ def test_every_message_has_both_languages_with_same_placeholders(key):
 @pytest.mark.parametrize("key", sorted(BUTTONS))
 def test_button_titles_fit_whatsapp_limit(key):
     for lang in ("ar", "en"):
-        assert len(button_title(key, lang, {"ticket": "#1024"})) <= 20
+        assert len(button_title(key, lang, {"ticket": "#1024", "incident": "#1024"})) <= 20
 
 
 def _payload(mode, buttons):

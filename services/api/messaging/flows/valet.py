@@ -179,10 +179,30 @@ def _availability(staff, available: bool, reply):
 
 # --- images -----------------------------------------------------------------------------------
 
+def _incident_choices(staff):
+    """Open incidents on tickets this valet holds or handled in their current event (never 'the latest')."""
+    from django.db.models import Q
+
+    from ops.models import Incident
+
+    shift = shifts.open_shift_for(staff)
+    if shift is None:
+        return []
+    return list(Incident.objects.filter(event=shift.event, status__in=["OPEN", "IN_REVIEW"], ticket__isnull=False)
+                .filter(Q(ticket__registered_by=staff) | Q(ticket__parked_by=staff) | Q(ticket__tasks__assignee=staff))
+                .distinct().order_by("-id")[:3])
+
+
 def _image(staff, conv, inb, reply):
     ticket = conv.ticket
     if conv.step != "awaiting_photos" or ticket is None:
-        return reply("valet.unknown_input")
+        choices = _incident_choices(staff)
+        if not choices:
+            return reply("valet.photo_no_incident")
+        buttons = [(tokens.issue("incident_photo", staff=staff, ticket=i.ticket,
+                                 data={"incident_id": i.id, "media_id": inb.media_id, "mime": inb.media_mime or ""}),
+                    "select_incident", {"incident": f"#{i.id}"}) for i in choices]
+        return reply("valet.photo_choose_incident", buttons=buttons)
     from messaging.transport import get_transport
 
     data, content_type = get_transport().fetch_media(inb.media_id)
@@ -292,7 +312,19 @@ def _ack_intake_custody(staff, conv, token, reply):
         reply(prompts[step], ticket=ticket)
 
 
+def _incident_photo(staff, conv, token, reply):
+    from messaging.transport import get_transport
+    from ops.services.incidents import attach_photo
+
+    data, content_type = get_transport().fetch_media(token.data["media_id"])
+    incident = attach_photo(staff, token.data["incident_id"], data, token.data.get("mime") or content_type,
+                            provider_media_id=token.data["media_id"])
+    tokens.revoke(staff=staff, purposes=["incident_photo"])
+    reply("valet.photo_attached", incident=f"#{incident.id}")
+
+
 BUTTON_HANDLERS = {
+    "incident_photo": _incident_photo,
     "intake_phone_ok": _phone_ok,
     "intake_phone_edit": _phone_edit,
     "intake_receipt_yes": _receipt(True),
