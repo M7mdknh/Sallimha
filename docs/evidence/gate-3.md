@@ -1,6 +1,13 @@
 # Gate 3 — operational completeness evidence
 
-- Build: _filled in after the final run_ (branch `build/phase-0-2`).
+- Build: `1ab5c37` (last code change, branch `build/phase-0-2`). CI for code up to `51091ac`: run
+  [43762126794](https://github.com/M7mdknh/Sallimha/actions/runs/43762126794) — backend, web, e2e **success**; the
+  run for the commit that adds this file is reported in the final hand-over.
+- Commands: `cd services/api && uv run pytest` → **359 passed**; `cd tests/e2e && PW_CHANNEL=chrome npx playwright test`
+  → **27 passed, 5 skipped** (desktop 1280 px + mobile 360 px; the 5 skips are desktop-only flows not repeated on
+  mobile: full journey, exception flow, manager unclaimed release, design-QA width matrix, event create/close).
+- Security Guidance commit review ran on every code commit of Phase 2 after `bc323d6`; findings on earlier
+  commits were fixed test-first (see PROGRESS.md); the last nine code commits reported no security issues.
 - Environment: as Gate 2 (Django 6.1.3, DRF 3.18.3, Python 3.14, PostgreSQL 18.7 in Docker, Node 24, Chrome 152 as the
   local Playwright channel; CI uses the PostgreSQL 18 service and Playwright Chromium).
 - Labelling: WhatsApp results use the local fake transport and are **PASS (SIMULATED)**. No real WhatsApp evidence
