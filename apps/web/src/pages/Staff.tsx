@@ -60,11 +60,13 @@ function CreateStaff({ me, disabled, onDone }: { me: Me; disabled: boolean; onDo
   );
 }
 
-/** The provisioning URI is a secret: kept in component state only, shown once, never logged or stored. */
+/** The provisioning URI is a secret: kept in component state only, shown once, never logged or stored.
+ *  Issuing replaces the person's current authenticator and signs them out, so it is confirmed first. */
 function MfaIssue({ person, disabled }: { person: Schemas["StaffRow"]; disabled: boolean }) {
   const { t } = useT();
   const [uri, setUri] = useState("");
   const [copied, setCopied] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const { run, busy, problem } = useCommand();
   if (uri) {
     return (
@@ -82,47 +84,66 @@ function MfaIssue({ person, disabled }: { person: Schemas["StaffRow"]; disabled:
   }
   return (
     <>
-      <button type="button" className="btn btn-quiet" data-mutation disabled={disabled || busy}
-        onClick={() => run(() => api.issueMfa(person.id), (r) => setUri(r.otpauth_uri))}>
-        <Icon name="shield" /> {t("issueMfa")}
-      </button>
+      {confirming ? (
+        <span className="confirm-inline span-all" role="group" aria-label={t("issueMfa")}>
+          <span className="muted">{t("issueMfaConfirm")}</span>
+          <button type="button" className="btn btn-primary" data-mutation disabled={disabled || busy}
+            onClick={() => run(() => api.issueMfa(person.id), (r) => { setConfirming(false); setUri(r.otpauth_uri); })}>
+            {t("confirm")}
+          </button>
+          <button type="button" className="btn btn-quiet" onClick={() => setConfirming(false)}>{t("cancel")}</button>
+        </span>
+      ) : (
+        <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
+          <Icon name="shield" /> {t("issueMfa")}
+        </button>
+      )}
       {problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
     </>
   );
 }
 
-function StaffRowActions({ me, person, disabled, onDone }: { me: Me; person: Schemas["StaffRow"]; disabled: boolean;
+/** Choosing a role only stages it; the grant (which also signs the person out) needs a confirm. */
+function RoleChange({ me, person, disabled, onDone }: { me: Me; person: Schemas["StaffRow"]; disabled: boolean;
   onDone: () => void }) {
+  const { t } = useT();
+  const [role, setRole] = useState<Role>(person.role);
+  const { run, busy, problem } = useCommand();
+  const staged = role !== person.role;
+  return (
+    <>
+      <label className="field inline-field">
+        <span className="visually-hidden">{t("changeRole")}</span>
+        <select value={role} disabled={disabled || busy} aria-label={`${t("changeRole")}: ${person.full_name}`}
+          onChange={(e) => setRole(e.target.value as Role)}>
+          {grantable(me).map((r) => <option key={r} value={r}>{t(`role_${r}` as StringKey)}</option>)}
+        </select>
+      </label>
+      {staged ? (
+        <span className="confirm-inline">
+          <button type="button" className="btn btn-primary" data-mutation disabled={disabled || busy}
+            onClick={() => run((key) => api.staffAction(person.id, "role", { role }, key), onDone)}>
+            {t("changeRole")}
+          </button>
+          <button type="button" className="btn btn-quiet" onClick={() => setRole(person.role)}>{t("cancel")}</button>
+        </span>
+      ) : null}
+      {problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
+    </>
+  );
+}
+
+function Deactivate({ person, disabled, onDone }: { person: Schemas["StaffRow"]; disabled: boolean; onDone: () => void }) {
   const { t } = useT();
   const [reason, setReason] = useState("");
   const [open, setOpen] = useState(false);
   const { run, busy, problem, setProblem } = useCommand();
-  const canGrant = grantable(me);
-  const manageable = ROLE_RANK[person.role] <= ROLE_RANK[MAX_GRANT[me.role] ?? "VALET"] && person.id !== me.id;
-  if (!manageable) return null;
   return (
-    <div className="row-actions">
-      {person.enabled ? (
-        <>
-          <label className="field inline-field">
-            <span className="visually-hidden">{t("changeRole")}</span>
-            <select value={person.role} disabled={disabled || busy} aria-label={`${t("changeRole")}: ${person.full_name}`}
-              onChange={(e) => run((key) => api.staffAction(person.id, "role", { role: e.target.value }, key), onDone)}>
-              {canGrant.map((r) => <option key={r} value={r}>{t(`role_${r}` as StringKey)}</option>)}
-            </select>
-          </label>
-          {atLeast(me, "ADMIN") && ROLE_RANK[person.role] >= ROLE_RANK.MANAGER ? <MfaIssue person={person} disabled={disabled} /> : null}
-          <button type="button" className="btn btn-quiet" aria-expanded={open} onClick={() => setOpen(!open)}>
-            {t("deactivate")}
-          </button>
-        </>
-      ) : (
-        <button type="button" className="btn btn-secondary" data-mutation disabled={disabled || busy}
-          onClick={() => run((key) => api.staffAction(person.id, "reactivate", {}, key), onDone)}>
-          {t("reactivate")}
-        </button>
-      )}
-      {open && person.enabled ? (
+    <>
+      <button type="button" className="btn btn-quiet" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {t("deactivate")}
+      </button>
+      {open ? (
         <form className="action-form span-all" noValidate onSubmit={(e) => {
           e.preventDefault();
           if (!reason.trim()) return setProblem(t("reasonRequired"));
@@ -132,10 +153,43 @@ function StaffRowActions({ me, person, disabled, onDone }: { me: Me; person: Sch
         }}>
           <label className="field"><span>{t("reason")}</span>
             <textarea rows={2} maxLength={200} value={reason} onChange={(e) => setReason(e.target.value)} /></label>
+          {problem ? <p className="form-error" role="alert">{problem}</p> : null}
           <button type="submit" className="btn btn-danger" data-mutation disabled={disabled || busy}>{t("deactivate")}</button>
         </form>
       ) : null}
+    </>
+  );
+}
+
+function Reactivate({ person, disabled, onDone }: { person: Schemas["StaffRow"]; disabled: boolean; onDone: () => void }) {
+  const { t } = useT();
+  const { run, busy, problem } = useCommand();
+  return (
+    <>
+      <button type="button" className="btn btn-secondary" data-mutation disabled={disabled || busy}
+        onClick={() => run((key) => api.staffAction(person.id, "reactivate", {}, key), onDone)}>
+        {t("reactivate")}
+      </button>
       {problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
+    </>
+  );
+}
+
+function StaffRowActions({ me, person, disabled, onDone }: { me: Me; person: Schemas["StaffRow"]; disabled: boolean;
+  onDone: () => void }) {
+  const manageable = ROLE_RANK[person.role] <= ROLE_RANK[MAX_GRANT[me.role] ?? "VALET"] && person.id !== me.id;
+  if (!manageable) return null;
+  return (
+    <div className="row-actions">
+      {person.enabled ? (
+        <>
+          <RoleChange key={person.role} me={me} person={person} disabled={disabled} onDone={onDone} />
+          {atLeast(me, "ADMIN") && ROLE_RANK[person.role] >= ROLE_RANK.MANAGER ? <MfaIssue person={person} disabled={disabled} /> : null}
+          <Deactivate person={person} disabled={disabled} onDone={onDone} />
+        </>
+      ) : (
+        <Reactivate person={person} disabled={disabled} onDone={onDone} />
+      )}
     </div>
   );
 }

@@ -12,14 +12,14 @@ export const riyadhTime = (iso: string, lang: string) =>
   new Date(iso).toLocaleString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-GB",
     { timeZone: "Asia/Riyadh", dateStyle: "short", timeStyle: "short" });
 
-function TextCommand({ label, field, disabled, submit }: { label: StringKey; field: StringKey; disabled: boolean;
-  submit: (text: string, key: string) => Promise<unknown> }) {
-  const { t } = useT();
+function TextCommand({ label, field, empty, disabled, submit }: { label: StringKey; field: StringKey; empty: string;
+  disabled: boolean; submit: (text: string, key: string) => Promise<unknown> }) {
+  const { t, error } = useT();
   const [text, setText] = useState("");
   const { run, busy, problem, setProblem } = useCommand();
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return setProblem(t("reasonRequired"));
+    if (!text.trim()) return setProblem(error(empty));
     if (await run((key) => submit(text.trim(), key))) setText("");
   }
   return (
@@ -81,13 +81,13 @@ function IncidentDetail({ incidentId, eventId, me, disabled, onChanged }: { inci
               </ol>
             )}
             {i.status !== "RESOLVED" ? (
-              <TextCommand label="addNote" field="note" disabled={disabled}
+              <TextCommand label="addNote" field="note" empty="description_required" disabled={disabled}
                 submit={(text, key) => api.incidentNote(incidentId, text, key).then(changed)} />
             ) : null}
             {i.status !== "RESOLVED" && atLeast(me, "MANAGER") ? (
               <>
                 <p className="muted">{t("resolveHint")}</p>
-                <TextCommand label="resolve" field="outcome" disabled={disabled}
+                <TextCommand label="resolve" field="outcome" empty="outcome_required" disabled={disabled}
                   submit={(text, key) => api.incidentResolve(incidentId, text, key).then(changed)} />
               </>
             ) : null}

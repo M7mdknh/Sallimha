@@ -11,8 +11,9 @@
 2. **Open incident** — category "Identity dispute".
 3. Verify in person: compare the vehicle photos, plate and description with what the person describes; check
    the registration details shown in the ticket.
-4. If verified: clear the hold, then **Supervisor-assisted handover**, choosing the verification method and
-   writing what was checked. The handover is recorded against you.
+4. If verified: **Clear hold** with the reason. Once the car is ready at the stand, use **Supervisor-assisted
+   handover**, choosing the verification method and writing what was checked. The handover is recorded
+   against you. (If the car is still parked, a **Supervisor-assisted request** brings it through the normal queue.)
 5. If not verified: keep the hold, keep the car parked, and call the manager. Do not give the key.
 
 ## Manager
