@@ -187,7 +187,12 @@ def test_ticket_finder_by_number_or_plate_is_event_scoped(ops):
     assert [r["id"] for r in by_number] == [ticket.id]
     assert by_number[0]["state"] == "PARKED" and by_number[0]["hook"] == 52
     assert [r["id"] for r in sup.get(f"/api/events/{ops.event.id}/tickets", {"q": "xyz"}).json()] == [ticket.id]
+    # Digits also match the plate, since many plates are mostly numbers.
+    assert [r["id"] for r in sup.get(f"/api/events/{ops.event.id}/tickets", {"q": "4821"}).json()] == [ticket.id]
     assert sup.get(f"/api/events/{ops.event.id}/tickets", {"q": ""}).json() == []
+    # A long run of digits (e.g. part of a plate) is not a ticket number and must not overflow the query.
+    long_digits = sup.get(f"/api/events/{ops.event.id}/tickets", {"q": "9" * 40})
+    assert long_digits.status_code == 200 and long_digits.json() == []
 
     from tests.factories import make_event, make_org, make_venue
 

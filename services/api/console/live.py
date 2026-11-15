@@ -146,12 +146,18 @@ def ticket_detail(ticket, actor) -> dict:
 
 
 def search(event, q: str) -> list[dict]:
-    """Ticket finder for supervisors: '#12' or '12' matches the ticket number, anything else the plate."""
+    """Ticket finder for supervisors: digits ('12', '#12') match the ticket number or the plate; anything else
+    matches the plate."""
+    from django.db.models import Q
+
     q = q.strip()[:40]
     if not q:
         return []
     qs = Ticket.objects.filter(event=event).select_related("location_zone")
     number = q.lstrip("#")
-    qs = qs.filter(display_number=int(number)) if number.isdigit() else qs.filter(vehicle_plate__icontains=q)
+    if number.isdigit() and len(number) <= 6:
+        qs = qs.filter(Q(display_number=int(number)) | Q(vehicle_plate__icontains=number))
+    else:
+        qs = qs.filter(vehicle_plate__icontains=q)
     return [{"id": t.id, "ticket": _t(t), "state": t.state, "vehicle": _vehicle(t), "location": _location(t),
              "hook": _hook(t)} for t in qs.order_by("display_number")[:20]]
