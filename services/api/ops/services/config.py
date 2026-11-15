@@ -60,8 +60,23 @@ def update_timings(actor, org, changes: dict) -> dict:
     return after
 
 
+MAX_TEMPLATE_LENGTH = 1000
+
+
 def _fields(template: str) -> set[str]:
     return {f for _, f, _, _ in string.Formatter().parse(template) if f}
+
+
+def _safe_template(template: str) -> bool:
+    """Only plain {name} placeholders: no format specs, conversions, attribute or index access."""
+    if len(template) > MAX_TEMPLATE_LENGTH:
+        return False
+    try:
+        parts = list(string.Formatter().parse(template))
+    except ValueError:
+        return False
+    return all(field is None or (field.isidentifier() and not spec and conv is None)
+               for _, field, spec, conv in parts)
 
 
 def update_templates(actor, org, overrides: dict) -> dict:
@@ -75,7 +90,8 @@ def update_templates(actor, org, overrides: dict) -> dict:
         if key not in MESSAGES or set(copy) != {"ar", "en"}:
             raise DomainError("invalid_setting")
         for lang in ("ar", "en"):
-            if not str(copy[lang]).strip() or _fields(copy[lang]) != _fields(MESSAGES[key][lang]):
+            text = str(copy[lang])
+            if not text.strip() or not _safe_template(text) or _fields(text) != _fields(MESSAGES[key][lang]):
                 raise DomainError("placeholders_mismatch")
     with transaction.atomic():
         cfg = OperatingConfig.objects.select_for_update(no_key=True).get(pk=get_config(org).pk)

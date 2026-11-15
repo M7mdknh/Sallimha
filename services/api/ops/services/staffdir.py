@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import F
 from django.utils import timezone
 
 from core.audit import audit
@@ -128,11 +129,13 @@ def issue_mfa_enrolment(actor, staff) -> str:
     out-of-band delivery; existing sessions of that person are invalidated."""
     from console import mfa
 
-    if not has_role(actor, Role.ADMIN) or not _may_manage(actor, staff):
-        raise DomainError("forbidden")
-    if ROLE_RANK[staff.role] < ROLE_RANK[Role.MANAGER]:
-        raise DomainError("mfa_not_required")
-    Staff.objects.filter(pk=staff.pk).update(session_epoch=staff.session_epoch + 1)
-    uri = mfa.issue_secret(staff)
-    _audit("staff.mfa_issue", actor, staff)
+    with transaction.atomic():
+        staff = Staff.objects.select_for_update(no_key=True).get(pk=staff.pk)  # fresh role and epoch
+        if not has_role(actor, Role.ADMIN) or not _may_manage(actor, staff):
+            raise DomainError("forbidden")
+        if ROLE_RANK[staff.role] < ROLE_RANK[Role.MANAGER]:
+            raise DomainError("mfa_not_required")
+        Staff.objects.filter(pk=staff.pk).update(session_epoch=F("session_epoch") + 1)
+        uri = mfa.issue_secret(staff)
+        _audit("staff.mfa_issue", actor, staff)
     return uri

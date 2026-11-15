@@ -2,6 +2,8 @@
 Prints the provisioning URI once; deliver it out of band. Audited."""
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
+from django.db.models import F
 
 from console import mfa
 from core.audit import audit
@@ -18,8 +20,10 @@ class Command(BaseCommand):
         staff = Staff.objects.filter(user__username=username).first()
         if staff is None:
             raise CommandError("unknown console user")
-        Staff.objects.filter(pk=staff.pk).update(session_epoch=staff.session_epoch + 1)
-        uri = mfa.issue_secret(staff)
+        with transaction.atomic():
+            Staff.objects.select_for_update(no_key=True).filter(pk=staff.pk).update(
+                session_epoch=F("session_epoch") + 1)
+            uri = mfa.issue_secret(staff)
         audit("staff.mfa_issue", actor_id=None, actor_label="server-operator", channel="system",
               entity_type="staff", entity_id=staff.id)
         self.stdout.write(uri)

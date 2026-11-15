@@ -4,6 +4,7 @@ worker or the notification integration is down."""
 from django.db import transaction
 
 from core.audit import audit
+from core.errors import DomainError
 from core.views_health import whatsapp_status, worker_status
 from messaging import outbox
 from messaging.models import MessageOutbox
@@ -21,7 +22,7 @@ def opening_check(event) -> dict:
     not_started = EventAssignment.objects.filter(event=event, staff__enabled=True).exclude(
         staff_id__in=on_shift).count()
     carryovers = carryover.register(event.org).filter(ticket__event__venue=event.venue).count()
-    dead = MessageOutbox.objects.filter(status=MessageOutbox.Status.DEAD).count()
+    dead = dead_letters(event.org).count()
     causes = []
     if worker != "ok":
         causes.append("worker")
@@ -37,13 +38,18 @@ def opening_check(event) -> dict:
 
 
 def dead_letters(org):
+    """Dead letters belonging to one organization only (staff recipient or ticket in its events)."""
+    from django.db.models import Q
+
     return (MessageOutbox.objects.filter(status=MessageOutbox.Status.DEAD)
-            .filter(staff__org=org) | MessageOutbox.objects.filter(status=MessageOutbox.Status.DEAD,
-                                                                   ticket__event__org=org)).distinct().order_by("id")
+            .filter(Q(staff__org=org) | Q(ticket__event__org=org)).distinct().order_by("id"))
 
 
 def replay_dead_letter(actor, row) -> bool:
     require(actor, Role.ADMIN)
+    row = dead_letters(actor.org).filter(pk=row.pk).first()  # never another organization's message
+    if row is None:
+        raise DomainError("forbidden")
     with transaction.atomic():
         replayed = outbox.replay(row.id)
         audit("outbox.replay", actor_id=actor.id, actor_label=actor_label(actor), channel="console",
