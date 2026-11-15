@@ -35,7 +35,7 @@ jobs:
         working-directory: services/api
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: "3.14"
       - run: uv sync --frozen
@@ -76,7 +76,7 @@ jobs:
       E2E_DATABASE_URL: postgres://sallimha:sallimha-ci-only@127.0.0.1:5432/sallimha
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: "3.14"
       - uses: actions/setup-node@v7
