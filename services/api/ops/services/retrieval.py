@@ -39,7 +39,7 @@ def request_retrieval(binding, ticket, *, via: str = "guest_whatsapp", actor=Non
                       now=None) -> tuple[RetrievalRequest, bool]:
     now = now or timezone.now()
     with transaction.atomic():
-        ticket = Ticket.objects.select_for_update().get(pk=ticket.pk)
+        ticket = Ticket.objects.select_for_update(no_key=True).get(pk=ticket.pk)
         if ticket.state not in (Ticket.State.RECEIVED, Ticket.State.PARKED, Ticket.State.RETRIEVING,
                                 Ticket.State.READY):
             raise DomainError("ticket_closed")
@@ -72,7 +72,7 @@ def request_retrieval(binding, ticket, *, via: str = "guest_whatsapp", actor=Non
 
 def supersede_offer(req, now, reason: str) -> None:
     """Release an unaccepted offer's reservation; its action references die forever."""
-    task = Task.objects.select_for_update().filter(request=req, status__in=["RESERVED", "OFFERED"]).first()
+    task = Task.objects.select_for_update(no_key=True).filter(request=req, status__in=["RESERVED", "OFFERED"]).first()
     if task is None:
         return
     task.status = Task.Status.RELEASED
@@ -91,7 +91,8 @@ def withdraw_request(actor, req, reason: str, now=None) -> RetrievalRequest:
     if not reason.strip():
         raise DomainError("reason_required")
     with transaction.atomic():
-        req = RetrievalRequest.objects.select_for_update().get(pk=req.pk)
+        Ticket.objects.select_for_update(no_key=True).get(pk=req.ticket_id)  # lock order: ticket → request → task
+        req = RetrievalRequest.objects.select_for_update(no_key=True).get(pk=req.pk)
         if req.state == RetrievalRequest.State.ACCEPTED:
             raise DomainError("custody_resolution_required")
         if req.state not in ("WAITING_FOR_PARKING", "QUEUED", "OFFERED"):
@@ -125,11 +126,11 @@ def correct_guest_phone(actor, ticket, raw_phone: str, reason: str, now=None):
     except PhoneInvalid as exc:
         raise DomainError("phone_invalid") from exc
     with transaction.atomic():
-        ticket = Ticket.objects.select_for_update().get(pk=ticket.pk)
+        ticket = Ticket.objects.select_for_update(no_key=True).get(pk=ticket.pk)
         if ticket.state not in (Ticket.State.RECEIVED, Ticket.State.PARKED, Ticket.State.RETRIEVING,
                                 Ticket.State.READY):
             raise DomainError("ticket_closed")
-        old = ticket.bindings.select_for_update().filter(revoked_at__isnull=True).first()
+        old = ticket.bindings.select_for_update(no_key=True).filter(revoked_at__isnull=True).first()
         revision = (ticket.bindings.order_by("-revision").values_list("revision", flat=True).first() or 0) + 1
         if old is not None:
             old.revoked_at = now

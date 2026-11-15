@@ -23,7 +23,7 @@ def resolve(payload: str | None, *, lock: bool = True) -> ActionToken | None:
         return None
     qs = ActionToken.objects.filter(token_hash=keyed_hash(payload[len(PREFIX):], "action"))
     if lock:
-        qs = qs.select_for_update()
+        qs = qs.select_for_update(no_key=True)
     return qs.first()
 
 

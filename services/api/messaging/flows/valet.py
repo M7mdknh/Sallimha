@@ -85,7 +85,7 @@ def _ticket_buttons(staff, ticket, *pairs):
 
 def handle(staff: Staff, inb: Inbound) -> None:
     outbox.note_inbound(staff=staff, at=inb.timestamp)
-    conv, _ = Conversation.objects.select_for_update().get_or_create(party_key=f"staff:{staff.id}")
+    conv, _ = Conversation.objects.select_for_update(no_key=True).get_or_create(party_key=f"staff:{staff.id}")
     reply = Reply(staff, inb)
     try:
         if inb.button_payload:

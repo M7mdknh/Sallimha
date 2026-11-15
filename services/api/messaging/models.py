@@ -132,7 +132,7 @@ class SimulatorControl(models.Model):
 
     @classmethod
     def take(cls) -> str | None:
-        row = cls.objects.select_for_update(skip_locked=True).order_by("id").first()
+        row = cls.objects.select_for_update(skip_locked=True, no_key=True).order_by("id").first()
         if row is None:
             return None
         mode = row.mode

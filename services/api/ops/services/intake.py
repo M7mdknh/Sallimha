@@ -44,7 +44,7 @@ def intake_task(ticket) -> Task | None:
 
 
 def _lock_ticket(ticket) -> Ticket:
-    return Ticket.objects.select_for_update().get(pk=ticket.pk)
+    return Ticket.objects.select_for_update(no_key=True).get(pk=ticket.pk)
 
 
 def _require_owner(valet, ticket) -> Task:
@@ -70,7 +70,7 @@ def register_vehicle(valet, now=None) -> Ticket:
         raise DomainError("not_available")
     try:
         with transaction.atomic():
-            event = Event.objects.select_for_update().get(pk=shift.event_id)
+            event = Event.objects.select_for_update(no_key=True).get(pk=shift.event_id)
             if event.status != Event.Status.OPEN:
                 raise DomainError("event_closed")
             event.display_seq += 1
@@ -323,7 +323,7 @@ def transfer_intake(actor, ticket, to_staff, reason: str, now=None) -> CustodyTr
 def acknowledge_intake_transfer(staff, transfer, now=None) -> CustodyTransfer:
     now = now or timezone.now()
     with transaction.atomic():
-        transfer = CustodyTransfer.objects.select_for_update().get(pk=transfer.pk)
+        transfer = CustodyTransfer.objects.select_for_update(no_key=True).get(pk=transfer.pk)
         if transfer.to_staff_id != staff.id:
             raise DomainError("forbidden")
         if transfer.acknowledged_at is None:

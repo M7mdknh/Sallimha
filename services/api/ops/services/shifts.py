@@ -18,7 +18,7 @@ def open_shift_for(staff, event=None, *, lock=False):
     if event is not None:
         qs = qs.filter(event=event)
     if lock:
-        qs = qs.select_for_update()
+        qs = qs.select_for_update(no_key=True)
     return qs.first()
 
 
@@ -54,7 +54,7 @@ def end_shift(actor, shift, now=None) -> Shift:
     now = now or timezone.now()
     require(actor, Role.SUPERVISOR, shift.event)
     with transaction.atomic():
-        shift = Shift.objects.select_for_update().get(pk=shift.pk)
+        shift = Shift.objects.select_for_update(no_key=True).get(pk=shift.pk)
         if shift.ended_at is not None:
             return shift
         if live_task(shift.staff) is not None:

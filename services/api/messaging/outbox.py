@@ -116,7 +116,7 @@ def _backoff(attempts: int) -> timedelta:
 def _claim(now, limit: int) -> list[MessageOutbox]:
     with transaction.atomic():
         rows = list(
-            MessageOutbox.objects.select_for_update(skip_locked=True)
+            MessageOutbox.objects.select_for_update(skip_locked=True, no_key=True)
             .filter(status=MessageOutbox.Status.PENDING, next_attempt_at__lte=now)
             .order_by("next_attempt_at", "id")[:limit]
         )
@@ -130,7 +130,7 @@ def _claim(now, limit: int) -> list[MessageOutbox]:
 
 def _finish(row_id: int, now, **changes) -> MessageOutbox:
     with transaction.atomic():
-        row = MessageOutbox.objects.select_for_update().get(pk=row_id)
+        row = MessageOutbox.objects.select_for_update(no_key=True).get(pk=row_id)
         if row.status != MessageOutbox.Status.SENDING:
             return row
         for name, value in changes.items():
@@ -175,7 +175,7 @@ def replay(outbox_id: int, now=None) -> bool:
     """Operator replay of a dead letter. Idempotent: only a DEAD row is re-queued."""
     now = now or timezone.now()
     with transaction.atomic():
-        row = MessageOutbox.objects.select_for_update().get(pk=outbox_id)
+        row = MessageOutbox.objects.select_for_update(no_key=True).get(pk=outbox_id)
         if row.status != MessageOutbox.Status.DEAD:
             return False
         row.status = MessageOutbox.Status.PENDING

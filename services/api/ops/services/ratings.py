@@ -12,7 +12,7 @@ def record_rating(binding, ticket, value: str, source_message_id: str) -> Rating
     if value not in Rating.Value.values:
         return None
     with transaction.atomic():
-        ticket = Ticket.objects.select_for_update().get(pk=ticket.pk)
+        ticket = Ticket.objects.select_for_update(no_key=True).get(pk=ticket.pk)
         if ticket.state != Ticket.State.DELIVERED or ticket.delivered_by_id is None:
             return None
         try:

@@ -98,3 +98,28 @@ def test_new_car_while_busy_reports_current_ticket(world, valet):
 def test_unknown_sender_is_not_treated_as_staff(world, valet):
     say("+966509999999", "مركبة جديدة")
     assert not Ticket.objects.exists()
+
+
+def test_offer_accept_via_whatsapp(world, valet):
+    from ops.services import dispatch
+    from tests.ops.dispatch_helpers import parked_with_request
+    ticket, req = parked_with_request(valet, world.event)
+    dispatch.dispatch_event(world.event.id)
+    offer = last(valet, kind="valet.offer")
+    tap(valet.phone_e164, button(offer, "accept"))
+    ticket.refresh_from_db()
+    assert ticket.state == Ticket.State.RETRIEVING
+    assert last(valet).template == "valet.assigned"
+    tap(valet.phone_e164, button(offer, "accept"))
+    assert last(valet).template == "valet.duplicate"
+
+
+def test_offer_decline_via_whatsapp(world, valet):
+    from ops.models import RetrievalRequest
+    from ops.services import dispatch
+    from tests.ops.dispatch_helpers import parked_with_request
+    ticket, req = parked_with_request(valet, world.event)
+    dispatch.dispatch_event(world.event.id)
+    tap(valet.phone_e164, button(last(valet, kind="valet.offer"), "decline"))
+    assert RetrievalRequest.objects.get(pk=req.pk).state == "QUEUED"
+    assert last(valet).template == "valet.offer_released"

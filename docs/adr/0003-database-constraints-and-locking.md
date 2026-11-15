@@ -26,8 +26,8 @@ Database roles: `sallimha_owner` (migrations only), `sallimha_app` (runtime DML;
 ## Transactions and locking
 - Isolation is READ COMMITTED plus explicit locks. Races are proven with real concurrent connections in tests: AT-08, AT-09, AT-11 and AT-32.
 - **Per-event dispatch serialization:** `pg_advisory_xact_lock(<event lock key>)` at the start of each dispatch transaction gives predictable FIFO selection. Constraints 3–5 still guard against any bypass.
-- **Lock order (all commands):** event advisory lock → retrieval_request → ticket → task → staff/shift → key_occupancy. Commands that don't need a level skip it but never reverse the order.
-- Rows are taken with `SELECT … FOR UPDATE` in that order. Worker claims use `SKIP LOCKED` (ADR-0002).
+- **Lock order (all commands, revised 2026-11-15 after the AT-11 race test found a deadlock):** event advisory lock → ticket → retrieval_request → task → staff/shift → key_occupancy → action tokens. Commands that don't need a level skip it but never reverse the order. (The original draft put retrieval_request before ticket; most commands are ticket-centric, so ticket comes first.)
+- Rows are taken with `SELECT … FOR NO KEY UPDATE` (Django `select_for_update(no_key=True)`), never plain `FOR UPDATE`: we never change keys, and plain `FOR UPDATE` blocks the key-share lock that inserting a referencing row (e.g. a task for that event) needs — the AT-09 race test deadlocked on exactly that. Worker claims use `SKIP LOCKED` (ADR-0002).
 - No network I/O happens while holding these locks.
 - Every command rechecks shift, permission, event scope and expected version inside the transaction (CLAUDE.md).
 

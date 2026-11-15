@@ -10,7 +10,8 @@ _RANK = {"SENT": 1, "DELIVERED": 2, "READ": 3}
 def apply_status(provider_message_id: str, status: str, provider_timestamp: int, errors: list | None = None) -> None:
     status_upper = status.upper()
     with transaction.atomic():
-        row = MessageOutbox.objects.select_for_update().filter(provider_message_id=provider_message_id).first()
+        row = (MessageOutbox.objects.select_for_update(no_key=True)
+               .filter(provider_message_id=provider_message_id).first())
         try:
             with transaction.atomic():
                 MessageStatusEvent.objects.create(
