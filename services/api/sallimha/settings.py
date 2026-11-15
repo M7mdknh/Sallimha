@@ -147,6 +147,7 @@ WHATSAPP_APP_SECRET = _secret("WHATSAPP_APP_SECRET", "dev-only-simulator-app-sec
 WHATSAPP_APP_SECRET_PREVIOUS = os.environ.get("WHATSAPP_APP_SECRET_PREVIOUS", "")
 WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
 WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
+WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
 SIMULATOR_ENABLED = os.environ.get("SIMULATOR_ENABLED", "1" if IS_DEV else "0") == "1"
 if SIMULATOR_ENABLED and not IS_DEV:
     raise ImproperlyConfigured("SIMULATOR_ENABLED is only allowed in local/test environments")

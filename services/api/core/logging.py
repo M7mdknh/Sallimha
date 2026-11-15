@@ -3,20 +3,21 @@
 import logging
 import re
 
-_PATTERNS = [
-    (re.compile(r"v1:[A-Za-z0-9_-]{16,}"), "v1:***"),
-    (
-        re.compile(r"""(?i)(["']?(?:code|otp|token|secret|password|payload)["']?\s*[=:]\s*["']?)[^"'\s,}]+"""),
-        r"\1***",
-    ),
-    (re.compile(r"\+?\(?\d[\d\s()-]{7,18}\d"), "[phone]"),
-]
+_TOKEN = re.compile(r"v1:[A-Za-z0-9_-]{16,}")
+_KEYED = re.compile(r"""(?i)(["']?(?:code|otp|token|secret|password|payload)["']?\s*[=:]\s*["']?)[^"'\s,}]+""")
+# Phone candidates: 9–15 digits with common separators; never adjacent to ':' (times) or other digits.
+_PHONE = re.compile(r"(?<![\d:])\+?\(?\d[\d\s().-]{6,22}\d(?![\d:])")
+
+
+def _phone_sub(match: re.Match) -> str:
+    digits = sum(ch.isdigit() for ch in match.group(0))
+    return "[phone]" if 9 <= digits <= 15 else match.group(0)
 
 
 def mask(text: str) -> str:
-    for pattern, replacement in _PATTERNS:
-        text = pattern.sub(replacement, text)
-    return text
+    text = _TOKEN.sub("v1:***", text)
+    text = _KEYED.sub(r"\1***", text)
+    return _PHONE.sub(_phone_sub, text)
 
 
 class MaskingFilter(logging.Filter):
@@ -29,7 +30,15 @@ class MaskingFilter(logging.Filter):
 
 
 class MaskingFormatter(logging.Formatter):
-    """Masks the final rendered line, including exception and stack text."""
+    """Masks the message, exception and stack text; leaves the formatter's own timestamp intact."""
 
     def format(self, record: logging.LogRecord) -> str:
-        return mask(super().format(record))
+        record.msg = mask(record.getMessage())
+        record.args = ()
+        return super().format(record)
+
+    def formatException(self, ei) -> str:  # noqa: N802 — logging API name
+        return mask(super().formatException(ei))
+
+    def formatStack(self, stack_info: str) -> str:  # noqa: N802 — logging API name
+        return mask(super().formatStack(stack_info))

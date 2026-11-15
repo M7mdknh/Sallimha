@@ -47,3 +47,12 @@ def test_masking_filter_hides_json_quoted_secrets():
 
 def test_masking_filter_hides_parenthesised_phone():
     assert "4567" not in _render("call (050) 123-4567 now")
+
+
+def test_masking_keeps_dates_and_times_readable():
+    from core.logging import MaskingFormatter
+
+    record = logging.LogRecord("t", logging.INFO, __file__, 1, "at 2026-11-15T11:23:06 and 2026-11-15 11:23", (), None)
+    rendered = MaskingFormatter("%(asctime)s %(message)s").format(record)
+    assert "[phone]" not in rendered
+    assert "2026-11-15T11:23:06" in rendered
