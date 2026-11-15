@@ -140,7 +140,12 @@ test("supervisor finds a parked car, places and clears a hold, and opens an inci
     await form.getByLabel("الجهة المسؤولة").fill("أمن المكان (تجريبي)");
     await form.getByLabel("الخطة").fill("تبقى المركبة حتى الصباح ويُتواصل مع الضيف");
   });
-  await expect(page.locator(".ticket-panel").getByRole("button", { name: "اعتماد غير مُستلمة" })).toHaveCount(0);
+  // Wait for the refreshed actions (proposing is no longer offered), then check that approval is not offered
+  // to a supervisor: it is a manager action.
+  const panelAfter = page.locator(".ticket-panel");
+  await expect(panelAfter.getByRole("button", { name: "اقتراح غير مُستلمة", exact: true })).toHaveCount(0);
+  await expect(panelAfter.getByRole("button", { name: "إيقاف سلامة", exact: true })).toBeVisible();
+  await expect(panelAfter.getByRole("button", { name: "اعتماد غير مُستلمة" })).toHaveCount(0);
 });
 
 test("manager resolves the incident, approves the unclaimed car and releases its key", async ({ page }, info) => {

@@ -227,3 +227,14 @@ def test_unknown_outcome_sends_are_visible_and_resent_only_on_explicit_replay(op
     outbox.send_due(timezone.now())
     assert sent.count() == 2  # resent once, by explicit operator decision (a duplicate is the known cost)
     assert AuditEvent.objects.filter(action="outbox.replay", entity_id=row.id).exists()
+
+
+def test_manager_only_carryover_actions_are_not_offered_to_supervisors(ops):
+    ticket = park(ops.valets[0], ops.event, hook=61)
+    sup, mgr = login_as(ops.supervisor), login_as(ops.manager)
+    post(sup, f"/api/tickets/{ticket.id}/propose-unclaimed", {"custodian": "Security", "plan": "Overnight"})
+    assert "approve_unclaimed" not in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
+    assert "approve_unclaimed" in mgr.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
+    post(mgr, f"/api/tickets/{ticket.id}/approve-unclaimed")
+    assert "release_carryover" not in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
+    assert "release_carryover" in mgr.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]

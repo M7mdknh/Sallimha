@@ -11,6 +11,7 @@ from ops.models import (
     KeyOccupancy,
     Media,
     RetrievalRequest,
+    Role,
     Shift,
     Task,
     Ticket,
@@ -87,8 +88,10 @@ def snapshot(event, now) -> dict:
     }
 
 
-def allowed_actions(ticket, req, binding) -> list[str]:
-    """UI hint only; every action is re-authorized and re-validated by the server."""
+def allowed_actions(ticket, req, binding, actor=None) -> list[str]:
+    """UI hint only; every action is re-authorized and re-validated by the server. Manager-only actions are
+    offered only to managers and above, so a supervisor never sees a control the server will refuse."""
+    from ops.permissions import has_role
     actions = []
     if ticket.state == Ticket.State.RECEIVED and ticket.parking_started_at is None:
         actions += ["cancel", "except_intake", "intake_transfer"]
@@ -110,7 +113,7 @@ def allowed_actions(ticket, req, binding) -> list[str]:
         actions.append("relocate_complete")
     if ticket.state == Ticket.State.READY:
         actions.append("assisted_handover")
-    if open_case is not None:
+    if open_case is not None and actor is not None and has_role(actor, Role.MANAGER):
         actions.append("approve_unclaimed" if open_case.status == "PROPOSED" else "release_carryover")
     from ops.services import holds, incidents
 
@@ -141,7 +144,8 @@ def ticket_detail(ticket, actor) -> dict:
         "holds": holds.brief(ticket),
         "incidents": incidents.brief(ticket),
         "timeline": [{"at": e.occurred_at, "action": e.action, "actor": e.actor_label} for e in timeline],
-        "allowed_actions": allowed_actions(ticket, req if req and req.state in OPEN_REQUEST_STATES else None, binding),
+        "allowed_actions": allowed_actions(ticket, req if req and req.state in OPEN_REQUEST_STATES else None, binding,
+                                           actor),
     }
 
 
