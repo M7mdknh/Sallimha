@@ -32,3 +32,10 @@ class IdempotencyRecord(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["scope", "key"], name="uniq_idempotency_scope_key")]
+
+
+class LoginAttempt(models.Model):
+    """Failed console logins for lockout (keyed hashes only; no usernames or IPs stored in clear)."""
+
+    key_hash = models.CharField(max_length=64, db_index=True)
+    attempted_at = models.DateTimeField(auto_now_add=True, db_index=True)
