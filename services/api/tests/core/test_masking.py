@@ -52,10 +52,10 @@ def test_masking_filter_hides_parenthesised_phone():
 def test_masking_keeps_dates_and_times_readable():
     from core.logging import MaskingFormatter
 
-    record = logging.LogRecord("t", logging.INFO, __file__, 1, "at 2026-11-15T11:23:06 and 2026-11-15 11:23", (), None)
+    record = logging.LogRecord("t", logging.INFO, __file__, 1, "at 2026-11-15T11:23:06 and 11:23", (), None)
     rendered = MaskingFormatter("%(asctime)s %(message)s").format(record)
     assert "[phone]" not in rendered
-    assert "2026-11-15T11:23:06" in rendered
+    assert "2026-11-15T11:23:06" in rendered and "11:23" in rendered
 
 
 def test_masking_key_colon_phone():
@@ -92,3 +92,8 @@ def test_masking_is_linear_on_large_input():
     started = time.perf_counter()
     _render("1 " * 50000)
     assert time.perf_counter() - started < 1.0
+
+
+def test_masking_phone_ending_before_colon_is_masked():
+    assert "45 67" not in _render("050 123 45 67: called")
+    assert "78" not in _render("06 12 34 56 78: x")

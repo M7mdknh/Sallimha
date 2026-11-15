@@ -6,7 +6,6 @@ import re
 _TOKEN = re.compile(r"v1:[A-Za-z0-9_-]{16,}")
 _KEYED = re.compile(r"""(?i)(["']?(?:code|otp|token|secret|password|payload)["']?\s*[=:]\s*["']?)[^"'\s,}]+""")
 _SPAN = re.compile(r"\+?\(?\d[\d\s().-]*\d|\d")
-_TRAILING_HOUR = re.compile(r"\s+\d{1,2}$")
 
 
 def _digits(text: str) -> int:
@@ -14,20 +13,12 @@ def _digits(text: str) -> int:
 
 
 def _mask_phones(text: str) -> str:
-    """Mask any digit span with 9+ digits as a whole (linear; over-masking is preferred to leaking).
+    """Mask any digit span with 9+ digits as a whole, in one linear pass.
 
-    Clock times stay readable: a 1–2 digit word directly followed by ':' is an hour, not part of a number.
+    Over-masking (for example a date written next to a number) is preferred to leaking. Log timestamps
+    stay readable because the formatter adds them after masking.
     """
-
-    def replace(match: re.Match) -> str:
-        span, tail = match.group(0), ""
-        if text[match.end() : match.end() + 1] == ":":
-            hour = _TRAILING_HOUR.search(span)
-            if hour:
-                span, tail = span[: hour.start()], span[hour.start() :]
-        return ("[phone]" if _digits(span) >= 9 else span) + tail
-
-    return _SPAN.sub(replace, text)
+    return _SPAN.sub(lambda m: "[phone]" if _digits(m.group(0)) >= 9 else m.group(0), text)
 
 
 def mask(text: str) -> str:
