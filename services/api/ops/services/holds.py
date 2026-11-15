@@ -7,3 +7,7 @@ def dispatch_blocked_ticket_ids(event) -> set[int]:
 
 def handover_blocked(ticket) -> bool:
     return False
+
+
+def on_delivered(ticket) -> None:
+    """Hook for incidents/holds bookkeeping after a verified delivery (Task 2.1)."""
