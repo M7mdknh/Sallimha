@@ -16,6 +16,7 @@ from rest_framework.response import Response
 
 from core.audit import audit
 from core.crypto import keyed_hash
+from core.models import LoginKnownNetwork
 
 MAX_FAILURES = 5              # per (IP, username) within WINDOW
 UNDER_ATTACK_PAIR_MAX = 2     # per (IP, username) while the account sees distributed failures
@@ -42,15 +43,38 @@ def client_ip(request) -> str:
     return request.META.get("REMOTE_ADDR", "")
 
 
-def ip_bucket(ip: str) -> str:
-    """IPv6 clients are grouped by /64 so rotating addresses inside one allocation does not evade limits."""
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+KNOWN_NETWORK_TTL = timedelta(days=30)
+
+
+def client_address(ip: str) -> str:
+    """Canonical client address; IPv4 embedded in IPv6 (mapped, NAT64, 6to4, Teredo) is unwrapped."""
     try:
         address = ipaddress.ip_address(ip)
     except ValueError:
         return ip
     if address.version == 6:
-        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+        if address.ipv4_mapped:
+            return str(address.ipv4_mapped)
+        if address in _NAT64:
+            return str(ipaddress.IPv4Address(int(address) & 0xFFFFFFFF))
+        if address.sixtofour:
+            return str(address.sixtofour)
+        if address.teredo:
+            return str(address.teredo[1])
     return str(address)
+
+
+def ip_bucket(ip: str) -> str:
+    """Spraying-counter bucket: native IPv6 grouped by /64; IPv4 (including unwrapped forms) per address."""
+    canonical = client_address(ip)
+    try:
+        address = ipaddress.ip_address(canonical)
+    except ValueError:
+        return canonical
+    if address.version == 6:
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return canonical
 
 
 def _pair_key(username: str, ip: str) -> str:
@@ -63,6 +87,10 @@ def _ip_key(ip: str) -> str:
 
 def _user_key(username: str) -> str:
     return keyed_hash(f"user:{username.lower()}", "login")
+
+
+def _known_key(username: str, address: str) -> str:
+    return keyed_hash(f"known:{username.lower()}|{address}", "login")
 
 
 def _reserve(key: str, now) -> int:
@@ -81,12 +109,14 @@ def _release(key: str, *, reset: bool) -> None:
                            [key])
 
 
-def login_step(request, authenticate, login):
+def login_step(request, data, authenticate, login):
     now = timezone.now()
-    username = str(request.data.get("username", ""))[:150]
-    password = str(request.data.get("password", ""))
-    ip = ip_bucket(client_ip(request))
-    pair, by_ip, by_user = _pair_key(username, ip), _ip_key(ip), _user_key(username)
+    username = data["username"]
+    password = data["password"]
+    raw_ip = client_ip(request)
+    address, bucket = client_address(raw_ip), ip_bucket(raw_ip)
+    pair, by_ip, by_user = _pair_key(username, address), _ip_key(bucket), _user_key(username)
+    known = _known_key(username, address)
     # Reserve before checking the password: concurrent attempts each consume a slot atomically.
     pair_count, ip_count, user_count = _reserve(pair, now), _reserve(by_ip, now), _reserve(by_user, now)
     # Account-level control without a lockout: failures for this username from other networks tighten the
@@ -95,7 +125,10 @@ def login_step(request, authenticate, login):
     if under_attack and _reserve(keyed_hash(f"alerted:{username.lower()}", "login"), now) == 1:
         audit("auth.account_under_attack", actor_id=None, actor_label="anonymous", channel="console",
               summary={"key": by_user[:12]})
-    pair_limit = UNDER_ATTACK_PAIR_MAX if under_attack else MAX_FAILURES
+    # Networks the account recently signed in from keep the normal limit (no targeted throttling of the owner).
+    trusted_network = LoginKnownNetwork.objects.filter(key_hash=known,
+                                                       last_success_at__gte=now - KNOWN_NETWORK_TTL).exists()
+    pair_limit = UNDER_ATTACK_PAIR_MAX if under_attack and not trusted_network else MAX_FAILURES
     if pair_count > pair_limit or ip_count > IP_MAX_FAILURES:
         audit("auth.locked", actor_id=None, actor_label="anonymous", channel="console",
               summary={"scope": "pair" if pair_count > pair_limit else "ip", "key": pair[:12]})
@@ -107,6 +140,7 @@ def login_step(request, authenticate, login):
     _release(pair, reset=True)
     _release(by_ip, reset=False)
     _release(by_user, reset=False)
+    LoginKnownNetwork.objects.update_or_create(key_hash=known, defaults={"last_success_at": now})
     login(request, user)
     request.session["mfa_ok"] = True
     audit("auth.login", actor_id=staff.id, actor_label=f"{staff.role}:{staff.id}", channel="console")

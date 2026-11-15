@@ -44,3 +44,10 @@ class LoginThrottle(models.Model):
     key_hash = models.CharField(max_length=64, unique=True)
     window_start = models.DateTimeField()
     failures = models.PositiveIntegerField(default=0)
+
+
+class LoginKnownNetwork(models.Model):
+    """(account, network) pairs with a recent successful login; they keep the normal limit under attack."""
+
+    key_hash = models.CharField(max_length=64, unique=True)
+    last_success_at = models.DateTimeField()

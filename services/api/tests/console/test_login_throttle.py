@@ -117,11 +117,29 @@ def test_concurrent_attempts_cannot_exceed_cap():
     assert statuses.count(429) == n - auth_flow.MAX_FAILURES
 
 
-def test_ipv6_addresses_are_bucketed_by_64(account):
-    for i in range(1, 6):
-        _login("sup1", "wrong", ip=f"2001:db8:1:2::{i}")
-    assert _login("sup1", PASSWORD, ip="2001:db8:1:2::99").status_code == 429
+def test_ipv6_spraying_counter_is_bucketed_by_64(account):
+    for i in range(1, auth_flow.IP_MAX_FAILURES + 1):
+        _login(f"guess{i}", "wrong", ip=f"2001:db8:1:2::{i:x}")
+    assert _login("sup1", PASSWORD, ip="2001:db8:1:2::ffff").status_code == 429
     assert _login("sup1", PASSWORD, ip="2001:db8:1:3::1").status_code == 200
+
+
+def test_ipv4_mapped_ipv6_clients_are_not_grouped_together(account):
+    for i in range(auth_flow.IP_MAX_FAILURES + 1):
+        _login(f"guess{i}", "wrong", ip="::ffff:10.0.0.1")
+    assert _login("sup1", PASSWORD, ip="::ffff:10.0.0.2").status_code == 200
+    assert auth_flow.ip_bucket("::ffff:10.0.0.2") == "10.0.0.2"
+    assert auth_flow.ip_bucket("64:ff9b::a00:2") == "10.0.0.2"
+
+
+def test_known_network_keeps_normal_limit_while_account_under_attack(account):
+    home = "198.51.100.77"
+    assert _login("sup1", PASSWORD, ip=home).status_code == 200
+    for i in range(auth_flow.ACCOUNT_ALERT_THRESHOLD + 2):
+        _login("sup1", "wrong", ip=f"198.18.0.{i + 1}")
+    for _ in range(auth_flow.MAX_FAILURES - 1):
+        assert _login("sup1", "typo", ip=home).status_code == 400
+    assert _login("sup1", PASSWORD, ip=home).status_code == 200
 
 
 def test_account_under_distributed_attack_tightens_but_never_locks_owner(account):
