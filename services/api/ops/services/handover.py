@@ -208,3 +208,32 @@ def complete_handover(staff, payload: str, now=None) -> str:
         tokens.mark_used(token, now)
         finalize_delivery(staff, ticket, req, task, now, code=code)
     return "delivered"
+
+
+def assisted_handover(actor, ticket, method: str, reason: str, now=None) -> None:
+    """Guest cannot use the code (no phone/WhatsApp): the supervisor verifies ownership in person and records how.
+    Identity-document photos are never required. The delivering valet stays the task's assignee."""
+    from core.errors import DomainError
+    from ops.models import AssistedVerification, Role
+    from ops.permissions import require
+    from ops.services import holds
+
+    now = now or timezone.now()
+    require(actor, Role.SUPERVISOR, ticket.event)
+    if method not in AssistedVerification.Method.values or not reason.strip():
+        raise DomainError("reason_required")
+    with transaction.atomic():
+        ticket = Ticket.objects.select_for_update(no_key=True).get(pk=ticket.pk)
+        req = RetrievalRequest.objects.select_for_update(no_key=True).filter(
+            ticket=ticket, state=RetrievalRequest.State.ACCEPTED).first()
+        task = Task.objects.select_for_update(no_key=True).filter(
+            ticket=ticket, type=Task.Type.RETRIEVAL, status=Task.Status.ACCEPTED).first()
+        if ticket.state != Ticket.State.READY or task is None:
+            raise DomainError("invalid_state")
+        if holds.handover_blocked(ticket):
+            raise DomainError("handover_blocked")
+        AssistedVerification.objects.create(ticket=ticket, verified_by=actor, method=method,
+                                            reason=reason.strip()[:200])
+        ticket.contact_state = Ticket.Contact.ASSISTED_FALLBACK
+        ticket.save(update_fields=["contact_state"])
+        finalize_delivery(actor, ticket, req, task, now, code=None, channel="console")

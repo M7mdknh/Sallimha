@@ -1,13 +1,74 @@
-"""Incidents and safety holds (docs/01 §7, docs/02). Complaint creation is completed in Task 2.1."""
+"""Incidents (docs/01 §7): supervisors create, view and annotate; only manager+ resolve with an outcome."""
+
+from django.db import transaction
+from django.utils import timezone
+
+from core.audit import audit
+from core.errors import DomainError
+from ops.models import Incident, IncidentNote, Role
+from ops.permissions import actor_label, require
 
 
-def open_complaint_from_rating(rating) -> None:
-    """Poor rating → complaint incident linked to the ticket (full incident model in Task 2.1)."""
+def _audit(action, actor, incident, **summary):
+    audit(action, actor_id=actor.id if actor else None, actor_label=actor_label(actor), channel="console",
+          entity_type="incident", entity_id=incident.id, event_id=incident.event_id, summary=summary)
+
+
+def open_incident(actor, event, category: str, description: str, *, ticket=None) -> Incident:
+    require(actor, Role.SUPERVISOR, event)
+    if category not in Incident.Category.values:
+        raise DomainError("invalid_category")
+    if not description.strip():
+        raise DomainError("description_required")
+    if ticket is not None and ticket.event_id != event.id:
+        raise DomainError("forbidden")
+    incident = Incident.objects.create(event=event, ticket=ticket, category=category,
+                                       description=description.strip()[:2000], created_by=actor)
+    _audit("incident.open", actor, incident, category=category, ticket_id=ticket.id if ticket else None)
+    return incident
+
+
+def annotate(actor, incident, text: str) -> IncidentNote:
+    require(actor, Role.SUPERVISOR, incident.event)
+    if not text.strip():
+        raise DomainError("description_required")
+    note = IncidentNote.objects.create(incident=incident, author=actor, text=text.strip()[:2000])
+    if incident.status == Incident.Status.OPEN:
+        Incident.objects.filter(pk=incident.pk).update(status=Incident.Status.IN_REVIEW)
+    _audit("incident.note", actor, incident)
+    return note
+
+
+def resolve(actor, incident, outcome: str) -> Incident:
+    require(actor, Role.MANAGER, incident.event)
+    if not outcome.strip():
+        raise DomainError("outcome_required")
+    with transaction.atomic():
+        incident = Incident.objects.select_for_update(no_key=True).get(pk=incident.pk)
+        if incident.status == Incident.Status.RESOLVED:
+            return incident
+        incident.status = Incident.Status.RESOLVED
+        incident.resolution = outcome.strip()[:2000]
+        incident.resolved_by = actor
+        incident.resolved_at = timezone.now()
+        incident.save(update_fields=["status", "resolution", "resolved_by", "resolved_at"])
+        _audit("incident.resolve", actor, incident)
+    return incident
+
+
+def open_complaint_from_rating(rating) -> Incident:
+    """Poor rating → complaint incident linked to the ticket (no automatic reprimand to the valet)."""
+    ticket = rating.ticket
+    incident = Incident.objects.create(event=ticket.event, ticket=ticket, category=Incident.Category.COMPLAINT,
+                                       description="Poor guest rating received after delivery.")
+    _audit("incident.open", None, incident, category="complaint", source="rating")
+    return incident
 
 
 def brief(ticket) -> list[dict]:
-    return []
+    return [{"id": i.id, "category": i.category, "status": i.status, "created_at": i.created_at}
+            for i in ticket.incidents.order_by("-id")]
 
 
 def allowed_actions(ticket) -> list[str]:
-    return []
+    return ["open_incident"]

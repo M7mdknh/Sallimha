@@ -62,6 +62,7 @@ def eligible_requests(event):
     return (RetrievalRequest.objects.filter(event=event, state=RetrievalRequest.State.QUEUED,
                                             ticket__state=Ticket.State.PARKED)
             .exclude(ticket_id__in=dispatch_blocked_ticket_ids(event))
+            .exclude(ticket__tasks__status__in=["RESERVED", "OFFERED", "ACCEPTED"])  # e.g. a relocation in progress
             .filter(Q(binding__isnull=True) | Q(binding__revoked_at__isnull=True))
             .order_by("requested_at", "id"))
 
