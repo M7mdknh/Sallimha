@@ -132,6 +132,229 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeResponse'
           description: ''
+  /api/carryover:
+    get:
+      operationId: carryover_list
+      tags:
+      - carryover
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CarryoverRow'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/config:
+    get:
+      operationId: config_retrieve
+      tags:
+      - config
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/config/retention:
+    post:
+      operationId: config_retention_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - config
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetentionRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RetentionRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RetentionRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/config/templates:
+    post:
+      operationId: config_templates_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - config
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplatesRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TemplatesRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TemplatesRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/config/timings:
+    post:
+      operationId: config_timings_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - config
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimingsRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TimingsRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TimingsRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/dev/sim/messages:
     get:
       operationId: dev_sim_messages_list
@@ -202,6 +425,65 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/events:
+    post:
+      operationId: events_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEventRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateEventRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateEventRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/events/:
     get:
       operationId: events_list
@@ -218,6 +500,148 @@ paths:
                 items:
                   $ref: '#/components/schemas/EventSummary'
           description: ''
+  /api/events/{event_id}/close:
+    post:
+      operationId: events_close_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/events/{event_id}/export/guest-phones.csv:
+    get:
+      operationId: events_export_guest_phones.csv_retrieve
+      parameters:
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/events/{event_id}/export/tickets.csv:
+    get:
+      operationId: events_export_tickets.csv_retrieve
+      parameters:
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: state
+        schema:
+          type: string
+      tags:
+      - events
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/events/{event_id}/incidents:
+    get:
+      operationId: events_incidents_list
+      parameters:
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IncidentSummary'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
   /api/events/{event_id}/live:
     get:
       operationId: events_live_retrieve
@@ -237,6 +661,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LiveSnapshot'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/events/{event_id}/opening-check:
+    get:
+      operationId: events_opening_check_retrieve
+      parameters:
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpeningCheck'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/events/{event_id}/report:
+    get:
+      operationId: events_report_retrieve
+      parameters:
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventReport'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '404':
           description: Not found or out of scope
@@ -304,6 +784,186 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/incidents/{incident_id}:
+    get:
+      operationId: incidents_retrieve
+      parameters:
+      - in: path
+        name: incident_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - incidents
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentDetail'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/incidents/{incident_id}/notes:
+    post:
+      operationId: incidents_notes_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: incident_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - incidents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NoteRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NoteRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/incidents/{incident_id}/resolve:
+    post:
+      operationId: incidents_resolve_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: incident_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - incidents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResolveRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResolveRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/integrations/whatsapp:
+    get:
+      operationId: integrations_whatsapp_retrieve
+      description: Super admin only. Shows readiness flags, never credential values;
+        credentials live in the secret store.
+      tags:
+      - integrations
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsAppIntegration'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
   /api/media/{media_id}:
     get:
       operationId: media_retrieve
@@ -329,6 +989,129 @@ paths:
           description: ''
         '404':
           description: Not found or out of scope
+  /api/ops/dead-letters:
+    get:
+      operationId: ops_dead_letters_list
+      tags:
+      - ops
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeadLetter'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/ops/dead-letters/{outbox_id}/replay:
+    post:
+      operationId: ops_dead_letters_replay_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: outbox_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/retention/apply:
+    post:
+      operationId: retention_apply_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - retention
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetentionResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/shifts/{shift_id}/end:
     post:
       operationId: shifts_end_create
@@ -381,6 +1164,316 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/staff:
+    get:
+      operationId: staff_list
+      tags:
+      - staff
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffRow'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+    post:
+      operationId: staff_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStaffRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateStaffRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateStaffRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/staff/{staff_id}/deactivate:
+    post:
+      operationId: staff_deactivate_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: staff_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/staff/{staff_id}/mfa:
+    post:
+      operationId: staff_mfa_create
+      description: 'Issues TOTP enrolment. Deliberately not replay-stored: the URI
+        is a secret and is shown only once.'
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - staff
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaIssueResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/staff/{staff_id}/reactivate:
+    post:
+      operationId: staff_reactivate_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: staff_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - staff
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/staff/{staff_id}/role:
+    post:
+      operationId: staff_role_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: staff_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/tickets/{ticket_id}:
     get:
       operationId: tickets_retrieve
@@ -403,6 +1496,198 @@ paths:
           description: ''
         '404':
           description: Not found or out of scope
+  /api/tickets/{ticket_id}/approve-unclaimed:
+    post:
+      operationId: tickets_approve_unclaimed_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/assisted-handover:
+    post:
+      operationId: tickets_assisted_handover_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/assisted-request:
+    post:
+      operationId: tickets_assisted_request_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/tickets/{ticket_id}/cancel:
     post:
       operationId: tickets_cancel_create
@@ -424,13 +1709,77 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/clear-hold:
+    post:
+      operationId: tickets_clear_hold_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -488,13 +1837,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -552,13 +1901,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -616,13 +1965,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -680,13 +2029,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -744,13 +2093,397 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/open-incident:
+    post:
+      operationId: tickets_open_incident_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/place-hold:
+    post:
+      operationId: tickets_place_hold_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/propose-unclaimed:
+    post:
+      operationId: tickets_propose_unclaimed_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/release-carryover:
+    post:
+      operationId: tickets_release_carryover_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/relocate-complete:
+    post:
+      operationId: tickets_relocate_complete_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/relocate-start:
+    post:
+      operationId: tickets_relocate_start_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -808,13 +2541,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -872,13 +2605,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ExceptIntakeRequestRequest'
+              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -915,6 +2648,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/venues:
+    get:
+      operationId: venues_list
+      tags:
+      - venues
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VenueRow'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
 components:
   schemas:
     AlertAckResponse:
@@ -952,6 +2709,97 @@ components:
       - severity
       - ticket
       - ticket_id
+    CarryoverRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticket:
+          type: string
+        ticket_id:
+          type: integer
+        event:
+          type: string
+        status:
+          $ref: '#/components/schemas/CarryoverStatusEnum'
+        custodian:
+          type: string
+        plan:
+          type: string
+        location:
+          type: string
+        hook:
+          type: integer
+          nullable: true
+        proposed_at:
+          type: string
+          format: date-time
+      required:
+      - custodian
+      - event
+      - hook
+      - id
+      - location
+      - plan
+      - proposed_at
+      - status
+      - ticket
+      - ticket_id
+    CarryoverStatusEnum:
+      enum:
+      - PROPOSED
+      - APPROVED
+      - RELEASED
+      type: string
+      description: |-
+        * `PROPOSED` - PROPOSED
+        * `APPROVED` - APPROVED
+        * `RELEASED` - RELEASED
+    CategoryEnum:
+      enum:
+      - missing_vehicle
+      - key_issue
+      - damage
+      - identity_dispute
+      - notification_failure
+      - operational_delay
+      - complaint
+      type: string
+      description: |-
+        * `missing_vehicle` - missing_vehicle
+        * `key_issue` - key_issue
+        * `damage` - damage
+        * `identity_dispute` - identity_dispute
+        * `notification_failure` - notification_failure
+        * `operational_delay` - operational_delay
+        * `complaint` - complaint
+    ConfigResponse:
+      type: object
+      properties:
+        timings:
+          type: object
+          additionalProperties:
+            type: integer
+        retention_days:
+          type: object
+          additionalProperties:
+            type: integer
+        template_overrides:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TemplateCopy'
+        catalogue:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TemplateCopy'
+        retention_preview:
+          $ref: '#/components/schemas/RetentionPreview'
+      required:
+      - catalogue
+      - retention_days
+      - retention_preview
+      - template_overrides
+      - timings
     ContactStateEnum:
       enum:
       - UNCONFIRMED
@@ -964,6 +2812,45 @@ components:
         * `CONFIRMED_IN_PERSON` - CONFIRMED_IN_PERSON
         * `CORRECTION_REQUIRED` - CORRECTION_REQUIRED
         * `ASSISTED_FALLBACK` - ASSISTED_FALLBACK
+    CreateEventRequestRequest:
+      type: object
+      properties:
+        venue_id:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        starts_at:
+          type: string
+          format: date-time
+      required:
+      - name
+      - starts_at
+      - venue_id
+    CreateStaffRequestRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 40
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        username:
+          type: string
+          maxLength: 150
+        password:
+          type: string
+          maxLength: 256
+      required:
+      - full_name
+      - phone
+      - role
     CsrfResponse:
       type: object
       properties:
@@ -971,6 +2858,33 @@ components:
           type: string
       required:
       - csrfToken
+    DeadLetter:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+        recipient:
+          type: string
+        ticket:
+          type: string
+          nullable: true
+        failure_class:
+          type: string
+        last_error:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - failure_class
+      - id
+      - kind
+      - last_error
+      - recipient
+      - ticket
     DirectionEnum:
       enum:
       - in
@@ -1009,6 +2923,39 @@ components:
       - name
       - status
       - venue
+    EventReport:
+      type: object
+      properties:
+        event_id:
+          type: integer
+        outcomes:
+          type: object
+          additionalProperties:
+            type: integer
+        stages:
+          $ref: '#/components/schemas/Stages'
+        oldest_queued_at:
+          type: string
+          format: date-time
+          nullable: true
+        unresolved_incidents:
+          type: integer
+        ratings:
+          type: object
+          additionalProperties:
+            type: integer
+        hours:
+          type: array
+          items:
+            $ref: '#/components/schemas/HoursRow'
+      required:
+      - event_id
+      - hours
+      - oldest_queued_at
+      - outcomes
+      - ratings
+      - stages
+      - unresolved_incidents
     EventStatusEnum:
       enum:
       - OPEN
@@ -1037,33 +2984,13 @@ components:
       - starts_at
       - status
       - venue
-    ExceptIntakeRequestKindEnum:
-      enum:
-      - photos
-      - vehicle
-      type: string
-      description: |-
-        * `photos` - photos
-        * `vehicle` - vehicle
-    ExceptIntakeRequestRequest:
-      type: object
-      properties:
-        reason:
-          type: string
-          minLength: 1
-          maxLength: 200
-        kind:
-          $ref: '#/components/schemas/ExceptIntakeRequestKindEnum'
-      required:
-      - kind
-      - reason
     Health:
       type: object
       properties:
         worker:
           $ref: '#/components/schemas/WorkerEnum'
         whatsapp:
-          $ref: '#/components/schemas/WhatsappEnum'
+          $ref: '#/components/schemas/WhatsAppStatusEnum'
       required:
       - whatsapp
       - worker
@@ -1087,6 +3014,32 @@ components:
       - created_at
       - id
       - reason
+    HoursRow:
+      type: object
+      properties:
+        staff_id:
+          type: integer
+        name:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        worked_s:
+          type: integer
+          nullable: true
+        break_s:
+          type: integer
+      required:
+      - break_s
+      - ended_at
+      - name
+      - staff_id
+      - started_at
+      - worked_s
     IdResponse:
       type: object
       properties:
@@ -1111,6 +3064,65 @@ components:
       - created_at
       - id
       - status
+    IncidentDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        status:
+          $ref: '#/components/schemas/IncidentStatusEnum'
+        description:
+          type: string
+        ticket:
+          type: string
+          nullable: true
+        ticket_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentNoteOut'
+        resolution:
+          type: string
+        resolved_by:
+          type: string
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - category
+      - created_at
+      - description
+      - id
+      - notes
+      - resolution
+      - resolved_at
+      - resolved_by
+      - status
+      - ticket
+      - ticket_id
+    IncidentNoteOut:
+      type: object
+      properties:
+        author:
+          type: string
+        text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - author
+      - created_at
+      - text
     IncidentStatusEnum:
       enum:
       - OPEN
@@ -1121,6 +3133,42 @@ components:
         * `OPEN` - OPEN
         * `IN_REVIEW` - IN_REVIEW
         * `RESOLVED` - RESOLVED
+    IncidentSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        status:
+          $ref: '#/components/schemas/IncidentStatusEnum'
+        description:
+          type: string
+        ticket:
+          type: string
+          nullable: true
+        ticket_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - category
+      - created_at
+      - description
+      - id
+      - status
+      - ticket
+      - ticket_id
+    KindEnum:
+      enum:
+      - INTAKE
+      - INCIDENT
+      type: string
+      description: |-
+        * `INTAKE` - INTAKE
+        * `INCIDENT` - INCIDENT
     LiveRequest:
       type: object
       properties:
@@ -1256,19 +3304,38 @@ components:
           type: string
           format: date-time
         kind:
-          $ref: '#/components/schemas/MediaBriefKindEnum'
+          $ref: '#/components/schemas/KindEnum'
       required:
       - id
       - kind
       - received_at
-    MediaBriefKindEnum:
+    MethodEnum:
       enum:
-      - INTAKE
-      - INCIDENT
+      - collected_verified
+      - moved_to_storage
+      - other
       type: string
       description: |-
-        * `INTAKE` - INTAKE
-        * `INCIDENT` - INCIDENT
+        * `collected_verified` - collected_verified
+        * `moved_to_storage` - moved_to_storage
+        * `other` - other
+    MfaIssueResponse:
+      type: object
+      properties:
+        otpauth_uri:
+          type: string
+          description: Shown once; deliver out of band
+      required:
+      - otpauth_uri
+    NoteRequestRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - text
     OkResponse:
       type: object
       properties:
@@ -1276,6 +3343,60 @@ components:
           type: boolean
       required:
       - ok
+    OpeningCheck:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        causes:
+          type: array
+          items:
+            type: string
+        worker:
+          type: string
+        whatsapp:
+          type: string
+        zones:
+          type: integer
+        key_hooks:
+          type: integer
+        assigned_not_started:
+          type: integer
+        carryover_unresolved:
+          type: integer
+        dead_letters:
+          type: integer
+      required:
+      - assigned_not_started
+      - carryover_unresolved
+      - causes
+      - dead_letters
+      - key_hooks
+      - ok
+      - whatsapp
+      - worker
+      - zones
+    ReasonRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - reason
+    ReleaseCarryoverRequestRequest:
+      type: object
+      properties:
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        note:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - method
+      - note
     RequestStateEnum:
       enum:
       - WAITING_FOR_PARKING
@@ -1292,6 +3413,61 @@ components:
         * `ACCEPTED` - ACCEPTED
         * `COMPLETED` - COMPLETED
         * `WITHDRAWN` - WITHDRAWN
+    ResolveRequestRequest:
+      type: object
+      properties:
+        outcome:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - outcome
+    RetentionCategory:
+      type: object
+      properties:
+        days:
+          type: integer
+        eligible:
+          type: integer
+      required:
+      - days
+      - eligible
+    RetentionPreview:
+      type: object
+      properties:
+        guest_contact:
+          $ref: '#/components/schemas/RetentionCategory'
+        intake_photos:
+          $ref: '#/components/schemas/RetentionCategory'
+        incident_evidence:
+          $ref: '#/components/schemas/RetentionCategory'
+      required:
+      - guest_contact
+      - incident_evidence
+      - intake_photos
+    RetentionRequestRequest:
+      type: object
+      properties:
+        retention_days:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+      required:
+      - retention_days
+    RetentionResult:
+      type: object
+      properties:
+        guest_contact:
+          type: integer
+        intake_photos:
+          type: integer
+        incident_evidence:
+          type: integer
+      required:
+      - guest_contact
+      - incident_evidence
+      - intake_photos
     RoleEnum:
       enum:
       - VALET
@@ -1306,6 +3482,13 @@ components:
         * `MANAGER` - MANAGER
         * `ADMIN` - ADMIN
         * `SUPER_ADMIN` - SUPER_ADMIN
+    RoleRequestRequest:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+      required:
+      - role
     SeverityEnum:
       enum:
       - warning
@@ -1417,6 +3600,66 @@ components:
       - name
       - role
       - staff_id
+    StaffRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        phone_masked:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        enabled:
+          type: boolean
+        username:
+          type: string
+          nullable: true
+        mfa_enrolled:
+          type: boolean
+        mfa_locked:
+          type: boolean
+      required:
+      - enabled
+      - full_name
+      - id
+      - mfa_enrolled
+      - mfa_locked
+      - phone_masked
+      - role
+      - username
+    StageStat:
+      type: object
+      properties:
+        count:
+          type: integer
+        median_s:
+          type: integer
+          nullable: true
+        p95_s:
+          type: integer
+          nullable: true
+      required:
+      - count
+      - median_s
+      - p95_s
+    Stages:
+      type: object
+      properties:
+        request_to_accept:
+          $ref: '#/components/schemas/StageStat'
+        accept_to_ready:
+          $ref: '#/components/schemas/StageStat'
+        ready_to_delivered:
+          $ref: '#/components/schemas/StageStat'
+        received_to_parked:
+          $ref: '#/components/schemas/StageStat'
+      required:
+      - accept_to_ready
+      - ready_to_delivered
+      - received_to_parked
+      - request_to_accept
     StartShiftRequestRequest:
       type: object
       properties:
@@ -1482,6 +3725,41 @@ components:
       - ticket
       - ticket_id
       - type
+    TemplateCopy:
+      type: object
+      properties:
+        ar:
+          type: string
+          maxLength: 1000
+        en:
+          type: string
+          maxLength: 1000
+      required:
+      - ar
+      - en
+    TemplateCopyRequest:
+      type: object
+      properties:
+        ar:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        en:
+          type: string
+          minLength: 1
+          maxLength: 1000
+      required:
+      - ar
+      - en
+    TemplatesRequestRequest:
+      type: object
+      properties:
+        overrides:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TemplateCopyRequest'
+      required:
+      - overrides
     TicketDetail:
       type: object
       properties:
@@ -1609,6 +3887,15 @@ components:
       - action
       - actor
       - at
+    TimingsRequestRequest:
+      type: object
+      properties:
+        timings:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - timings
     TypeEnum:
       enum:
       - INTAKE
@@ -1619,7 +3906,44 @@ components:
         * `INTAKE` - INTAKE
         * `RETRIEVAL` - RETRIEVAL
         * `RELOCATION` - RELOCATION
-    WhatsappEnum:
+    VenueRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        zones:
+          type: array
+          items:
+            type: string
+        key_hooks:
+          type: integer
+      required:
+      - id
+      - key_hooks
+      - name
+      - zones
+    WhatsAppIntegration:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/WhatsAppStatusEnum'
+        transport:
+          type: string
+        sender_ready:
+          type: boolean
+        signature_secret_set:
+          type: boolean
+        webhook_verification_set:
+          type: boolean
+      required:
+      - sender_ready
+      - signature_secret_set
+      - status
+      - transport
+      - webhook_verification_set
+    WhatsAppStatusEnum:
       enum:
       - simulated
       - configured

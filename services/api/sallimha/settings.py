@@ -152,6 +152,8 @@ SPECTACULAR_SETTINGS = {
         "TeamStatusEnum": "console.serializers.TEAM_STATUSES",
         "IncidentStatusEnum": "console.serializers.INCIDENT_STATUSES",
         "RoleEnum": "console.serializers.ROLES",
+        "CarryoverStatusEnum": "console.serializers.CARRYOVER_STATUSES",
+        "WhatsAppStatusEnum": "console.serializers.WHATSAPP_STATUSES",
     },
 }
 

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.urls import path
 
-from console import views
+from console import views, views_admin
 from messaging import simulator_api
 
 urlpatterns = [
@@ -24,6 +24,41 @@ urlpatterns = [
     path("tickets/<int:ticket_id>/confirm-receipt", views.ConfirmReceipt.as_view()),
     path("tickets/<int:ticket_id>/except-intake", views.ExceptIntake.as_view()),
     path("media/<int:media_id>", views.media_file),
+    path("tickets/<int:ticket_id>/open-incident", views.OpenIncident.as_view()),
+    path("tickets/<int:ticket_id>/place-hold", views.PlaceHold.as_view()),
+    path("tickets/<int:ticket_id>/clear-hold", views.ClearHold.as_view()),
+    path("tickets/<int:ticket_id>/assisted-request", views.AssistedRequest.as_view()),
+    path("tickets/<int:ticket_id>/assisted-handover", views.AssistedHandover.as_view()),
+    path("tickets/<int:ticket_id>/relocate-start", views.RelocateStart.as_view()),
+    path("tickets/<int:ticket_id>/relocate-complete", views.RelocateComplete.as_view()),
+    path("tickets/<int:ticket_id>/propose-unclaimed", views.ProposeUnclaimed.as_view()),
+    path("tickets/<int:ticket_id>/approve-unclaimed", views.ApproveUnclaimed.as_view()),
+    path("tickets/<int:ticket_id>/release-carryover", views.ReleaseCarryover.as_view()),
+    path("events/<int:event_id>/incidents", views_admin.event_incidents),
+    path("incidents/<int:incident_id>", views_admin.incident_detail),
+    path("incidents/<int:incident_id>/notes", views_admin.IncidentNote.as_view()),
+    path("incidents/<int:incident_id>/resolve", views_admin.IncidentResolve.as_view()),
+    path("staff", views_admin.StaffDirectory.as_view()),
+    path("staff/<int:staff_id>/role", views_admin.StaffRole.as_view()),
+    path("staff/<int:staff_id>/deactivate", views_admin.StaffDeactivate.as_view()),
+    path("staff/<int:staff_id>/reactivate", views_admin.StaffReactivate.as_view()),
+    path("staff/<int:staff_id>/mfa", views_admin.StaffMfa.as_view()),
+    path("venues", views_admin.Venues.as_view()),
+    path("events", views_admin.CreateEvent.as_view()),
+    path("events/<int:event_id>/close", views_admin.CloseEvent.as_view()),
+    path("events/<int:event_id>/report", views_admin.event_report),
+    path("events/<int:event_id>/export/tickets.csv", views_admin.export_tickets),
+    path("events/<int:event_id>/export/guest-phones.csv", views_admin.export_guest_phones),
+    path("events/<int:event_id>/opening-check", views_admin.opening_check),
+    path("ops/dead-letters", views_admin.DeadLetters.as_view()),
+    path("ops/dead-letters/<int:outbox_id>/replay", views_admin.ReplayDeadLetter.as_view()),
+    path("carryover", views_admin.CarryoverRegister.as_view()),
+    path("config", views_admin.Config.as_view()),
+    path("config/timings", views_admin.ConfigTimings.as_view()),
+    path("config/retention", views_admin.ConfigRetention.as_view()),
+    path("config/templates", views_admin.ConfigTemplates.as_view()),
+    path("retention/apply", views_admin.ApplyRetention.as_view()),
+    path("integrations/whatsapp", views_admin.WhatsAppIntegrationView.as_view()),
 ]
 
 if settings.SIMULATOR_ENABLED:  # local/test only; settings refuse it elsewhere

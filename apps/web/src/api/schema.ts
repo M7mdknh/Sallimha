@@ -84,6 +84,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/carryover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["carryover_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["config_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/config/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["config_retention_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/config/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["config_templates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/config/timings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["config_timings_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dev/sim/messages": {
         parameters: {
             query?: never;
@@ -132,6 +212,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["events_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events/": {
         parameters: {
             query?: never;
@@ -140,6 +236,70 @@ export interface paths {
             cookie?: never;
         };
         get: operations["events_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{event_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["events_close_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{event_id}/export/guest-phones.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events_export_guest_phones.csv_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{event_id}/export/tickets.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events_export_tickets.csv_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{event_id}/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events_incidents_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -164,6 +324,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{event_id}/opening-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events_opening_check_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{event_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events_report_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events/{event_id}/shifts": {
         parameters: {
             query?: never;
@@ -174,6 +366,71 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["events_shifts_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incidents/{incident_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["incidents_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incidents/{incident_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["incidents_notes_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incidents/{incident_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["incidents_resolve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Super admin only. Shows readiness flags, never credential values; credentials live in the secret store. */
+        get: operations["integrations_whatsapp_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -197,6 +454,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ops/dead-letters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ops_dead_letters_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ops/dead-letters/{outbox_id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ops_dead_letters_replay_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/retention/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retention_apply_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shifts/{shift_id}/end": {
         parameters: {
             query?: never;
@@ -207,6 +512,87 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["shifts_end_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["staff_list"];
+        put?: never;
+        post: operations["staff_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/{staff_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["staff_deactivate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/{staff_id}/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Issues TOTP enrolment. Deliberately not replay-stored: the URI is a secret and is shown only once. */
+        post: operations["staff_mfa_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/{staff_id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["staff_reactivate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/{staff_id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["staff_role_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -229,6 +615,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tickets/{ticket_id}/approve-unclaimed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_approve_unclaimed_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/assisted-handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_assisted_handover_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/assisted-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_assisted_request_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tickets/{ticket_id}/cancel": {
         parameters: {
             query?: never;
@@ -239,6 +673,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["tickets_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/clear-hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_clear_hold_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -325,6 +775,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tickets/{ticket_id}/open-incident": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_open_incident_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/place-hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_place_hold_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/propose-unclaimed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_propose_unclaimed_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/release-carryover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_release_carryover_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/relocate-complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_relocate_complete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/relocate-start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_relocate_start_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tickets/{ticket_id}/withdraw": {
         parameters: {
             query?: never;
@@ -357,6 +903,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/venues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["venues_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -374,6 +936,52 @@ export interface components {
             ticket: string | null;
             ticket_id: number | null;
         };
+        CarryoverRow: {
+            id: number;
+            ticket: string;
+            ticket_id: number;
+            event: string;
+            status: components["schemas"]["CarryoverStatusEnum"];
+            custodian: string;
+            plan: string;
+            location: string;
+            hook: number | null;
+            /** Format: date-time */
+            proposed_at: string;
+        };
+        /**
+         * @description * `PROPOSED` - PROPOSED
+         *     * `APPROVED` - APPROVED
+         *     * `RELEASED` - RELEASED
+         * @enum {string}
+         */
+        CarryoverStatusEnum: "PROPOSED" | "APPROVED" | "RELEASED";
+        /**
+         * @description * `missing_vehicle` - missing_vehicle
+         *     * `key_issue` - key_issue
+         *     * `damage` - damage
+         *     * `identity_dispute` - identity_dispute
+         *     * `notification_failure` - notification_failure
+         *     * `operational_delay` - operational_delay
+         *     * `complaint` - complaint
+         * @enum {string}
+         */
+        CategoryEnum: "missing_vehicle" | "key_issue" | "damage" | "identity_dispute" | "notification_failure" | "operational_delay" | "complaint";
+        ConfigResponse: {
+            timings: {
+                [key: string]: number;
+            };
+            retention_days: {
+                [key: string]: number;
+            };
+            template_overrides: {
+                [key: string]: components["schemas"]["TemplateCopy"];
+            };
+            catalogue: {
+                [key: string]: components["schemas"]["TemplateCopy"];
+            };
+            retention_preview: components["schemas"]["RetentionPreview"];
+        };
         /**
          * @description * `UNCONFIRMED` - UNCONFIRMED
          *     * `CONFIRMED_IN_PERSON` - CONFIRMED_IN_PERSON
@@ -382,8 +990,31 @@ export interface components {
          * @enum {string}
          */
         ContactStateEnum: "UNCONFIRMED" | "CONFIRMED_IN_PERSON" | "CORRECTION_REQUIRED" | "ASSISTED_FALLBACK";
+        CreateEventRequestRequest: {
+            venue_id: number;
+            name: string;
+            /** Format: date-time */
+            starts_at: string;
+        };
+        CreateStaffRequestRequest: {
+            full_name: string;
+            phone: string;
+            role: components["schemas"]["RoleEnum"];
+            username?: string;
+            password?: string;
+        };
         CsrfResponse: {
             csrfToken: string;
+        };
+        DeadLetter: {
+            id: number;
+            kind: string;
+            recipient: string;
+            ticket: string | null;
+            failure_class: string;
+            last_error: string;
+            /** Format: date-time */
+            created_at: string;
         };
         /**
          * @description * `in` - in
@@ -404,6 +1035,20 @@ export interface components {
             status: components["schemas"]["EventStatusEnum"];
             venue: string;
         };
+        EventReport: {
+            event_id: number;
+            outcomes: {
+                [key: string]: number;
+            };
+            stages: components["schemas"]["Stages"];
+            /** Format: date-time */
+            oldest_queued_at: string | null;
+            unresolved_incidents: number;
+            ratings: {
+                [key: string]: number;
+            };
+            hours: components["schemas"]["HoursRow"][];
+        };
         /**
          * @description * `OPEN` - OPEN
          *     * `CLOSED` - CLOSED
@@ -418,19 +1063,9 @@ export interface components {
             /** Format: date-time */
             starts_at: string;
         };
-        /**
-         * @description * `photos` - photos
-         *     * `vehicle` - vehicle
-         * @enum {string}
-         */
-        ExceptIntakeRequestKindEnum: "photos" | "vehicle";
-        ExceptIntakeRequestRequest: {
-            reason: string;
-            kind: components["schemas"]["ExceptIntakeRequestKindEnum"];
-        };
         Health: {
             worker: components["schemas"]["WorkerEnum"];
-            whatsapp: components["schemas"]["WhatsappEnum"];
+            whatsapp: components["schemas"]["WhatsAppStatusEnum"];
         };
         HoldBrief: {
             id: number;
@@ -439,6 +1074,16 @@ export interface components {
             blocks_handover: boolean;
             /** Format: date-time */
             created_at: string;
+        };
+        HoursRow: {
+            staff_id: number;
+            name: string;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: date-time */
+            ended_at: string | null;
+            worked_s: number | null;
+            break_s: number;
         };
         IdResponse: {
             id: number;
@@ -450,6 +1095,27 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        IncidentDetail: {
+            id: number;
+            category: components["schemas"]["CategoryEnum"];
+            status: components["schemas"]["IncidentStatusEnum"];
+            description: string;
+            ticket: string | null;
+            ticket_id: number | null;
+            /** Format: date-time */
+            created_at: string;
+            notes: components["schemas"]["IncidentNoteOut"][];
+            resolution: string;
+            resolved_by: string | null;
+            /** Format: date-time */
+            resolved_at: string | null;
+        };
+        IncidentNoteOut: {
+            author: string;
+            text: string;
+            /** Format: date-time */
+            created_at: string;
+        };
         /**
          * @description * `OPEN` - OPEN
          *     * `IN_REVIEW` - IN_REVIEW
@@ -457,6 +1123,22 @@ export interface components {
          * @enum {string}
          */
         IncidentStatusEnum: "OPEN" | "IN_REVIEW" | "RESOLVED";
+        IncidentSummary: {
+            id: number;
+            category: components["schemas"]["CategoryEnum"];
+            status: components["schemas"]["IncidentStatusEnum"];
+            description: string;
+            ticket: string | null;
+            ticket_id: number | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description * `INTAKE` - INTAKE
+         *     * `INCIDENT` - INCIDENT
+         * @enum {string}
+         */
+        KindEnum: "INTAKE" | "INCIDENT";
         LiveRequest: {
             request_id: number;
             ticket_id: number;
@@ -505,16 +1187,42 @@ export interface components {
             id: number;
             /** Format: date-time */
             received_at: string;
-            kind: components["schemas"]["MediaBriefKindEnum"];
+            kind: components["schemas"]["KindEnum"];
         };
         /**
-         * @description * `INTAKE` - INTAKE
-         *     * `INCIDENT` - INCIDENT
+         * @description * `collected_verified` - collected_verified
+         *     * `moved_to_storage` - moved_to_storage
+         *     * `other` - other
          * @enum {string}
          */
-        MediaBriefKindEnum: "INTAKE" | "INCIDENT";
+        MethodEnum: "collected_verified" | "moved_to_storage" | "other";
+        MfaIssueResponse: {
+            /** @description Shown once; deliver out of band */
+            otpauth_uri: string;
+        };
+        NoteRequestRequest: {
+            text: string;
+        };
         OkResponse: {
             ok: boolean;
+        };
+        OpeningCheck: {
+            ok: boolean;
+            causes: string[];
+            worker: string;
+            whatsapp: string;
+            zones: number;
+            key_hooks: number;
+            assigned_not_started: number;
+            carryover_unresolved: number;
+            dead_letters: number;
+        };
+        ReasonRequestRequest: {
+            reason: string;
+        };
+        ReleaseCarryoverRequestRequest: {
+            method: components["schemas"]["MethodEnum"];
+            note: string;
         };
         /**
          * @description * `WAITING_FOR_PARKING` - WAITING_FOR_PARKING
@@ -526,6 +1234,28 @@ export interface components {
          * @enum {string}
          */
         RequestStateEnum: "WAITING_FOR_PARKING" | "QUEUED" | "OFFERED" | "ACCEPTED" | "COMPLETED" | "WITHDRAWN";
+        ResolveRequestRequest: {
+            outcome: string;
+        };
+        RetentionCategory: {
+            days: number;
+            eligible: number;
+        };
+        RetentionPreview: {
+            guest_contact: components["schemas"]["RetentionCategory"];
+            intake_photos: components["schemas"]["RetentionCategory"];
+            incident_evidence: components["schemas"]["RetentionCategory"];
+        };
+        RetentionRequestRequest: {
+            retention_days: {
+                [key: string]: number;
+            };
+        };
+        RetentionResult: {
+            guest_contact: number;
+            intake_photos: number;
+            incident_evidence: number;
+        };
         /**
          * @description * `VALET` - VALET
          *     * `SUPERVISOR` - SUPERVISOR
@@ -535,6 +1265,9 @@ export interface components {
          * @enum {string}
          */
         RoleEnum: "VALET" | "SUPERVISOR" | "MANAGER" | "ADMIN" | "SUPER_ADMIN";
+        RoleRequestRequest: {
+            role: components["schemas"]["RoleEnum"];
+        };
         /**
          * @description * `warning` - warning
          *     * `critical` - critical
@@ -578,6 +1311,27 @@ export interface components {
             name: string;
             role: components["schemas"]["RoleEnum"];
         };
+        StaffRow: {
+            id: number;
+            full_name: string;
+            phone_masked: string;
+            role: components["schemas"]["RoleEnum"];
+            enabled: boolean;
+            username: string | null;
+            mfa_enrolled: boolean;
+            mfa_locked: boolean;
+        };
+        StageStat: {
+            count: number;
+            median_s: number | null;
+            p95_s: number | null;
+        };
+        Stages: {
+            request_to_accept: components["schemas"]["StageStat"];
+            accept_to_ready: components["schemas"]["StageStat"];
+            ready_to_delivered: components["schemas"]["StageStat"];
+            received_to_parked: components["schemas"]["StageStat"];
+        };
         StartShiftRequestRequest: {
             staff_id: number;
         };
@@ -604,6 +1358,19 @@ export interface components {
             ticket: string;
             ticket_id: number;
             status: string;
+        };
+        TemplateCopy: {
+            ar: string;
+            en: string;
+        };
+        TemplateCopyRequest: {
+            ar: string;
+            en: string;
+        };
+        TemplatesRequestRequest: {
+            overrides: {
+                [key: string]: components["schemas"]["TemplateCopyRequest"];
+            };
         };
         TicketDetail: {
             id: number;
@@ -651,6 +1418,11 @@ export interface components {
             action: string;
             actor: string;
         };
+        TimingsRequestRequest: {
+            timings: {
+                [key: string]: number;
+            };
+        };
         /**
          * @description * `INTAKE` - INTAKE
          *     * `RETRIEVAL` - RETRIEVAL
@@ -658,13 +1430,26 @@ export interface components {
          * @enum {string}
          */
         TypeEnum: "INTAKE" | "RETRIEVAL" | "RELOCATION";
+        VenueRow: {
+            id: number;
+            name: string;
+            zones: string[];
+            key_hooks: number;
+        };
+        WhatsAppIntegration: {
+            status: components["schemas"]["WhatsAppStatusEnum"];
+            transport: string;
+            sender_ready: boolean;
+            signature_secret_set: boolean;
+            webhook_verification_set: boolean;
+        };
         /**
          * @description * `simulated` - simulated
          *     * `configured` - configured
          *     * `not_configured` - not_configured
          * @enum {string}
          */
-        WhatsappEnum: "simulated" | "configured" | "not_configured";
+        WhatsAppStatusEnum: "simulated" | "configured" | "not_configured";
         /**
          * @description * `ok` - ok
          *     * `stale` - stale
@@ -843,6 +1628,275 @@ export interface operations {
             };
         };
     };
+    carryover_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CarryoverRow"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    config_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    config_retention_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RetentionRequestRequest"];
+                "multipart/form-data": components["schemas"]["RetentionRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    config_templates_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplatesRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TemplatesRequestRequest"];
+                "multipart/form-data": components["schemas"]["TemplatesRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    config_timings_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TimingsRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TimingsRequestRequest"];
+                "multipart/form-data": components["schemas"]["TimingsRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     dev_sim_messages_list: {
         parameters: {
             query: {
@@ -916,6 +1970,73 @@ export interface operations {
             };
         };
     };
+    events_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEventRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CreateEventRequestRequest"];
+                "multipart/form-data": components["schemas"]["CreateEventRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     events_list: {
         parameters: {
             query?: never;
@@ -932,6 +2053,179 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EventSummary"][];
                 };
+            };
+        };
+    };
+    events_close_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                event_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    "events_export_guest_phones.csv_retrieve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "events_export_tickets.csv_retrieve": {
+        parameters: {
+            query?: {
+                state?: string;
+            };
+            header?: never;
+            path: {
+                event_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    events_incidents_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentSummary"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -952,6 +2246,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LiveSnapshot"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    events_opening_check_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpeningCheck"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    events_report_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventReport"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Not found or out of scope */
@@ -1032,6 +2398,214 @@ export interface operations {
             };
         };
     };
+    incidents_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentDetail"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    incidents_notes_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                incident_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NoteRequestRequest"];
+                "multipart/form-data": components["schemas"]["NoteRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    incidents_resolve_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                incident_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ResolveRequestRequest"];
+                "multipart/form-data": components["schemas"]["ResolveRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    integrations_whatsapp_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppIntegration"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     media_retrieve: {
         parameters: {
             query?: never;
@@ -1060,6 +2634,164 @@ export interface operations {
             };
         };
     };
+    ops_dead_letters_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadLetter"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ops_dead_letters_replay_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                outbox_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    retention_apply_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     shifts_end_create: {
         parameters: {
             query?: never;
@@ -1080,6 +2812,368 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShiftResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    staff_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffRow"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    staff_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStaffRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CreateStaffRequestRequest"];
+                "multipart/form-data": components["schemas"]["CreateStaffRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    staff_deactivate_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                staff_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReasonRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReasonRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    staff_mfa_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staff_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaIssueResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    staff_reactivate_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                staff_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    staff_role_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                staff_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RoleRequestRequest"];
+                "multipart/form-data": components["schemas"]["RoleRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
                 };
             };
             400: {
@@ -1151,6 +3245,213 @@ export interface operations {
             };
         };
     };
+    tickets_approve_unclaimed_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_assisted_handover_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_assisted_request_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     tickets_cancel_create: {
         parameters: {
             query?: never;
@@ -1165,9 +3466,78 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExceptIntakeRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ExceptIntakeRequestRequest"];
-                "multipart/form-data": components["schemas"]["ExceptIntakeRequestRequest"];
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_clear_hold_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
             };
         };
         responses: {
@@ -1234,9 +3604,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExceptIntakeRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ExceptIntakeRequestRequest"];
-                "multipart/form-data": components["schemas"]["ExceptIntakeRequestRequest"];
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
             };
         };
         responses: {
@@ -1303,9 +3673,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExceptIntakeRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ExceptIntakeRequestRequest"];
-                "multipart/form-data": components["schemas"]["ExceptIntakeRequestRequest"];
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
             };
         };
         responses: {
@@ -1372,9 +3742,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExceptIntakeRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ExceptIntakeRequestRequest"];
-                "multipart/form-data": components["schemas"]["ExceptIntakeRequestRequest"];
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
             };
         };
         responses: {
@@ -1441,9 +3811,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExceptIntakeRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ExceptIntakeRequestRequest"];
-                "multipart/form-data": components["schemas"]["ExceptIntakeRequestRequest"];
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
             };
         };
         responses: {
@@ -1510,9 +3880,423 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExceptIntakeRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ExceptIntakeRequestRequest"];
-                "multipart/form-data": components["schemas"]["ExceptIntakeRequestRequest"];
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_open_incident_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_place_hold_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_propose_unclaimed_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_release_carryover_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_relocate_complete_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_relocate_start_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
             };
         };
         responses: {
@@ -1579,9 +4363,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExceptIntakeRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ExceptIntakeRequestRequest"];
-                "multipart/form-data": components["schemas"]["ExceptIntakeRequestRequest"];
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
             };
         };
         responses: {
@@ -1648,9 +4432,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExceptIntakeRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ExceptIntakeRequestRequest"];
-                "multipart/form-data": components["schemas"]["ExceptIntakeRequestRequest"];
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
             };
         };
         responses: {
@@ -1700,6 +4484,40 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
+            };
+        };
+    };
+    venues_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VenueRow"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

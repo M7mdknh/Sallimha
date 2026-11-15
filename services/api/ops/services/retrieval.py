@@ -36,7 +36,7 @@ def _status_text(req, ticket, language):
 
 
 def request_retrieval(binding, ticket, *, via: str = "guest_whatsapp", actor=None, source_id: str = "",
-                      now=None) -> tuple[RetrievalRequest, bool]:
+                      reason: str = "", now=None) -> tuple[RetrievalRequest, bool]:
     now = now or timezone.now()
     with transaction.atomic():
         ticket = Ticket.objects.select_for_update(no_key=True).get(pk=ticket.pk)
@@ -67,7 +67,8 @@ def request_retrieval(binding, ticket, *, via: str = "guest_whatsapp", actor=Non
             template = "guest.queued" if state == RetrievalRequest.State.QUEUED else "guest.early_request"
             outbox.enqueue(template, binding=binding, ticket=ticket, template=template,
                            params={"ticket": _t(ticket)}, dedupe_key=f"{template}:{req.id}", now=now)
-        _audit("request.create", actor, ticket, "console" if actor else "whatsapp", via=via, state=state)
+        _audit("request.create", actor, ticket, "console" if actor else "whatsapp", via=via, state=state,
+               reason=reason.strip()[:200])
         wake_dispatcher()
     return req, True
 

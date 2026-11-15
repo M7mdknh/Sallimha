@@ -12,6 +12,8 @@ CONTACT_STATES = ["UNCONFIRMED", "CONFIRMED_IN_PERSON", "CORRECTION_REQUIRED", "
 EVENT_STATUSES = ["OPEN", "CLOSED"]
 TEAM_STATUSES = ["available", "busy", "unavailable"]
 INCIDENT_STATUSES = ["OPEN", "IN_REVIEW", "RESOLVED"]
+CARRYOVER_STATUSES = ["PROPOSED", "APPROVED", "RELEASED"]
+WHATSAPP_STATUSES = ["simulated", "configured", "not_configured"]
 
 
 # --- shared ---------------------------------------------------------------------------------------
@@ -73,7 +75,7 @@ class EventBrief(serializers.Serializer):
 
 class Health(serializers.Serializer):
     worker = serializers.ChoiceField(choices=["ok", "stale", "missing", "unknown"])
-    whatsapp = serializers.ChoiceField(choices=["simulated", "configured", "not_configured"])
+    whatsapp = serializers.ChoiceField(choices=WHATSAPP_STATUSES)
 
 
 class AttentionItem(serializers.Serializer):
@@ -304,3 +306,235 @@ class SimSendRequest(serializers.Serializer):
 class SimSendResponse(serializers.Serializer):
     ok = serializers.BooleanField()
     simulated = serializers.BooleanField()
+
+
+# --- Phase 2: exceptions, incidents, directory, configuration, reports -----------------------------
+
+INCIDENT_CATEGORIES = ["missing_vehicle", "key_issue", "damage", "identity_dispute", "notification_failure",
+                       "operational_delay", "complaint"]
+
+
+class OpenIncidentRequest(serializers.Serializer):
+    category = serializers.ChoiceField(choices=INCIDENT_CATEGORIES)
+    description = serializers.CharField(max_length=2000)
+
+
+class PlaceHoldRequest(ReasonRequest):
+    blocks_dispatch = serializers.BooleanField()
+    blocks_handover = serializers.BooleanField()
+
+
+class ClearHoldRequest(ReasonRequest):
+    hold_id = serializers.IntegerField()
+
+
+class AssistedHandoverRequest(ReasonRequest):
+    method = serializers.ChoiceField(choices=["in_person_check", "known_guest", "other"])
+
+
+class RelocateStartRequest(ReasonRequest):
+    to_staff_id = serializers.IntegerField()
+
+
+class RelocateCompleteRequest(serializers.Serializer):
+    zone_code = serializers.CharField(max_length=20)
+    detail = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    hook_number = serializers.IntegerField(min_value=1)
+
+
+class ProposeUnclaimedRequest(serializers.Serializer):
+    custodian = serializers.CharField(max_length=160)
+    plan = serializers.CharField(max_length=2000)
+
+
+class ReleaseCarryoverRequest(serializers.Serializer):
+    method = serializers.ChoiceField(choices=["collected_verified", "moved_to_storage", "other"])
+    note = serializers.CharField(max_length=2000)
+
+
+class IncidentSummary(serializers.Serializer):
+    id = serializers.IntegerField()
+    category = serializers.ChoiceField(choices=INCIDENT_CATEGORIES)
+    status = serializers.ChoiceField(choices=INCIDENT_STATUSES)
+    description = serializers.CharField()
+    ticket = serializers.CharField(allow_null=True)
+    ticket_id = serializers.IntegerField(allow_null=True)
+    created_at = serializers.DateTimeField()
+
+
+class IncidentNoteOut(serializers.Serializer):
+    author = serializers.CharField()
+    text = serializers.CharField()
+    created_at = serializers.DateTimeField()
+
+
+class IncidentDetail(IncidentSummary):
+    notes = IncidentNoteOut(many=True)
+    resolution = serializers.CharField(allow_blank=True)
+    resolved_by = serializers.CharField(allow_null=True)
+    resolved_at = serializers.DateTimeField(allow_null=True)
+
+
+class NoteRequest(serializers.Serializer):
+    text = serializers.CharField(max_length=2000)
+
+
+class ResolveRequest(serializers.Serializer):
+    outcome = serializers.CharField(max_length=2000)
+
+
+class StaffRow(serializers.Serializer):
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    phone_masked = serializers.CharField()
+    role = serializers.ChoiceField(choices=ROLES)
+    enabled = serializers.BooleanField()
+    username = serializers.CharField(allow_null=True)
+    mfa_enrolled = serializers.BooleanField()
+    mfa_locked = serializers.BooleanField()
+
+
+class CreateStaffRequest(serializers.Serializer):
+    full_name = serializers.CharField(max_length=120)
+    phone = serializers.CharField(max_length=40)
+    role = serializers.ChoiceField(choices=ROLES)
+    username = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    password = serializers.CharField(max_length=256, required=False, allow_blank=True, trim_whitespace=False)
+
+
+class RoleRequest(serializers.Serializer):
+    role = serializers.ChoiceField(choices=ROLES)
+
+
+class MfaIssueResponse(serializers.Serializer):
+    otpauth_uri = serializers.CharField(help_text="Shown once; deliver out of band")
+
+
+class VenueRow(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    zones = serializers.ListField(child=serializers.CharField())
+    key_hooks = serializers.IntegerField()
+
+
+class CreateEventRequest(serializers.Serializer):
+    venue_id = serializers.IntegerField()
+    name = serializers.CharField(max_length=160)
+    starts_at = serializers.DateTimeField()
+
+
+class StageStat(serializers.Serializer):
+    count = serializers.IntegerField()
+    median_s = serializers.IntegerField(allow_null=True)
+    p95_s = serializers.IntegerField(allow_null=True)
+
+
+class Stages(serializers.Serializer):
+    request_to_accept = StageStat()
+    accept_to_ready = StageStat()
+    ready_to_delivered = StageStat()
+    received_to_parked = StageStat()
+
+
+class HoursRow(serializers.Serializer):
+    staff_id = serializers.IntegerField()
+    name = serializers.CharField()
+    started_at = serializers.DateTimeField()
+    ended_at = serializers.DateTimeField(allow_null=True)
+    worked_s = serializers.IntegerField(allow_null=True)
+    break_s = serializers.IntegerField()
+
+
+class EventReport(serializers.Serializer):
+    event_id = serializers.IntegerField()
+    outcomes = serializers.DictField(child=serializers.IntegerField())
+    stages = Stages()
+    oldest_queued_at = serializers.DateTimeField(allow_null=True)
+    unresolved_incidents = serializers.IntegerField()
+    ratings = serializers.DictField(child=serializers.IntegerField())
+    hours = HoursRow(many=True)
+
+
+class OpeningCheck(serializers.Serializer):
+    ok = serializers.BooleanField()
+    causes = serializers.ListField(child=serializers.CharField())
+    worker = serializers.CharField()
+    whatsapp = serializers.CharField()
+    zones = serializers.IntegerField()
+    key_hooks = serializers.IntegerField()
+    assigned_not_started = serializers.IntegerField()
+    carryover_unresolved = serializers.IntegerField()
+    dead_letters = serializers.IntegerField()
+
+
+class DeadLetter(serializers.Serializer):
+    id = serializers.IntegerField()
+    kind = serializers.CharField()
+    recipient = serializers.CharField()
+    ticket = serializers.CharField(allow_null=True)
+    failure_class = serializers.CharField(allow_blank=True)
+    last_error = serializers.CharField(allow_blank=True)
+    created_at = serializers.DateTimeField()
+
+
+class CarryoverRow(serializers.Serializer):
+    id = serializers.IntegerField()
+    ticket = serializers.CharField()
+    ticket_id = serializers.IntegerField()
+    event = serializers.CharField()
+    status = serializers.ChoiceField(choices=CARRYOVER_STATUSES)
+    custodian = serializers.CharField()
+    plan = serializers.CharField()
+    location = serializers.CharField(allow_blank=True)
+    hook = serializers.IntegerField(allow_null=True)
+    proposed_at = serializers.DateTimeField()
+
+
+class RetentionCategory(serializers.Serializer):
+    days = serializers.IntegerField()
+    eligible = serializers.IntegerField()
+
+
+class RetentionPreview(serializers.Serializer):
+    guest_contact = RetentionCategory()
+    intake_photos = RetentionCategory()
+    incident_evidence = RetentionCategory()
+
+
+class RetentionResult(serializers.Serializer):
+    guest_contact = serializers.IntegerField()
+    intake_photos = serializers.IntegerField()
+    incident_evidence = serializers.IntegerField()
+
+
+class TemplateCopy(serializers.Serializer):
+    ar = serializers.CharField(max_length=1000)
+    en = serializers.CharField(max_length=1000)
+
+
+class ConfigResponse(serializers.Serializer):
+    timings = serializers.DictField(child=serializers.IntegerField())
+    retention_days = serializers.DictField(child=serializers.IntegerField())
+    template_overrides = serializers.DictField(child=TemplateCopy())
+    catalogue = serializers.DictField(child=TemplateCopy())
+    retention_preview = RetentionPreview()
+
+
+class TimingsRequest(serializers.Serializer):
+    timings = serializers.DictField(child=serializers.IntegerField())
+
+
+class RetentionRequest(serializers.Serializer):
+    retention_days = serializers.DictField(child=serializers.IntegerField(min_value=0))
+
+
+class TemplatesRequest(serializers.Serializer):
+    overrides = serializers.DictField(child=TemplateCopy())
+
+
+class WhatsAppIntegration(serializers.Serializer):
+    status = serializers.ChoiceField(choices=WHATSAPP_STATUSES)
+    transport = serializers.CharField()
+    sender_ready = serializers.BooleanField()
+    signature_secret_set = serializers.BooleanField()
+    webhook_verification_set = serializers.BooleanField()

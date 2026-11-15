@@ -102,6 +102,16 @@ def allowed_actions(ticket, req, binding) -> list[str]:
     if ticket.state in (Ticket.State.RECEIVED, Ticket.State.PARKED, Ticket.State.RETRIEVING, Ticket.State.READY) \
             and binding is not None:
         actions.append("correct_phone")
+    open_case = ticket.carryover_cases.exclude(status="RELEASED").first()
+    moving = ticket.tasks.filter(type="RELOCATION", status__in=["RESERVED", "OFFERED", "ACCEPTED"]).exists()
+    if ticket.state == Ticket.State.PARKED and req is None and open_case is None:
+        actions += ["assisted_request", "propose_unclaimed"] + ([] if moving else ["relocate_start"])
+    if moving:
+        actions.append("relocate_complete")
+    if ticket.state == Ticket.State.READY:
+        actions.append("assisted_handover")
+    if open_case is not None:
+        actions.append("approve_unclaimed" if open_case.status == "PROPOSED" else "release_carryover")
     from ops.services import holds, incidents
 
     actions += holds.allowed_actions(ticket) + incidents.allowed_actions(ticket)

@@ -272,3 +272,112 @@ def media_file(request, media_id):
     response["Cache-Control"] = "private, no-store"
     response["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+# --- Phase 2 ticket exception actions ------------------------------------------------------------
+
+@ticket_command(s.OpenIncidentRequest, s.IdResponse)
+class OpenIncident(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.services import incidents
+
+        return {"id": incidents.open_incident(actor, ticket.event, data["category"], data["description"],
+                                              ticket=ticket).id}
+
+
+@ticket_command(s.PlaceHoldRequest, s.IdResponse)
+class PlaceHold(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.services import holds
+
+        return {"id": holds.place_hold(actor, ticket, data["reason"], blocks_dispatch=data["blocks_dispatch"],
+                                       blocks_handover=data["blocks_handover"]).id}
+
+
+@ticket_command(s.ClearHoldRequest, s.IdResponse)
+class ClearHold(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.models import SafetyHold
+        from ops.services import holds
+
+        hold = SafetyHold.objects.filter(pk=data["hold_id"], ticket=ticket).first()
+        if hold is None:
+            raise DomainError("invalid_state")
+        return {"id": holds.clear_hold(actor, hold, data["reason"]).id}
+
+
+@ticket_command(s.ReasonRequest, s.RequestStateResponse)
+class AssistedRequest(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.models import Role
+        from ops.permissions import require
+
+        require(actor, Role.SUPERVISOR, ticket.event)
+        req, _created = retrieval.request_retrieval(None, ticket, via="assisted", actor=actor,
+                                                    reason=data["reason"])
+        return {"request_id": req.id, "state": req.state}
+
+
+@ticket_command(s.AssistedHandoverRequest, s.TicketStateResponse)
+class AssistedHandover(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.services import handover
+
+        handover.assisted_handover(actor, ticket, data["method"], data["reason"])
+        ticket.refresh_from_db()
+        return {"id": ticket.id, "state": ticket.state}
+
+
+@ticket_command(s.RelocateStartRequest, s.IdResponse)
+class RelocateStart(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.services import relocation
+
+        valet = Staff.objects.filter(pk=data["to_staff_id"], org_id=actor.org_id).first()
+        if valet is None:
+            raise DomainError("receiver_unavailable")
+        return {"id": relocation.start_relocation(actor, ticket, valet, data["reason"]).id}
+
+
+@ticket_command(s.RelocateCompleteRequest, s.TicketStateResponse)
+class RelocateComplete(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.services import relocation
+
+        task = ticket.tasks.filter(type="RELOCATION", status__in=["RESERVED", "OFFERED", "ACCEPTED"]).first()
+        if task is None:
+            raise DomainError("invalid_state")
+        ticket = relocation.complete_relocation(actor, task, zone_code=data["zone_code"],
+                                                detail=data.get("detail", ""), hook_number=data["hook_number"])
+        return {"id": ticket.id, "state": ticket.state}
+
+
+@ticket_command(s.ProposeUnclaimedRequest, s.IdResponse)
+class ProposeUnclaimed(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.services import carryover
+
+        return {"id": carryover.propose_unclaimed(actor, ticket, custodian=data["custodian"], plan=data["plan"]).id}
+
+
+def _open_case(ticket):
+    case = ticket.carryover_cases.exclude(status="RELEASED").first()
+    if case is None:
+        raise DomainError("invalid_state")
+    return case
+
+
+@ticket_command(None, s.IdResponse)
+class ApproveUnclaimed(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.services import carryover
+
+        return {"id": carryover.approve_unclaimed(actor, _open_case(ticket)).id}
+
+
+@ticket_command(s.ReleaseCarryoverRequest, s.IdResponse)
+class ReleaseCarryover(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.services import carryover
+
+        return {"id": carryover.release_carryover(actor, _open_case(ticket), data["method"], data["note"]).id}

@@ -17,11 +17,16 @@ def test_schema_is_complete_and_committed(tmp_path):
         "contracts/openapi.yaml is stale: run `make contract` and commit the result")
 
 
+# Commands whose only input is the path; anything else must document its request body.
+BODYLESS_COMMANDS = ("/end", "/ack", "logout", "/close", "/reactivate", "/mfa", "/approve-unclaimed", "/replay",
+                     "/retention/apply")
+
+
 def test_every_console_route_documents_request_and_response():
     import yaml
     schema = yaml.safe_load(CONTRACT.read_text())
     for path, operations in schema["paths"].items():
         for method, op in operations.items():
             assert "200" in op["responses"], f"{method.upper()} {path} has no 200 response"
-            if method == "post" and not path.endswith(("/end", "/ack", "logout")):
+            if method == "post" and not path.endswith(BODYLESS_COMMANDS):
                 assert "requestBody" in op, f"POST {path} has no request body schema"
