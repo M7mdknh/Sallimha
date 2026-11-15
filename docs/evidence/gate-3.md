@@ -1,9 +1,9 @@
 # Gate 3 — operational completeness evidence
 
-- Build: `1ab5c37` (last code change, branch `build/phase-0-2`). CI for code up to `51091ac`: run
-  [43762126794](https://github.com/M7mdknh/Sallimha/actions/runs/43762126794) — backend, web, e2e **success**; the
-  run for the commit that adds this file is reported in the final hand-over.
-- Commands: `cd services/api && uv run pytest` → **359 passed**; `cd tests/e2e && PW_CHANNEL=chrome npx playwright test`
+- Build: `6938705` (last code change, branch `build/phase-0-2`). CI on the commit that adds this text is reported in
+  the final hand-over. CI caught one defect on `0a4705c` (run 43762749318: the ticket panel offered a manager-only
+  approval to supervisors); fixed test-first in `6938705`.
+- Commands: `cd services/api && uv run pytest` → **360 passed**; `cd tests/e2e && PW_CHANNEL=chrome npx playwright test`
   → **27 passed, 5 skipped** (desktop 1280 px + mobile 360 px; the 5 skips are desktop-only flows not repeated on
   mobile: full journey, exception flow, manager unclaimed release, design-QA width matrix, event create/close).
 - Security Guidance commit review ran on every code commit of Phase 2 after `bc323d6`; findings on earlier
@@ -36,7 +36,7 @@
 | AT-51 | PASS (SIMULATED) | test_outbox.py::test_permanent_failure_goes_dead_and_replay_is_once; test_phase2_api.py::test_admin_operations_round_trip, test_unknown_outcome_sends_are_visible_and_resent_only_on_explicit_replay |
 | AT-52 | PASS | test_reports.py::test_stage_durations_survive_reassignment |
 | AT-53 | PASS | e2e phase2.spec.ts "management pages hold their layout at every width in both languages": 8 pages × 1280/768/640 (200% zoom)/360 px × Arabic/English with no sideways scroll; visible keyboard focus. Every Playwright test also runs on the 360 px mobile project. Visual review screenshots taken at 1280 and 360 px. |
-| AT-58 | PASS | test_carryover.py::test_key_hook_reserved_across_events_until_explicit_release; test_phase2_api.py::test_hold_relocation_and_unclaimed_actions (non-manager release denied) |
+| AT-58 | PASS | test_carryover.py::test_key_hook_reserved_across_events_until_explicit_release; test_phase2_api.py::test_hold_relocation_and_unclaimed_actions (non-manager release denied), test_manager_only_carryover_actions_are_not_offered_to_supervisors |
 | AT-59 | PASS | e2e phase2.spec.ts role matrix (supervisor, manager, admin, super admin: links present/absent; direct URL above role shows the forbidden state); test_console_api.py::test_no_manual_dispatch_endpoint, test_valet_has_no_console_access; test_phase2_api.py role matrices |
 
 ## Also delivered in Phase 2

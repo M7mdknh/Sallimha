@@ -3,8 +3,8 @@
 Newest first. Status vocabulary: PASS / PASS (SIMULATED) / FAIL / BLOCKED / NOT RUN. Results obtained with the local fake WhatsApp transport are **SIMULATED** and are not real integration evidence.
 
 ## 2026-11-16 — Phase 1 finished, contract gap closed, Phase 2 built (Gate 2 and Gate 3 locally)
-Branch `build/phase-0-2`. Backend suite: **359 passed**. Playwright: **27 passed, 5 skipped** (desktop 1280 px +
-mobile 360 px; skips are desktop-only flows). CI green (run 43762126794). Nothing deployed; WhatsApp is SIMULATED.
+Branch `build/phase-0-2`. Backend suite: **360 passed**. Playwright: **27 passed, 5 skipped** (desktop 1280 px +
+mobile 360 px; skips are desktop-only flows). Nothing deployed; WhatsApp is SIMULATED.
 
 Authentication (the two open findings from the paused session, both **fixed**):
 - Login throttling uses atomic upsert counters in PostgreSQL (safe under concurrent requests and across workers):
