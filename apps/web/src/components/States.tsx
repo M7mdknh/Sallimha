@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+
+import { ApiError } from "../api/client";
 import { useT } from "../strings";
 import { Icon } from "./Icon";
 
@@ -55,4 +58,27 @@ export function Id({ children }: { children: React.ReactNode }) {
       {children}
     </bdi>
   );
+}
+
+/** A page outside the signed-in role. No retry: the server decided, and retrying cannot change it. */
+export function Forbidden() {
+  const { t } = useT();
+  return (
+    <div className="state-block" role="alert" data-testid="forbidden">
+      <Icon name="shield" />
+      <h2>{t("forbiddenTitle")}</h2>
+      <p className="muted">{t("forbiddenBody")}</p>
+    </div>
+  );
+}
+
+type Poll<T> = { data: T | null; error: unknown; refresh: () => void };
+
+/** Loading, forbidden and failed states for a page read; renders children once data exists. */
+export function PageData<T>({ poll, rows = 4, children }: { poll: Poll<T>; rows?: number;
+  children: (data: T) => ReactNode }) {
+  if (poll.data !== null) return <>{children(poll.data)}</>;
+  if (poll.error instanceof ApiError && poll.error.status === 403) return <Forbidden />;
+  if (poll.error) return <LoadFailed onRetry={poll.refresh} />;
+  return <SkeletonRows rows={rows} />;
 }

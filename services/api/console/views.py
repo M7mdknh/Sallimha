@@ -150,6 +150,16 @@ class AckAlert(ConsoleCommand):
         return out(s.AlertAckResponse, {"id": alert.id, "acknowledged": True})
 
 
+@extend_schema(parameters=[OpenApiParameter("q", str, required=True, description="Ticket number or part of a plate")],
+               responses={200: s.TicketSearchRow(many=True),
+                          404: OpenApiResponse(description="Not found or out of scope")})
+@api_view(["GET"])
+@permission_classes([IsConsoleStaff])
+def ticket_search(request, event_id):
+    event = scoped_event(actor_of(request), event_id)
+    return out(s.TicketSearchRow, live.search(event, request.query_params.get("q", "")))
+
+
 @extend_schema(responses={200: s.TicketDetail, 404: OpenApiResponse(description="Not found or out of scope")})
 @api_view(["GET"])
 @permission_classes([IsConsoleStaff])

@@ -300,6 +300,7 @@ class CarryoverRegister(Command):
             ticket = case.ticket
             occ = ticket.key_occupancies.filter(released_at__isnull=True).first()
             rows.append({"id": case.id, "ticket": _t(ticket), "ticket_id": ticket.id, "event": ticket.event.name,
+                         "event_id": ticket.event_id,
                          "status": case.status, "custodian": case.custodian, "plan": case.plan,
                          "location": f"{ticket.location_zone.code} {ticket.location_detail}".strip()
                          if ticket.location_zone_id else "", "hook": occ.hook_number if occ else None,

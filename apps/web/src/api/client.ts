@@ -9,6 +9,11 @@ export type Me = Schemas["MeResponse"];
 export type LoginResult = Schemas["LoginResponse"];
 export type SimPhone = Schemas["SimPhone"];
 export type SimMessage = Schemas["SimMessage"];
+export type Role = Schemas["RoleEnum"];
+
+/** Rank used only to decide which links to show; the server enforces every permission itself. */
+export const ROLE_RANK: Record<Role, number> = { VALET: 0, SUPERVISOR: 1, MANAGER: 2, ADMIN: 3, SUPER_ADMIN: 4 };
+export const atLeast = (me: Me, role: Role) => ROLE_RANK[me.role] >= ROLE_RANK[role];
 
 export class ApiError extends Error {
   constructor(
@@ -75,6 +80,41 @@ export const api = {
     call<Schemas["ShiftResponse"]>("POST", `/api/shifts/${shiftId}/end`, {}, key),
   ticketAction: (ticketId: number, action: string, body: Record<string, unknown>, key: string) =>
     call<Record<string, unknown>>("POST", `/api/tickets/${ticketId}/${action}`, body, key),
+  searchTickets: (eventId: number, q: string) =>
+    call<Schemas["TicketSearchRow"][]>("GET", `/api/events/${eventId}/tickets?q=${encodeURIComponent(q)}`),
+  incidents: (eventId: number) => call<Schemas["IncidentSummary"][]>("GET", `/api/events/${eventId}/incidents`),
+  incident: (id: number) => call<Schemas["IncidentDetail"]>("GET", `/api/incidents/${id}`),
+  incidentNote: (id: number, text: string, key: string) =>
+    call<Schemas["IdResponse"]>("POST", `/api/incidents/${id}/notes`, { text }, key),
+  incidentResolve: (id: number, outcome: string, key: string) =>
+    call<Schemas["IdResponse"]>("POST", `/api/incidents/${id}/resolve`, { outcome }, key),
+  staff: () => call<Schemas["StaffRow"][]>("GET", "/api/staff"),
+  createStaff: (body: Schemas["CreateStaffRequestRequest"], key: string) =>
+    call<Schemas["IdResponse"]>("POST", "/api/staff", body, key),
+  staffAction: (id: number, action: "role" | "deactivate" | "reactivate", body: Record<string, unknown>, key: string) =>
+    call<Schemas["IdResponse"]>("POST", `/api/staff/${id}/${action}`, body, key),
+  // Not replay-stored on the server: the URI is a secret shown once.
+  issueMfa: (id: number) => call<Schemas["MfaIssueResponse"]>("POST", `/api/staff/${id}/mfa`),
+  venues: () => call<Schemas["VenueRow"][]>("GET", "/api/venues"),
+  createEvent: (body: Schemas["CreateEventRequestRequest"], key: string) =>
+    call<Schemas["IdResponse"]>("POST", "/api/events", body, key),
+  closeEvent: (id: number, key: string) => call<Schemas["IdResponse"]>("POST", `/api/events/${id}/close`, {}, key),
+  report: (eventId: number) => call<Schemas["EventReport"]>("GET", `/api/events/${eventId}/report`),
+  openingCheck: (eventId: number) => call<Schemas["OpeningCheck"]>("GET", `/api/events/${eventId}/opening-check`),
+  deadLetters: () => call<Schemas["DeadLetter"][]>("GET", "/api/ops/dead-letters"),
+  replay: (id: number, key: string) => call<Schemas["OkResponse"]>("POST", `/api/ops/dead-letters/${id}/replay`, {}, key),
+  carryover: () => call<Schemas["CarryoverRow"][]>("GET", "/api/carryover"),
+  config: () => call<Schemas["ConfigResponse"]>("GET", "/api/config"),
+  saveTimings: (timings: Record<string, number>, key: string) =>
+    call<Schemas["OkResponse"]>("POST", "/api/config/timings", { timings }, key),
+  saveRetention: (retention_days: Record<string, number>, key: string) =>
+    call<Schemas["OkResponse"]>("POST", "/api/config/retention", { retention_days }, key),
+  saveTemplates: (overrides: Record<string, Schemas["TemplateCopyRequest"] | null>, key: string) =>
+    call<Schemas["OkResponse"]>("POST", "/api/config/templates", { overrides }, key),
+  applyRetention: (key: string) => call<Schemas["RetentionResult"]>("POST", "/api/retention/apply", {}, key),
+  whatsapp: () => call<Schemas["WhatsAppIntegration"]>("GET", "/api/integrations/whatsapp"),
+  // CSV downloads are plain links (the JSON client cannot read text/csv).
+  exportUrl: (eventId: number, kind: "tickets" | "guest-phones") => `/api/events/${eventId}/export/${kind}.csv`,
   simPhones: () => call<SimPhone[]>("GET", "/api/dev/sim/phones"),
   simMessages: (phone: string) => call<SimMessage[]>("GET", `/api/dev/sim/messages?phone=${encodeURIComponent(phone)}`),
   simSend: (body: Schemas["SimSendRequestRequest"]) => call<Schemas["SimSendResponse"]>("POST", "/api/dev/sim/send", body),

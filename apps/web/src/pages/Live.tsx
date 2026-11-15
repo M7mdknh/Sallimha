@@ -1,12 +1,85 @@
-import { useRef, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 
-import { ApiError, api, newKey, type LiveSnapshot } from "../api/client";
+import { ApiError, api, newKey, type LiveSnapshot, type Schemas } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Empty, Id, LoadFailed, SkeletonRows, StaleBanner, StatusPill } from "../components/States";
 import { TicketPanel } from "../components/TicketPanel";
 import { navigate } from "../router";
 import { useT } from "../strings";
 import { usePoll } from "../usePoll";
+
+const CHECK_FIELDS = [["zones", "zones"], ["key_hooks", "keyHooks"], ["assigned_not_started", "assignedNotStarted"],
+  ["carryover_unresolved", "carryoverUnresolved"], ["dead_letters", "deadLetters"]] as const;
+
+/** Find any ticket (parked cars have no open request, so they are not in the lists below). */
+function TicketFinder({ eventId, current, onOpen }: { eventId: number; current?: number; onOpen: (id: number) => void }) {
+  const { t, state, error } = useT();
+  const [q, setQ] = useState("");
+  const [rows, setRows] = useState<Schemas["TicketSearchRow"][] | null>(null);
+  const [problem, setProblem] = useState("");
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!q.trim()) return;
+    setProblem("");
+    try {
+      setRows(await api.searchTickets(eventId, q.trim()));
+    } catch (err) {
+      setProblem(error(err instanceof ApiError ? err.code : "generic"));
+    }
+  }
+  return (
+    <section className="card" aria-labelledby="find-h">
+      <h2 id="find-h"><Icon name="key" /> {t("findTicket")}</h2>
+      <form className="inline-form" role="search" onSubmit={submit}>
+        <label className="field grow">
+          <span>{t("findTicketHint")}</span>
+          <input type="search" dir="ltr" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
+        </label>
+        <button type="submit" className="btn btn-secondary">{t("find")}</button>
+      </form>
+      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
+      {rows && rows.length === 0 ? <Empty text={t("findNone")} /> : null}
+      {rows && rows.length ? (
+        <ul className="rows">
+          {rows.map((r) => (
+            <li key={r.id}>
+              <button type="button" className="row row-button" aria-current={current === r.id ? "true" : undefined}
+                onClick={() => onOpen(r.id)}>
+                <span className="row-title"><Id>{r.ticket}</Id> <span className="muted">{r.vehicle}</span></span>
+                <StatusPill tone="info" icon="car" label={state(r.state)} />
+                <span className="row-meta"><Icon name="pin" size={16} /> <Id>{r.location || "—"}</Id> · <Icon name="key" size={16} /> <Id>{r.hook ?? "—"}</Id></span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
+/** Readiness before opening (worker, WhatsApp, zones, hooks, team, carryover, dead letters). */
+function OpeningCheck({ eventId }: { eventId: number }) {
+  const { t } = useT();
+  const { data } = usePoll(() => api.openingCheck(eventId), 30_000, [eventId]);
+  if (!data) return null;
+  return (
+    <details className="card disclosure" open={!data.ok} data-testid="opening-check">
+      <summary>
+        <span>{t("openingCheck")}</span>
+        <StatusPill tone={data.ok ? "success" : "warning"} icon={data.ok ? "check" : "alert"}
+          label={data.ok ? t("openingOk") : t("openingNotOk")} />
+      </summary>
+      {data.causes.length ? (
+        <ul className="causes">{data.causes.map((c) => <li key={c}>{t(`cause_${c}` as never) ?? c}</li>)}</ul>
+      ) : null}
+      <dl className="facts">
+        {CHECK_FIELDS.map(([field, label]) => (
+          <div key={field}><dt>{t(label)}</dt><dd><Id>{data[field]}</Id></dd></div>
+        ))}
+      </dl>
+    </details>
+  );
+}
 
 const TONE: Record<string, [string, string]> = {
   WAITING_FOR_PARKING: ["info", "clock"], QUEUED: ["warning", "clock"], OFFERED: ["warning", "user"],
@@ -107,6 +180,8 @@ export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number
             ))}
           </ul>
 
+          <TicketFinder eventId={eventId} current={ticketId} onOpen={openTicket} />
+
           <section className="card" aria-labelledby="requests-h" role="region">
             <h2 id="requests-h"><Icon name="car" /> {t("requests")}</h2>
             {snapshot.requests.length === 0 ? <Empty text={t("requestsEmpty")} /> : null}
@@ -135,6 +210,7 @@ export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number
             <TicketPanel ticketId={ticketId} eventId={eventId} team={snapshot.team} disabled={disabled}
               onClose={() => navigate(`/events/${eventId}`)} onChanged={refresh} />
           ) : null}
+          <OpeningCheck eventId={eventId} />
           <section className="card" aria-labelledby="team-h" role="region">
             <h2 id="team-h"><Icon name="users" /> {t("team")}</h2>
             {snapshot.team.length === 0 ? <Empty text={t("teamEmpty")} /> : null}

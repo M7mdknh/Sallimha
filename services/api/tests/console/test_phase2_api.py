@@ -155,7 +155,7 @@ def test_admin_operations_round_trip(ops, settings):
     post(mgr, f"/api/tickets/{ticket.id}/approve-unclaimed")
     [row] = mgr.get("/api/carryover").json()
     assert row["ticket_id"] == ticket.id and row["status"] == "APPROVED" and row["hook"] == 41
-    assert row["event"] == ops.event.name and row["location"].startswith("A")
+    assert row["event"] == ops.event.name and row["event_id"] == ops.event.id and row["location"].startswith("A")
 
     assert post(adm, "/api/config/retention", {"retention_days": {"guest_contact": 30}}).status_code == 200
     assert adm.get("/api/config").json()["retention_days"]["guest_contact"] == 30
@@ -177,3 +177,19 @@ def test_me_reports_simulator_availability(ops, settings):
     assert sup.get("/api/auth/me").json()["simulator"] is True
     settings.SIMULATOR_ENABLED = False
     assert sup.get("/api/auth/me").json()["simulator"] is False
+
+
+def test_ticket_finder_by_number_or_plate_is_event_scoped(ops):
+    ticket = park(ops.valets[0], ops.event, hook=52)
+    Ticket.objects.filter(pk=ticket.pk).update(vehicle_plate="XYZ 4821")
+    sup = login_as(ops.supervisor)
+    by_number = sup.get(f"/api/events/{ops.event.id}/tickets", {"q": f"#{ticket.display_number}"}).json()
+    assert [r["id"] for r in by_number] == [ticket.id]
+    assert by_number[0]["state"] == "PARKED" and by_number[0]["hook"] == 52
+    assert [r["id"] for r in sup.get(f"/api/events/{ops.event.id}/tickets", {"q": "xyz"}).json()] == [ticket.id]
+    assert sup.get(f"/api/events/{ops.event.id}/tickets", {"q": ""}).json() == []
+
+    from tests.factories import make_event, make_org, make_venue
+
+    foreign = make_event(make_venue(make_org("Other Org")))
+    assert sup.get(f"/api/events/{foreign.id}/tickets", {"q": "1"}).status_code == 404

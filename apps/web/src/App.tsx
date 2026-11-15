@@ -1,12 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useState } from "react";
 
 import { ApiError, api, type Me } from "./api/client";
 import { Shell } from "./components/Shell";
 import { LoadFailed, SkeletonRows } from "./components/States";
+import { Carryover } from "./pages/Carryover";
 import { Events } from "./pages/Events";
+import { Incidents } from "./pages/Incidents";
+import { Integrations } from "./pages/Integrations";
 import { Live } from "./pages/Live";
 import { Login } from "./pages/Login";
+import { Manage } from "./pages/Manage";
+import { Operations } from "./pages/Operations";
+import { Report } from "./pages/Report";
+import { Settings } from "./pages/Settings";
 import { Simulator } from "./pages/Simulator";
+import { Staff } from "./pages/Staff";
 import { navigate, usePath } from "./router";
 
 type Session = { status: "loading" } | { status: "anonymous" } | { status: "error" } | { status: "ready"; me: Me };
@@ -36,14 +44,27 @@ export function App() {
   if (session.status === "error") return <main className="page"><LoadFailed onRetry={load} /></main>;
   if (session.status === "anonymous") return <Login onSignedIn={load} />;
 
-  const live = path.match(/^\/events\/(\d+)(?:\/tickets\/(\d+))?/);
-  const eventId = live ? Number(live[1]) : undefined;
+  const me = session.me;
+  const scoped = path.match(/^\/events\/(\d+)(?:\/(tickets|incidents|report)(?:\/(\d+))?)?\/?$/);
+  const eventId = scoped ? Number(scoped[1]) : undefined;
+  if (eventId) rememberEvent(eventId);
+  const sub = scoped?.[3] ? Number(scoped[3]) : undefined;
+  const pages: Record<string, () => ReactElement> = {
+    "/manage": () => <Manage />,
+    "/staff": () => <Staff me={me} />,
+    "/carryover": () => <Carryover />,
+    "/settings": () => <Settings />,
+    "/operations": () => <Operations />,
+    "/integrations": () => <Integrations />,
+  };
   let page = <Events />;
-  if (live) rememberEvent(eventId!);
-  if (live) page = <Live eventId={eventId!} ticketId={live[2] ? Number(live[2]) : undefined} />;
-  else if (path === "/dev/simulator") page = <Simulator />;
+  if (scoped && scoped[2] === "incidents") page = <Incidents eventId={eventId!} incidentId={sub} me={me} />;
+  else if (scoped && scoped[2] === "report") page = <Report eventId={eventId!} me={me} />;
+  else if (scoped) page = <Live eventId={eventId!} ticketId={scoped[2] === "tickets" ? sub : undefined} />;
+  else if (pages[path]) page = pages[path]();
+  else if (path === "/dev/simulator" && me.simulator) page = <Simulator />;
   return (
-    <Shell me={session.me} eventId={eventId ?? lastEvent()}>
+    <Shell me={me} eventId={eventId ?? lastEvent()}>
       {page}
     </Shell>
   );

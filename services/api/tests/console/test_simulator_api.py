@@ -43,6 +43,9 @@ def test_seed_demo_creates_synthetic_world(db):
     assert Event.objects.filter(name__contains="تجريبي").exists()
     assert Staff.objects.filter(role="VALET").count() >= 3
     assert Staff.objects.filter(user__username="supervisor").exists()
+    # One synthetic account per console role, so the role matrix (AT-59) can be demonstrated end to end.
+    assert set(Staff.objects.filter(user__isnull=False).values_list("role", flat=True)) == {
+        "SUPERVISOR", "MANAGER", "ADMIN", "SUPER_ADMIN"}
 
 
 def test_seed_demo_with_activity_builds_mid_event_state(db):

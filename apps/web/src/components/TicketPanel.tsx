@@ -1,13 +1,18 @@
 import { type FormEvent, useRef, useState } from "react";
 
 import { ApiError, api, newKey, type Schemas } from "../api/client";
+import { navigate } from "../router";
 import { useT, type StringKey } from "../strings";
 import { usePoll } from "../usePoll";
 import { Icon } from "./Icon";
 import { Id, LoadFailed, SkeletonRows, StatusPill } from "./States";
 
-type Field = { name: string; label: StringKey; kind: "text" | "textarea" | "number" | "staff" | "check" | "select";
-  options?: [string, StringKey][]; required?: boolean };
+type Field = { name: string; label: StringKey; kind: "text" | "textarea" | "number" | "staff" | "check" | "select" | "hold";
+  options?: [string, StringKey][]; required?: boolean; initial?: boolean; max?: number };
+
+export const INCIDENT_CATEGORIES = ["missing_vehicle", "key_issue", "damage", "identity_dispute", "notification_failure",
+  "operational_delay", "complaint"] as const;
+const REASON: Field = { name: "reason", label: "reason", kind: "textarea", required: true };
 
 // Each action maps to a console command; the server re-checks permission, scope and state.
 const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Field[]; destructive?: boolean }> = {
@@ -36,13 +41,42 @@ const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Fiel
   except_intake: { endpoint: "except-intake", fields: [
     { name: "kind", label: "kind", kind: "select", options: [["photos", "kind_photos"], ["vehicle", "kind_vehicle"]], required: true },
     { name: "reason", label: "reason", kind: "textarea", required: true }] },
+  open_incident: { endpoint: "open-incident", hint: "action_open_incident_hint", fields: [
+    { name: "category", label: "category", kind: "select", required: true,
+      options: INCIDENT_CATEGORIES.map((c) => [c, `cat_${c}` as StringKey]) },
+    { name: "description", label: "description", kind: "textarea", required: true, max: 2000 }] },
+  place_hold: { endpoint: "place-hold", hint: "action_place_hold_hint", destructive: true, fields: [
+    { name: "blocks_dispatch", label: "blocksDispatch", kind: "check", initial: true },
+    { name: "blocks_handover", label: "blocksHandover", kind: "check", initial: true }, REASON] },
+  clear_hold: { endpoint: "clear-hold", hint: "action_clear_hold_hint", fields: [
+    { name: "hold_id", label: "hold", kind: "hold", required: true }, REASON] },
+  assisted_request: { endpoint: "assisted-request", hint: "action_assisted_request_hint", fields: [REASON] },
+  assisted_handover: { endpoint: "assisted-handover", hint: "action_assisted_handover_hint", fields: [
+    { name: "method", label: "verification", kind: "select", required: true, options: [
+      ["in_person_check", "method_in_person_check"], ["known_guest", "method_known_guest"], ["other", "method_other"]] },
+    REASON] },
+  relocate_start: { endpoint: "relocate-start", hint: "action_relocate_start_hint", fields: [
+    { name: "to_staff_id", label: "toStaff", kind: "staff", required: true }, REASON] },
+  relocate_complete: { endpoint: "relocate-complete", fields: [
+    { name: "zone_code", label: "zone", kind: "text", required: true }, { name: "detail", label: "spot", kind: "text" },
+    { name: "hook_number", label: "hook", kind: "number", required: true }] },
+  propose_unclaimed: { endpoint: "propose-unclaimed", hint: "action_propose_unclaimed_hint", fields: [
+    { name: "custodian", label: "custodian", kind: "text", required: true },
+    { name: "plan", label: "plan", kind: "textarea", required: true, max: 2000 }] },
+  approve_unclaimed: { endpoint: "approve-unclaimed", hint: "action_approve_unclaimed_hint", fields: [] },
+  release_carryover: { endpoint: "release-carryover", hint: "action_release_carryover_hint", fields: [
+    { name: "method", label: "method", kind: "select", required: true, options: [
+      ["collected_verified", "release_collected_verified"], ["moved_to_storage", "release_moved_to_storage"],
+      ["other", "release_other"]] },
+    { name: "note", label: "note", kind: "textarea", required: true, max: 2000 }] },
 };
 
-function ActionForm({ action, ticketId, team, disabled, onDone }: { action: string; ticketId: number;
-  team: Schemas["TeamMember"][]; disabled: boolean; onDone: () => void }) {
+function ActionForm({ action, ticketId, team, holds, disabled, onDone }: { action: string; ticketId: number;
+  team: Schemas["TeamMember"][]; holds: Schemas["HoldBrief"][]; disabled: boolean; onDone: () => void }) {
   const { t, error } = useT();
   const spec = ACTIONS[action];
-  const [values, setValues] = useState<Record<string, string | boolean>>({});
+  const [values, setValues] = useState<Record<string, string | boolean>>(() =>
+    Object.fromEntries(spec.fields.filter((f) => f.initial !== undefined).map((f) => [f.name, f.initial!])));
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const key = useRef(newKey()); // stable across retries of this form (idempotent resubmit)
@@ -59,7 +93,8 @@ function ActionForm({ action, ticketId, team, disabled, onDone }: { action: stri
     const body: Record<string, unknown> = {};
     for (const f of spec.fields) {
       const v = values[f.name];
-      body[f.name] = f.kind === "check" ? Boolean(v) : f.kind === "number" || f.kind === "staff" ? Number(v) : String(v ?? "").trim();
+      body[f.name] = f.kind === "check" ? Boolean(v)
+        : f.kind === "number" || f.kind === "staff" || f.kind === "hold" ? Number(v) : String(v ?? "").trim();
     }
     try {
       await api.ticketAction(ticketId, spec.endpoint, body, key.current);
@@ -88,11 +123,16 @@ function ActionForm({ action, ticketId, team, disabled, onDone }: { action: stri
             <>
               <span>{t(f.label)}</span>
               {f.kind === "textarea" ? (
-                <textarea rows={2} maxLength={200} value={String(values[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)} />
+                <textarea rows={2} maxLength={f.max ?? 200} value={String(values[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)} />
               ) : f.kind === "staff" ? (
                 <select value={String(values[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)}>
                   <option value="">—</option>
                   {available.map((m) => <option key={m.staff_id} value={m.staff_id}>{m.name}</option>)}
+                </select>
+              ) : f.kind === "hold" ? (
+                <select value={String(values[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)}>
+                  <option value="">—</option>
+                  {holds.map((h) => <option key={h.id} value={h.id}>{h.reason}</option>)}
                 </select>
               ) : f.kind === "select" ? (
                 <select value={String(values[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)}>
@@ -116,7 +156,7 @@ function ActionForm({ action, ticketId, team, disabled, onDone }: { action: stri
   );
 }
 
-export function TicketPanel({ ticketId, team, disabled, onClose, onChanged }: { ticketId: number; eventId: number;
+export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChanged }: { ticketId: number; eventId: number;
   team: Schemas["TeamMember"][]; disabled: boolean; onClose: () => void; onChanged: () => void }) {
   const { t, state } = useT();
   const { data, error, refresh } = usePoll(() => api.ticket(ticketId), 5_000, [ticketId]);
@@ -149,8 +189,25 @@ export function TicketPanel({ ticketId, team, disabled, onClose, onChanged }: { 
             <div><dt>{t("photos")}</dt><dd>{data.media.length}</dd></div>
           </dl>
           {data.holds.length ? (
-            <ul className="rows">{data.holds.map((h) => (
-              <li key={h.id} className="row"><StatusPill tone="danger" icon="shield" label={t("holds")} /> {h.reason}</li>
+            <ul className="rows" aria-label={t("holds")}>{data.holds.map((h) => (
+              <li key={h.id} className="row attention-critical">
+                <StatusPill tone="danger" icon="shield" label={t("hold")} />
+                <span>{h.reason}</span>
+                <span className="row-meta">
+                  {[h.blocks_dispatch ? t("blocksDispatch") : "", h.blocks_handover ? t("blocksHandover") : ""].filter(Boolean).join(" · ")}
+                </span>
+              </li>
+            ))}</ul>
+          ) : null}
+          {data.incidents.length ? (
+            <ul className="rows" aria-label={t("incidents")}>{data.incidents.map((i) => (
+              <li key={i.id}>
+                <a className="row row-link-plain" href={`/events/${eventId}/incidents/${i.id}`}
+                  onClick={(e) => { e.preventDefault(); navigate(`/events/${eventId}/incidents/${i.id}`); }}>
+                  <StatusPill tone={i.status === "RESOLVED" ? "neutral" : "warning"} icon="alert" label={t(`cat_${i.category}` as StringKey)} />
+                  <span className="row-meta">{state(i.status)}</span>
+                </a>
+              </li>
             ))}</ul>
           ) : null}
           <div className="actions">
@@ -162,7 +219,7 @@ export function TicketPanel({ ticketId, team, disabled, onClose, onChanged }: { 
                   {t(`action_${a}` as StringKey)}
                 </button>
                 {open === a ? (
-                  <ActionForm action={a} ticketId={ticketId} team={team} disabled={disabled}
+                  <ActionForm action={a} ticketId={ticketId} team={team} holds={data.holds} disabled={disabled}
                     onDone={() => { setOpen(null); void refresh(); onChanged(); }} />
                 ) : null}
               </div>

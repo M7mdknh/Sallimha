@@ -143,3 +143,15 @@ def ticket_detail(ticket, actor) -> dict:
         "timeline": [{"at": e.occurred_at, "action": e.action, "actor": e.actor_label} for e in timeline],
         "allowed_actions": allowed_actions(ticket, req if req and req.state in OPEN_REQUEST_STATES else None, binding),
     }
+
+
+def search(event, q: str) -> list[dict]:
+    """Ticket finder for supervisors: '#12' or '12' matches the ticket number, anything else the plate."""
+    q = q.strip()[:40]
+    if not q:
+        return []
+    qs = Ticket.objects.filter(event=event).select_related("location_zone")
+    number = q.lstrip("#")
+    qs = qs.filter(display_number=int(number)) if number.isdigit() else qs.filter(vehicle_plate__icontains=q)
+    return [{"id": t.id, "ticket": _t(t), "state": t.state, "vehicle": _vehicle(t), "location": _location(t),
+             "hook": _hook(t)} for t in qs.order_by("display_number")[:20]]

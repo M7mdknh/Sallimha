@@ -483,6 +483,7 @@ class CarryoverRow(serializers.Serializer):
     ticket = serializers.CharField()
     ticket_id = serializers.IntegerField()
     event = serializers.CharField()
+    event_id = serializers.IntegerField()
     status = serializers.ChoiceField(choices=CARRYOVER_STATUSES)
     custodian = serializers.CharField()
     plan = serializers.CharField()
@@ -540,3 +541,12 @@ class WhatsAppIntegration(serializers.Serializer):
     sender_ready = serializers.BooleanField()
     signature_secret_set = serializers.BooleanField()
     webhook_verification_set = serializers.BooleanField()
+
+
+class TicketSearchRow(serializers.Serializer):
+    id = serializers.IntegerField()
+    ticket = serializers.CharField()
+    state = serializers.ChoiceField(choices=TICKET_STATES)
+    vehicle = serializers.CharField()
+    location = serializers.CharField(allow_blank=True)
+    hook = serializers.IntegerField(allow_null=True)

@@ -34,6 +34,7 @@ urlpatterns = [
     path("tickets/<int:ticket_id>/propose-unclaimed", views.ProposeUnclaimed.as_view()),
     path("tickets/<int:ticket_id>/approve-unclaimed", views.ApproveUnclaimed.as_view()),
     path("tickets/<int:ticket_id>/release-carryover", views.ReleaseCarryover.as_view()),
+    path("events/<int:event_id>/tickets", views.ticket_search),
     path("events/<int:event_id>/incidents", views_admin.event_incidents),
     path("incidents/<int:incident_id>", views_admin.incident_detail),
     path("incidents/<int:incident_id>/notes", views_admin.IncidentNote.as_view()),

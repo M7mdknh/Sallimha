@@ -1,27 +1,30 @@
 import type { ReactNode } from "react";
 
-import { api, type Me } from "../api/client";
+import { api, atLeast, type Me } from "../api/client";
 import { setLang } from "../i18n";
 import { navigate, usePath } from "../router";
-import { useT } from "../strings";
+import { useT, type StringKey } from "../strings";
 import { Icon } from "./Icon";
+
+/** Links by role (AT-59). Hiding a link is a convenience only; every page's API refuses out-of-role reads. */
+export function navLinks(me: Me, eventId?: number): [string, StringKey][] {
+  const links: [string, StringKey][] = [eventId ? [`/events/${eventId}`, "live"] : ["/events", "events"]];
+  if (eventId) links.push([`/events/${eventId}/incidents`, "navIncidents"]);
+  if (atLeast(me, "MANAGER")) links.push(["/manage", "navEvents"], ["/staff", "navStaff"], ["/carryover", "navCarryover"]);
+  if (atLeast(me, "ADMIN")) links.push(["/settings", "navSettings"], ["/operations", "navOperations"]);
+  if (atLeast(me, "SUPER_ADMIN")) links.push(["/integrations", "navIntegrations"]);
+  if (me.simulator) links.push(["/dev/simulator", "simulator"]);
+  return links;
+}
 
 export function Shell({ me, eventId, children }: { me: Me; eventId?: number; children: ReactNode }) {
   const { t, lang } = useT();
   const path = usePath();
-  const link = (href: string, label: string) => (
-    <a
-      href={href}
-      className="nav-link"
-      aria-current={path.startsWith(href) ? "page" : undefined}
-      onClick={(e) => {
-        e.preventDefault();
-        navigate(href);
-      }}
-    >
-      {label}
-    </a>
-  );
+  const links = navLinks(me, eventId);
+  // The most specific matching link is current, so /events/1/incidents does not also mark Live.
+  const current = links.map(([href]) => href)
+    .filter((href) => path === href || path.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
   return (
     <div className="app">
       <header className="topbar">
@@ -29,9 +32,13 @@ export function Shell({ me, eventId, children }: { me: Me; eventId?: number; chi
           <img src="/brand/assets/mark-on-plum.svg" alt="" width={32} height={32} />
           <span className="brand-name">{t("appName")}</span>
         </a>
-        <nav className="nav" aria-label={t("events")}>
-          {eventId ? link(`/events/${eventId}`, t("live")) : link("/events", t("events"))}
-          {link("/dev/simulator", t("simulator"))}
+        <nav className="nav" aria-label={t("mainNav")}>
+          {links.map(([href, label]) => (
+            <a key={href} href={href} className="nav-link" aria-current={href === current ? "page" : undefined}
+              onClick={(e) => { e.preventDefault(); navigate(href); }}>
+              {t(label)}
+            </a>
+          ))}
         </nav>
         <div className="topbar-end">
           <span className="who">{me.name}</span>

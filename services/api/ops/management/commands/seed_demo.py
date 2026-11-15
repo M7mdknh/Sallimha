@@ -28,9 +28,10 @@ from ops.models import (
 
 # Synthetic TOTP secrets for the local demo only (manager and above must use a second factor).
 # `manage.py demo_totp manager` prints the current code. Never use these outside local/test.
-DEMO_TOTP_SECRETS = {"manager": "SALLIMHADEMOMANAGERX2345", "admin": "SALLIMHADEMOADMINXX23456"}
+DEMO_TOTP_SECRETS = {"manager": "SALLIMHADEMOMANAGERX2345", "admin": "SALLIMHADEMOADMINXX23456",
+                     "owner": "SALLIMHADEMOOWNERXX23456"}
 DEMO_PASSWORDS = {"manager": "sallimha-demo-manager", "supervisor": "sallimha-demo-supervisor",
-                  "admin": "sallimha-demo-admin"}
+                  "admin": "sallimha-demo-admin", "owner": "sallimha-demo-owner"}
 VALETS = [("ماجد (تجريبي)", "+966550000101"), ("سارة (تجريبي)", "+966550000102"),
           ("فهد (تجريبي)", "+966550000103")]
 
@@ -62,6 +63,7 @@ class Command(BaseCommand):
             ("manager", Role.MANAGER, "مدير العرض (تجريبي)", "+966550000001"),
             ("supervisor", Role.SUPERVISOR, "مشرفة الليلة (تجريبي)", "+966550000002"),
             ("admin", Role.ADMIN, "مسؤول النظام (تجريبي)", "+966550000003"),
+            ("owner", Role.SUPER_ADMIN, "المالك (تجريبي)", "+966550000004"),
         ):
             user = users.objects.create_user(username=username, password=DEMO_PASSWORDS[username])
             people[username] = Staff.objects.create(
