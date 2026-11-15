@@ -6,7 +6,7 @@ from django.utils import timezone
 from core.audit import audit
 from core.errors import DomainError
 from ops.models import LIVE_TASK_STATUSES, EventAssignment, Role, Shift, Task, UnavailablePeriod
-from ops.permissions import actor_label, require
+from ops.permissions import actor_label, has_role, require
 
 
 def live_task(staff):
@@ -31,9 +31,14 @@ def start_shift(actor, event, staff, now=None) -> Shift:
         raise DomainError("staff_disabled")
     if event.status != event.Status.OPEN:
         raise DomainError("event_closed")
+    assigned = EventAssignment.objects.filter(event=event, staff=staff).exists()
+    if not assigned and staff.role != Role.VALET and not has_role(actor, Role.MANAGER):
+        # Adding supervisor-level staff to an event grants event scope: manager+ only.
+        raise DomainError("forbidden")
     try:
         with transaction.atomic():
-            EventAssignment.objects.get_or_create(event=event, staff=staff, defaults={"assigned_by": actor})
+            if not assigned:
+                EventAssignment.objects.create(event=event, staff=staff, assigned_by=actor)
             shift = Shift.objects.create(event=event, staff=staff, started_at=now, started_by=actor)
             audit("shift.start", actor_id=actor.id, actor_label=actor_label(actor), channel="console",
                   entity_type="shift", entity_id=shift.id, event_id=event.id, summary={"staff_id": staff.id})

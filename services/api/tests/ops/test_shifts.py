@@ -126,3 +126,25 @@ def test_shift_start_is_audited(world, role):
     actor = world.supervisor if role == Role.SUPERVISOR else world.manager
     shifts.start_shift(actor, world.event, world.valets[0])
     assert AuditEvent.objects.filter(action="shift.start", actor_id=actor.id).exists()
+
+
+def test_supervisor_cannot_grant_event_scope_to_another_supervisor(world):
+    """Security review finding: shift start must not become an assignment backdoor."""
+    from ops.models import EventAssignment
+    other_sup = make_staff(world.org, Role.SUPERVISOR, name="Other supervisor")
+    with pytest.raises(DomainError) as err:
+        shifts.start_shift(world.supervisor, world.event, other_sup)
+    assert err.value.code == "forbidden"
+    assert not EventAssignment.objects.filter(event=world.event, staff=other_sup).exists()
+
+
+def test_manager_can_assign_and_start_supervisor_shift(world):
+    other_sup = make_staff(world.org, Role.SUPERVISOR, name="Other supervisor")
+    assert shifts.start_shift(world.manager, world.event, other_sup).staff == other_sup
+
+
+def test_supervisor_can_start_shift_for_already_assigned_supervisor(world):
+    from tests.factories import assign
+    other_sup = make_staff(world.org, Role.SUPERVISOR, name="Assigned supervisor")
+    assign(world.event, other_sup)
+    assert shifts.start_shift(world.supervisor, world.event, other_sup).staff == other_sup
