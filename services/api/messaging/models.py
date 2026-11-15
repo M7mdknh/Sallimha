@@ -45,6 +45,8 @@ class MessageOutbox(models.Model):
     binding = models.ForeignKey("ops.GuestBinding", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     ticket = models.ForeignKey("ops.Ticket", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     task = models.ForeignKey("ops.Task", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    to_phone_enc = models.TextField(blank=True)  # replies to senders with no binding (no personal data shared)
+    to_phone_hash = models.CharField(max_length=64, blank=True)
     template = models.CharField(max_length=60)
     params = models.JSONField(default=dict)
     buttons = models.JSONField(default=list)  # [[payload, catalogue button key], ...]
@@ -65,7 +67,8 @@ class MessageOutbox(models.Model):
         indexes = [models.Index(fields=["status", "next_attempt_at"])]
         constraints = [
             models.CheckConstraint(
-                condition=Q(staff__isnull=False) | Q(binding__isnull=False), name="outbox_has_recipient"
+                condition=Q(staff__isnull=False) | Q(binding__isnull=False) | ~Q(to_phone_enc=""),
+                name="outbox_has_recipient",
             )
         ]
 

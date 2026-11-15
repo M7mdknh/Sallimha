@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.db import connection, transaction
 from django.utils import timezone
 
-from core.crypto import decrypt_text
+from core.crypto import decrypt_text, encrypt_text, keyed_hash
 from messaging import hooks
 from messaging.catalogue import button_title, render_text
 from messaging.models import Conversation, MessageOutbox
@@ -30,8 +30,8 @@ def _notify_worker() -> None:
         cursor.execute("SELECT pg_notify('sallimha_work', 'outbox')")
 
 
-def enqueue(kind: str, *, staff=None, binding=None, template: str, params: dict, buttons=(), ticket=None,
-            task=None, dedupe_key: str, language: str | None = None, now=None) -> MessageOutbox:
+def enqueue(kind: str, *, staff=None, binding=None, to_phone: str | None = None, template: str, params: dict,
+            buttons=(), ticket=None, task=None, dedupe_key: str, language: str | None = None, now=None) -> MessageOutbox:
     """Call inside the business transaction. `buttons` = [(payload, button_key, key_params?)]."""
     now = now or timezone.now()
     lang = language or (binding.language if binding is not None else getattr(staff, "language", "ar"))
@@ -39,6 +39,8 @@ def enqueue(kind: str, *, staff=None, binding=None, template: str, params: dict,
         dedupe_key=dedupe_key,
         defaults={
             "kind": kind, "staff": staff, "binding": binding, "ticket": ticket, "task": task,
+            "to_phone_enc": encrypt_text(to_phone) if to_phone else "",
+            "to_phone_hash": keyed_hash(to_phone, "phone") if to_phone else "",
             "template": template, "params": params, "buttons": [list(b) for b in buttons],
             "language": lang, "next_attempt_at": now,
         },
@@ -48,8 +50,10 @@ def enqueue(kind: str, *, staff=None, binding=None, template: str, params: dict,
     return row
 
 
-def party_key(*, staff=None, binding=None) -> str:
-    return f"staff:{staff.id}" if staff is not None else f"guest:{binding.phone_hash}"
+def party_key(*, staff=None, binding=None, phone_hash: str = "") -> str:
+    if staff is not None:
+        return f"staff:{staff.id}"
+    return f"guest:{binding.phone_hash if binding is not None else phone_hash}"
 
 
 def note_inbound(*, staff=None, binding=None, key: str | None = None, at=None) -> None:
@@ -62,7 +66,7 @@ def note_inbound(*, staff=None, binding=None, key: str | None = None, at=None) -
 
 
 def choose_mode(row: MessageOutbox, now) -> str:
-    key = party_key(staff=row.staff, binding=row.binding) if row.staff_id or row.binding_id else ""
+    key = party_key(staff=row.staff, binding=row.binding, phone_hash=row.to_phone_hash)
     conv = Conversation.objects.filter(party_key=key).first()
     if conv and conv.last_inbound_at and now - conv.last_inbound_at < SERVICE_WINDOW:
         return "session"
@@ -84,7 +88,12 @@ def _resolve_params(row: MessageOutbox) -> dict:
 
 def render(row: MessageOutbox, now) -> OutboundPayload:
     params = _resolve_params(row)
-    to_phone = row.staff.phone_e164 if row.staff_id else decrypt_text(row.binding.phone_enc)
+    if row.staff_id:
+        to_phone = row.staff.phone_e164
+    elif row.binding_id:
+        to_phone = decrypt_text(row.binding.phone_enc)
+    else:
+        to_phone = decrypt_text(row.to_phone_enc)
     buttons = [(b[0], button_title(b[1], row.language, b[2] if len(b) > 2 else None)) for b in row.buttons]
     return OutboundPayload(
         outbox_id=row.id, to_phone=to_phone, mode=choose_mode(row, now), template=row.template,
