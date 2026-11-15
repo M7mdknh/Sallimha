@@ -40,6 +40,36 @@ Tests must verify observable behavior, invariants and failure recovery, not mirr
 | AT-33 | Key-hook collision and vehicle relocation | Collision rejected; movement task/custody recorded |
 | AT-34 | Stale console and repeated submit after reconnect | Explicit stale banner; idempotent recovery |
 
+### Added 15 Nov 2026 (approved by the user)
+| ID | Scenario | Required outcome |
+|---|---|---|
+| AT-35 | Valet confirms or denies that the guest received the ticket | CONFIRMED_IN_PERSON only by staff confirmation; denial/no answer leaves the visible exception; provider DELIVERED/READ alone never confirms |
+| AT-36 | Photo outside intake with 0/1/many open incidents; invalid type or size | Explicit incident selection; never “latest incident”; invalid files rejected |
+| AT-37 | Intake started by A, parked by B | Custody transfer recorded; `parked_by` = B; retrieval affinity follows B |
+| AT-38 | Every guest message, both languages | Queued never claims retrieval; no ETA; language preserved; identifiers isolated LTR |
+| AT-39 | Offer content | Ticket, vehicle, location, hook, expiry; never collection code or guest phone |
+| AT-40 | Timing change while offers are live | Audited; live offers keep original deadlines |
+| AT-41 | Guest without phone at handover | Supervisor+ assisted verification with reason/verifier/outcome; valet alone cannot |
+| AT-42 | Second active shift for one person | Rejected by DB constraint with a clear message |
+| AT-43 | Event closes with an unclaimed car | Carryover case visible; its venue key hook remains occupied for later events |
+| AT-44 | Worker heartbeat stale / WhatsApp degraded at opening | Degraded status with cause, never healthy |
+| AT-45 | Grant escalation, last super admin, staff deletion | Denied; deactivate not delete; history kept |
+| AT-46 | Privileged login without MFA; repeated failures | MFA enforced; rate-limited and audited |
+| AT-47 | Button wording changed | Same operations; action identifiers unchanged |
+| AT-48 | Overrides/exports/credential changes; app role UPDATE/DELETE on audit | Audited; mutation refused by the database |
+| AT-49 | Full flow with log capture | No phones, codes or tokens in logs |
+| AT-50 | Missing/invalid webhook signature; valid webhook | Rejected before persistence; valid stored before acknowledgement |
+| AT-51 | Permanent send failure; operator replay | Dead letter visible; replay effects applied once |
+| AT-52 | Reports after reassignment and breaks | Original timestamps kept; median/p95 correct; breaks separate |
+| AT-53 | Design QA matrix | 360 px/tablet/desktop, 200% zoom, keyboard, Arabic/English, status labels |
+| AT-54 | Supervisor withdraws a WAITING/QUEUED/OFFERED request | Request WITHDRAWN with reason; live offer superseded and reservation released; vehicle stays PARKED; ticket open; guest can request again |
+| AT-55 | Cancel an intake before vs. after “بدء الركن”; with and without guest-has-vehicle-and-keys confirmation | Allowed only before parking starts and with the confirmation; refused otherwise; after parking starts the car leaves only through retrieval and verified handover |
+| AT-56 | Cancel a ticket that has an early request and an intake reservation | Request WITHDRAWN (`ticket_cancelled`); intake task cancelled; valet released; guest tokens/codes revoked; guest told truthfully |
+| AT-57 | Withdraw an ACCEPTED retrieval | Refused without custody resolution; with a recorded and acknowledged resolution the task closes, ticket returns to PARKED at the recorded location/hook, valet released explicitly |
+| AT-58 | Unclaimed vehicle's key hook | Stays reserved across events until an explicit, audited release; release by non-authorized role denied |
+| AT-59 | Supervisor console scope | Supervisor can monitor live work, start/end shifts and handle exceptions in assigned events; no control exists to dispatch routine retrieval manually; valets have no console access |
+| AT-60 | Duplicate or expired valet button taps (accept, ready, delivered, ready-for-work) | Duplicate returns the current outcome without a second effect; expired/superseded rejected with the stale message; no state change |
+
 ## Verification layers
 - Unit: phone normalization, state guards, candidate ordering, permissions, formatting and deadline calculations.
 - Integration: transactions, uniqueness constraints, media authorization, inbox/outbox, dead-letter handling and actual worker restart.
@@ -60,5 +90,5 @@ Use DESIGN.md tokens. Test 360 px mobile, tablet and desktop; 200% zoom; actual 
 6. **Release:** exact build deployed, health checks and designated production smoke pass; status is reported with version/time and remaining limitations.
 
 ## Evidence format
-For each gate, record test command/scenario, environment, build identifier, result, evidence path and limitations. Use PASS / FAIL / BLOCKED / NOT RUN. An unconfigured provider is BLOCKED, not PASS. Mocked message delivery must be labelled mocked. Retain test artifacts without guest personal data.
+For each gate, record test command/scenario, environment, build identifier, result, evidence path and limitations. Use PASS / FAIL / BLOCKED / NOT RUN. An unconfigured provider is BLOCKED, not PASS. Mocked message delivery must be labelled mocked: results obtained with the local fake WhatsApp transport are reported as **PASS (SIMULATED)** and are never counted as real integration evidence; real-provider scenarios stay BLOCKED until run in staging. Retain test artifacts without guest personal data.
 

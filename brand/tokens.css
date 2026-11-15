@@ -1,4 +1,5 @@
-/* Sallimha v1.0 — proposed tokens. Copy fonts with their license. */
+/* Sallimha v1.0 — approved tokens (15 Nov 2026). Copy fonts with their license.
+   v1.0.1: cross-script font stacks and html[lang] rules so Arabic never falls back to a system font (ADR-0005 C9). */
 @font-face {font-family:'Noto Sans Arabic';src:url('./fonts/NotoSansArabic-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap;}
 @font-face {font-family:'Noto Sans Arabic';src:url('./fonts/NotoSansArabic-Bold.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap;}
 @font-face {font-family:'Noto Sans';src:url('./fonts/NotoSans-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap;}
@@ -18,10 +19,11 @@
   --sl-danger: #B42332;
   --sl-info: #245EA8;
   --sl-radius-input:8px; --sl-radius-card:12px; --sl-radius-dialog:16px;
-  --sl-font-ar:"Noto Sans Arabic",sans-serif; --sl-font-en:"Noto Sans",sans-serif;
+  --sl-font-ar:"Noto Sans Arabic","Noto Sans",sans-serif; --sl-font-en:"Noto Sans","Noto Sans Arabic",sans-serif;
 }
 body {background:var(--sl-paper);color:var(--sl-ink);font-family:var(--sl-font-en);font-size:16px;line-height:1.5;}
-[lang="ar"] {font-family:var(--sl-font-ar);line-height:1.65;letter-spacing:normal;}
+html[lang="ar"] body, [lang="ar"] {font-family:var(--sl-font-ar);line-height:1.65;letter-spacing:normal;}
+html[lang="en"] body, [lang="en"] {font-family:var(--sl-font-en);line-height:1.5;}
 :focus-visible {outline:2px solid var(--sl-purple);outline-offset:3px;}
 .sl-primary {background:var(--sl-purple);color:var(--sl-surface);min-height:44px;border-radius:var(--sl-radius-input);}
 .sl-identifier {direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums;}

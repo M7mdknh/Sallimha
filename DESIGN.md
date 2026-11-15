@@ -1,6 +1,6 @@
 # Sallimha brand and interface system
 
-Version 1.0 — 15 November 2026. **Proposed identity for review before UI implementation.** This refines the plum/purple and gold direction visible in the original guides. It is not a claim of an established registered identity or trademark clearance.
+Version 1.0.1 — 15 November 2026. **Identity approved by the user on 15 Nov 2026 as supplied.** v1.0.1 changes only the CSS font inheritance in `brand/tokens.css` (ADR-0005 C9); colours, fonts, logos and rules are unchanged. This refines the plum/purple and gold direction visible in the original guides. It is not a claim of an established registered identity or trademark clearance.
 
 ## Brand foundation
 - Arabic name: **سلّمها**. Display wordmark may use **سَلِّمها**. Never split or letter-space Arabic lettering.
@@ -57,6 +57,8 @@ Self-host bundled **Noto Sans Arabic** for Arabic and **Noto Sans** for English.
 | Body / forms | 16 px / 1.65 Arabic, 1.5 English | 400 |
 | Supporting text | 14 px / 1.6 | 400 |
 | Ticket/status metrics | 28–36 px / 1.2 | 700, tabular numerals |
+
+Font stacks are cross-script — Arabic: `"Noto Sans Arabic", "Noto Sans", sans-serif`; English: `"Noto Sans", "Noto Sans Arabic", sans-serif` — and the language rule applies from `html[lang]`, so Arabic text never falls back to a system font and mixed strings keep both faces.
 
 No Arabic tracking. Do not shrink operational copy below 14 px to fit. Keep phone numbers, collection codes and machine identifiers in isolated LTR spans using `bdi`/`dir=ltr`; render Arabic prose RTL. Normalize input digits internally. Proposed UI default: 0–9 for operational identifiers to match WhatsApp, printed key labels and system exports. Dates/times localize to Asia/Riyadh; store UTC internally.
 

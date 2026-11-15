@@ -3,6 +3,9 @@
 ## Approved business direction
 Paperless WhatsApp guest ticket; phone captured during registration; no required guest QR/app; location and parking-valet tracking; original valet priority only when available; automatic alternative assignment; supervisor monitoring/exception role; immediate ticket; receipt check; automatic availability; acceptance timeout; queue; collection verification; preserved photos/audit; one request/assignee at a time.
 
+### Approved 15 Nov 2026 (after initial review)
+Brand identity approved as supplied (font-inheritance fix only); venue-owned key hooks whose occupancy survives event closure; request withdrawal semantics; cancellation only before parking starts with guest-has-vehicle-and-keys confirmation; explicit staff receipt confirmation; ADR-0006 valet WhatsApp contract; supervisor console = monitoring, shift operations and exceptions without manual routine dispatch; Django 6.1 (latest patch) with 6.2 LTS upgrade plan; AT-35–AT-60. Recorded in ADR-0001 and ADR-0005/0006.
+
 ## Preserved from original operating documentation
 Events and separate shift activation; one active shift/person; WhatsApp valet channel; role hierarchy; manager incident closure; admin-only guest-phone export; super-admin WhatsApp connection; stage timing; server-held photos; ratings; filtered reports; configurable messages; retention zero means never delete; honest cancellation and unclaimed outcomes.
 

@@ -1,6 +1,6 @@
 # ADR-0003 — Database constraints, scoping and lock order
 
-- Status: **Proposed — awaiting user approval**
+- Status: **Accepted 2026-11-15**
 - Date: 2026-11-15
 - Requirement basis: CLAUDE.md non-negotiables; docs/02 database-enforced invariants; docs/03 atomicity. Constraints are the final guard; application checks give friendly errors first.
 
@@ -12,7 +12,7 @@
 | 3 | A valet holds at most one live capacity-consuming task (intake, retrieval, relocation; offers count) | Partial unique index on `task(assignee_id) WHERE status IN ('RESERVED','OFFERED','ACCEPTED')` |
 | 4 | A vehicle has at most one live movement task | Partial unique index on `task(ticket_id) WHERE status IN (live)` |
 | 5 | A ticket has at most one open retrieval request | Partial unique index on `retrieval_request(ticket_id) WHERE state NOT IN ('COMPLETED','WITHDRAWN')` |
-| 6 | A physical key hook holds at most one unreleased key, across events (ADR-0005 C1) | Partial unique index on `key_occupancy(key_station_id, hook_number) WHERE released_at IS NULL` |
+| 6 | A physical (venue-owned) key hook holds at most one unreleased key, across events and carryover, until explicitly released (ADR-0005 C1) | Partial unique index on `key_occupancy(key_station_id, hook_number) WHERE released_at IS NULL` |
 | 7 | Each offer generation exists once per request | `UNIQUE (request_id, generation)` |
 | 8 | Each inbound provider message or action has exactly one effect | `UNIQUE (provider, provider_message_id)` on inbound operations; status events keyed by `(provider, message_id, status, provider_timestamp)` |
 | 9 | Client-retried mutations are applied once | `idempotency_key UNIQUE (actor_id, key)` storing the recorded outcome |

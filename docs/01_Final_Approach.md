@@ -5,6 +5,8 @@ The business workflow below consolidates the five original operating guides, the
 
 Sallimha makes vehicle intake, parking, retrieval and handover traceable without paper tickets. Guests and valets primarily use WhatsApp. Supervisors and management use a responsive web console. A guest does not need an account, app installation or QR scan.
 
+Supervisor role (clarified 15 Nov 2026, user decision): the supervisor console supports live monitoring, shift operations and exception handling. “Exceptions only” means supervisors do not manually dispatch routine work — automatic assignment does. It does not remove their normal monitoring, shift and intervention capabilities.
+
 The service is organized around a venue/event and its active shifts. A venue may be a restaurant or a hall; an event represents an operating session at that venue. V1 is one operating organization with many venues/events, not a public multi-tenant SaaS marketplace.
 
 ## Approved changes from the documented baseline
@@ -35,18 +37,20 @@ Normalize Arabic/Persian digits, preserve country code, validate format and show
 
 Proposed default: collect a plate identifier, optional make/color description and four intake photos. Require useful vehicle identification before ordinary intake completion; provide a reasoned supervisor exception for unusual cases rather than invented values. This tightens the old optional-description shortcut and is a proposed safety control.
 
-The WhatsApp ticket is dispatched immediately after phone confirmation, without waiting for parking. At the counter, confirm the guest actually received the correct event/ticket. Provider delivery alone is not ownership verification. Store both messaging delivery status and staff-confirmed guest receipt separately.
+The WhatsApp ticket is dispatched immediately after phone confirmation, without waiting for parking. At the counter, the receiving valet explicitly confirms in the intake conversation that the intended guest has the correct event/ticket on their phone (approved 15 Nov 2026). Only that staff confirmation sets the contact to CONFIRMED_IN_PERSON; provider delivery or read status alone never does. Store both messaging delivery status and staff-confirmed guest receipt separately. A “not received” answer or no answer leaves the visible contact exception and the correction path; intake continues.
 
 Take front/right/rear/left photos before moving the car. Each photo records ticket, uploader and server receipt time. Store original media privately. A timestamp establishes receipt time, not cryptographic proof that the vehicle had not moved; staff workflow and training are also necessary.
 
 If notification delivery is delayed, retain a visible “Guest contact unconfirmed” exception. Do not silently send personal details to a guessed number. Follow the documented contact exception flow without forcing the supervisor to intervene in every normal intake.
 
 ## 3. Park and confirm location
+After intake photos, the valet records “بدء الركن” (parking started) before moving the car. From that operation onward the vehicle is in operator custody: the ticket can no longer be cancelled, and returning the car to the guest requires the normal retrieval and verified handover process (approved 15 Nov 2026).
+
 The valet parks, records a configured zone/row/space or venue-appropriate location, hangs the key on its numbered hook, and confirms “تم الركن”. Only then is the parking task complete and the valet available again.
 
 The system remembers the actual parking valet as `parked_by`, separately from `registered_by`. The happy path uses the same person. If intake or parking is handed to another valet, record an explicit custody transfer so retrieval priority points to the person who actually parked.
 
-Parking location and key-hook number are different fields. A proposed uniqueness constraint prevents two active tickets at the same event/key station from occupying the same key hook. Space-occupancy constraints depend on the venue layout; do not assume tandem parking is impossible.
+Parking location and key-hook number are different fields. Key stations and their hooks belong to the venue, not to an event (approved 15 Nov 2026). A hook holds at most one unreleased key across all events; its occupancy survives event closure and stays reserved for an unclaimed vehicle until it is explicitly released with an audited reason. Space-occupancy constraints depend on the venue layout; do not assume tandem parking is impossible.
 
 Send a parked confirmation. If the guest requested the car before parking finished, retain the request as waiting for parking. Do not lose the request or dispatch a second valet to an unparked car. The ticket must reach a safe returnable state before normal retrieval starts.
 
@@ -79,6 +83,11 @@ Close only after actual handover. Record actor/time, consume credentials, releas
 Excellent: record and notify the delivering valet. Neutral: record silently. Poor: immediately alert the event supervisor and create a complaint incident linked to the ticket. Management can review all ratings; no poor-rating reprimand is automatically sent to the valet.
 
 Incidents include missing vehicle, key issue, damage, identity dispute, notification failure and operational delay. Keep vehicle state truthful while investigating. Supervisors can create, view and annotate incidents; only manager or higher resolves/closes them with a written outcome. Safety holds are explicit and audited.
+
+## Cancellation and withdrawal (approved 15 Nov 2026)
+- **Cancelling an abandoned intake** is allowed only before “بدء الركن” and only after staff confirm that the guest has their vehicle and keys. Cancellation records actor, reason and that confirmation, ends the intake reservation, withdraws any early request, revokes guest action references and collection credentials, and tells the guest the ticket was cancelled if a ticket had been sent. After parking starts, cancellation is refused.
+- **Withdrawing a retrieval request** is a separate supervisor action with a reason. It leaves the vehicle PARKED and the ticket open. Before acceptance it supersedes any live offer and releases the valet's reservation; the guest may request again later.
+- **After a retrieval has been accepted**, withdrawal requires supervised custody resolution: the supervisor records where the car and key now are (returned to a recorded location and hook, or handed to a named valet) and the custody record is acknowledged. Only then is the valet released. The valet is never silently freed.
 
 ## 8. End the event
 Supervisors end shifts only when active tasks and custody are cleared or explicitly transferred. Managers close the operating session after reconciliation. Cancelled empty tickets, delivered vehicles, and unclaimed vehicles are distinct outcomes; never simulate delivery to clear a dashboard.

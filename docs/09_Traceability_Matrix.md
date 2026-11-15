@@ -1,11 +1,11 @@
 # 09 — Requirements-to-tests traceability matrix
 
-Status: **Proposed — awaiting approval.** Every test is **NOT RUN** (no code exists). Built from docs/01–07, CLAUDE.md, DESIGN.md and ADR-0005/0006.
+Status: **Approved 2026-11-15** (user decision 6). Test status is tracked in `PROGRESS.md`; WhatsApp-dependent results from the fake transport are reported as **PASS (SIMULATED)**, never as real integration evidence. Built from docs/01–07, CLAUDE.md, DESIGN.md and ADR-0005/0006.
 
 **Origin:**
 - **A** — approved business direction (docs/01 approved changes, docs/07 §Approved)
 - **P** — preserved from the original operating documents
-- **D** — proposed default, still awaiting approval
+- **D** — proposed default accepted for the build (pilot-tunable; not separately validated in production)
 
 **Layer:**
 - **U** — unit
@@ -30,7 +30,7 @@ Status: **Proposed — awaiting approval.** Every test is **NOT RUN** (no code e
 | R-02 | Phone: Arabic/Persian digits normalized, country code kept, international numbers allowed, masked confirmation, never confused with a hook | 01§2 | A | AT-01 | U I | 1 | mock |
 | R-03 | Service-messaging permission recorded at confirmation; no marketing use | 01§2, 04 | A | AT-01, AT-02 | I | 1 | mock |
 | R-04 | Ticket sent immediately after confirmation, before parking | 01§2 | A | AT-02, AT-28 | I C | 1 / 3 | mock / real |
-| R-05 | Staff-confirmed in-person receipt stored separately from provider delivery; “contact unconfirmed” exception visible | 01§2, 02, ADR-0005 C3 | A | AT-35 | I E | 1 | mock |
+| R-05 | Explicit staff confirmation that the intended guest received the ticket; provider status alone never confirms; “contact unconfirmed” exception visible | 01§2, 02, ADR-0005 C3 | A | AT-35 | I E | 1 | mock |
 | R-06 | No messages to a guessed number; correction path for a wrong number | 01§2, 03 | A | AT-17 | I | 1 | mock |
 | R-07 | Usable vehicle identifier required, or a reasoned supervisor exception | 01§2, 07 | D | AT-03 | U I | 1 | mock |
 | R-08 | Four photos before movement; ticket, uploader and server receipt time; private originals; upload time never labelled capture time | 01§2, 04, ADR-0005 C8 | P / A | AT-03, AT-21, AT-29 | I | 1 | mock |
@@ -41,7 +41,7 @@ Status: **Proposed — awaiting approval.** Every test is **NOT RUN** (no code e
 | ID | Requirement | Source | Origin | Tests | Layer | Phase | WA |
 |---|---|---|---|---|---|---|---|
 | R-11 | Location and key hook are separate fields; PARKED only once both are recorded; valet released | 01§3 | A | AT-03 | U I | 1 | mock |
-| R-12 | Key-hook collision rejected, including carryover across events | 01§3, 02, ADR-0005 C1 | D | AT-33, AT-43 | I | 1 / 2 | — |
+| R-12 | Venue-owned key hooks: collision rejected; occupancy survives event closure and stays reserved for unclaimed cars until explicit audited release | 01§3, 02, ADR-0005 C1 | A | AT-33, AT-43, AT-58 | I | 1 / 2 | — |
 | R-13 | Relocation is an explicit task with custody and old/new location | 02 | D | AT-33 | I | 2 | mock |
 | R-14 | Parked confirmation sent to the guest | 01§3, 04 | A | AT-38 | I | 1 | mock |
 | R-15 | Early request kept as WAITING_FOR_PARKING; no dispatch to an unparked car | 01§3 | A | AT-04 | I | 1 | mock |
@@ -53,7 +53,7 @@ Status: **Proposed — awaiting approval.** Every test is **NOT RUN** (no code e
 | R-17 | Exactly one open request; repeat taps return current status | 01§4 | A | AT-10 | I | 1 | mock |
 | R-18 | Several tickets on one phone → explicit selection | 01§4 | A | AT-18 | I | 1 | mock |
 | R-19 | Truthful wording (queued vs. being retrieved); no invented ETA; guest's language preserved; identifiers kept LTR | 01§4, 04, DESIGN | A | AT-38 | U I | 1 | mock |
-| R-20 | Supervisor withdrawal before acceptance with a reason; later re-request allowed; ticket cancellation withdraws the open request | 02, ADR-0005 C2 | P / D | AT-54 | I | 2 | mock |
+| R-20 | Withdrawal leaves vehicle PARKED and ticket open; before acceptance it supersedes offers and releases reservations; after acceptance only with supervised custody resolution; re-request allowed | 01, 02, ADR-0005 C2 | A | AT-54, AT-57 | I | 1 | mock |
 
 ## Dispatch
 | ID | Requirement | Source | Origin | Tests | Layer | Phase | WA |
@@ -69,7 +69,8 @@ Status: **Proposed — awaiting approval.** Every test is **NOT RUN** (no code e
 | R-29 | Accepted work never auto-transferred; alert plus explicit custody transfer | 01§5, 03 | A | AT-13 | I | 1 | mock |
 | R-30 | Late or stale actions rejected with no state or audit change | 02, 03 | D | AT-14 | I | 1 | mock |
 | R-31 | Timing settings audited; issued offers keep their original deadline | 03 | D | AT-40 | I | 2 | — |
-| R-32 | Valet shift readiness, breaks and help through WhatsApp | ADR-0006, ADR-0005 C6 | D | AT-19, AT-42 | I C | 1 | mock |
+| R-32 | Valet WhatsApp contract: readiness, intake, receipt confirmation, parking start/completion, offer accept, retrieval, ready, code, handover, breaks, help | ADR-0006, ADR-0005 C6 | A | AT-19, AT-42, AT-60 | I C | 1 | mock |
+| R-32a | Duplicate or expired valet taps rejected safely; no second effect | ADR-0006, 03 | A | AT-60, AT-14 | I | 1 | mock |
 
 ## Ready, handover and feedback
 | ID | Requirement | Source | Origin | Tests | Layer | Phase | WA |
@@ -88,7 +89,7 @@ Status: **Proposed — awaiting approval.** Every test is **NOT RUN** (no code e
 | R-40 | One active shift per person; supervisor activates and ends shifts | 01§1, 02 | P | AT-42 | I | 1 | — |
 | R-41 | Availability derived from state; a break takes effect after custody is released | 01§1, 02 | A / D | AT-19 | I | 1 | mock |
 | R-42 | Deactivation or shift end while holding custody → exception, never silent release | 02 | D | AT-19 | I | 1 | — |
-| R-43 | Cancelled empty ticket with a reason (cutoff per ADR-0005 C4) | 01§8, 02 | P | AT-24 | I | 2 | — |
+| R-43 | Cancel abandoned intake only before “بدء الركن” and after confirming guest has vehicle and keys; cascade withdraws requests, cancels intake task, releases reservation, revokes credentials | 01, 02, ADR-0005 C2/C4 | A | AT-24, AT-55, AT-56 | I | 1 | mock |
 | R-44 | Unclaimed: manager-approved custody plan, named custodian, carryover register | 01§8 | D | AT-24, AT-43 | I E | 2 | — |
 | R-45 | Opening check never shows healthy while the worker or WhatsApp is down | 01§1 | A | AT-44 | I E | 2 | mock |
 
@@ -125,6 +126,7 @@ Status: **Proposed — awaiting approval.** Every test is **NOT RUN** (no code e
 | R-65 | Console: stale banner, unsafe mutations disabled, idempotent resubmit | 03 | D | AT-34 | E | 1 | — |
 | R-66 | Arabic-first bilingual RTL/LTR; 360 px, tablet and desktop; 200% zoom; keyboard focus; 44 px targets; status never conveyed by colour alone | DESIGN, 06 | D | AT-53 | E M | 1 / 2 | — |
 | R-67 | Supervisor home puts attention items first, scoped to one event | DESIGN | D | AT-53 | E | 1 / 2 | — |
+| R-67a | Supervisor console = live monitoring, shift operations and exception handling; no manual routine-dispatch control; valets have no console access | 01 (clarified), 02 | A | AT-59 | I E | 1 / 2 | — |
 
 ## Non-functional
 | ID | Requirement | Source | Origin | Tests | Layer | Phase | WA |
@@ -136,8 +138,7 @@ Status: **Proposed — awaiting approval.** Every test is **NOT RUN** (no code e
 | R-72 | Real WhatsApp flow in staging: templates, signed webhooks, delivery failures | 05, 06 | A | STG-01 | C M | 3 | **real** |
 | R-73 | Production smoke on the exact build: guest message, accept, ready, handover, audit | 05, 06 | A | PROD-01 | M | 5 | **real** |
 
-## Proposed additional acceptance scenarios (AT-35+)
-docs/06 has no scenario covering these requirements. They are proposed additions for approval.
+## Additional acceptance scenarios (AT-35+, approved 2026-11-15; also listed in docs/06)
 
 | ID | Scenario | Required outcome |
 |---|---|---|
@@ -160,12 +161,18 @@ docs/06 has no scenario covering these requirements. They are proposed additions
 | AT-51 | Permanent send failure; operator replay | Dead letter visible; replay applies its effect once |
 | AT-52 | Reassigned retrieval and break-containing shift in reports | Original timestamps kept; median/p95 correct; breaks shown separately |
 | AT-53 | Design QA matrix (docs/06 Design QA) | Passes on 360 px, tablet and desktop, at 200% zoom, with keyboard navigation, in Arabic and English, with status labels |
-| AT-54 | Supervisor withdraws a queued request; ticket cancelled with an early request | WITHDRAWN with a reason; later re-request allowed; no orphaned open request |
+| AT-54 | Supervisor withdraws a WAITING/QUEUED/OFFERED request | WITHDRAWN with reason; live offer superseded and reservation released; vehicle stays PARKED; ticket open; guest may request again |
+| AT-55 | Cancel intake before vs. after “بدء الركن”, with/without guest-has-vehicle-and-keys confirmation | Allowed only before parking starts and with confirmation; refused otherwise |
+| AT-56 | Cancel a ticket with an early request and an intake reservation | Request WITHDRAWN (`ticket_cancelled`); intake task cancelled; valet released; tokens/codes revoked; guest informed |
+| AT-57 | Withdraw an ACCEPTED retrieval | Refused without custody resolution; with recorded, acknowledged resolution: task closed, ticket PARKED at recorded location/hook, valet released explicitly |
+| AT-58 | Unclaimed car's key hook | Reserved across events until explicit audited release; unauthorized release denied |
+| AT-59 | Supervisor console scope | Monitoring, shift start/end and exceptions in assigned events; no manual routine-dispatch control; valets have no console access |
+| AT-60 | Duplicate or expired valet taps | Duplicate returns current outcome without second effect; expired/superseded rejected with stale message |
 
 ## Coverage check
 - Every docs/06 scenario AT-01…AT-34 appears at least once above.
 - Every row has at least one test ID.
 - **Extended Gate 2 set** (identical in `10_Build_Plan.md`):
   - docs/06 Gate 2 scenarios: AT-01–19, AT-32–34.
-  - Phase 1 additions: AT-25, AT-26, AT-35, AT-37, AT-38, AT-39, AT-42, AT-48 (database-role part), AT-49, AT-50 (mocked), and AT-53 limited to the live view.
+  - Phase 1 additions: AT-25, AT-26, AT-35, AT-37, AT-38, AT-39, AT-42, AT-48 (database-role part), AT-49, AT-50 (simulated), AT-54, AT-55, AT-56, AT-57, AT-60, and AT-53/AT-59 limited to the live view.
 - Everything else is Gate 3 or later.

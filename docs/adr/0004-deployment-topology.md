@@ -1,6 +1,6 @@
 # ADR-0004 — Deployment topology (provider-neutral)
 
-- Status: **Proposed — awaiting user approval. Provider and region selection BLOCKED on inputs.**
+- Status: **Accepted 2026-11-15 (topology). Provider and region selection BLOCKED on inputs.**
 - Date: 2026-11-15
 - Requirement basis: docs/05 hosting requirements and release sequence; CLAUDE.md delivery rules.
 

@@ -20,7 +20,7 @@ All console actions require authenticated staff, role permission and event scope
 | Guest-phone / subject data exports | No | No | No | Yes | Yes |
 | WhatsApp credentials and connection | No | No | No | No | Yes |
 
-Supervisor cancellation is preserved; manager approval for unclaimed custody is a **proposed strengthening** of the original guide. Exception assistance must not make routine supervisor dispatch necessary. Audit impersonation, overrides, exports and credential changes.
+Supervisor cancellation is preserved, limited to abandoned intakes before parking starts (see Transition rules). Manager approval for unclaimed custody is a **proposed strengthening** of the original guide. Supervisors monitor live operations, run shift operations and handle exceptions; they have no control for manually dispatching routine retrieval work. Exception assistance must not make routine supervisor dispatch necessary. Audit impersonation, overrides, exports and credential changes.
 
 ## Separate dimensions
 Do not overload one status column to represent physical custody, work assignment, message delivery and incidents.
@@ -28,22 +28,26 @@ Do not overload one status column to represent physical custody, work assignment
 ### Vehicle ticket lifecycle
 | State | Meaning | Normal exit |
 |---|---|---|
-| RECEIVED | Registered; intake/parking task holds a valet | PARKED |
+| RECEIVED | Registered; intake/parking task holds a valet. `parking_started_at` marks when the car first moves | PARKED (or CANCELLED only before parking starts) |
 | PARKED | Location and key hook recorded; ready for retrieval | RETRIEVING after acceptance |
 | RETRIEVING | Accepted retrieval; assigned valet responsible | READY |
 | READY | At the handover point; assigned valet still responsible | DELIVERED |
 | DELIVERED | Verified physical handover completed | Terminal |
-| CANCELLED | No vehicle was taken into custody; reason recorded | Terminal |
+| CANCELLED | Abandoned intake before parking started; staff confirmed the guest has vehicle and keys; reason recorded | Terminal |
 | UNCLAIMED | Operating session ended with manager-approved continuing custody | Separate carryover case |
 
 Display queued/offered badges from request state while vehicle remains PARKED. RECEIVED may have an early request, but cannot be auto-dispatched yet. Never cancel a car already held by the operator merely to remove a ticket.
 
 ### Retrieval request lifecycle
-WAITING_FOR_PARKING → QUEUED → OFFERED → ACCEPTED → COMPLETED.
+WAITING_FOR_PARKING → QUEUED → OFFERED → ACCEPTED → COMPLETED, with terminal WITHDRAWN reachable from any open state.
 
 An expired/declined OFFERED becomes QUEUED. Reassignment does not change `requested_at`. ACCEPTED stays active through READY. Only explicit custody resolution permits transfer of an accepted task. A superseded offer is invalid forever.
 
-Withdrawal is an exceptional supervisor action before acceptance with a reason. V1 has no guest cancellation button. Preserve the withdrawal event and allow a later new request after withdrawal; the “one open request” constraint applies only to active states.
+Withdrawal (approved 15 Nov 2026) is an exceptional supervisor action with a reason. V1 has no guest cancellation button.
+- From WAITING_FOR_PARKING / QUEUED / OFFERED: request → WITHDRAWN; any live offer is superseded and its reservation released; the vehicle stays PARKED (or continues parking) and the ticket stays open.
+- From ACCEPTED: allowed only together with a supervised custody resolution that records the car and key location (or a named receiving valet) and is acknowledged. The retrieval task then closes with reason `custody_resolved`, the ticket returns to PARKED at the recorded location/hook, and only then is the valet released.
+- Ticket cancellation (allowed only before parking starts) withdraws any open request with reason `ticket_cancelled`, cancels the intake task, releases its reservation, and revokes guest action references and collection credentials.
+Preserve the withdrawal event and allow a later new request after withdrawal; the “one open request” constraint applies only to open states.
 
 ### Staff availability
 Derived available = enabled staff + active event shift + available preference + no current live task/reservation. LIVE task statuses: RESERVED/OFFERED/ACCEPTED. A valet is busy during parking and from retrieval offer through physical handover. Break/unavailable requests are separate from task completion.
@@ -51,7 +55,7 @@ Derived available = enabled staff + active event shift + available preference + 
 Intake reservation and retrieval reservation must contend on the same staff capacity constraint. A web dashboard or WhatsApp button cannot override a busy assignment without an explicit transfer.
 
 ### Contact and message state
-Contact: UNCONFIRMED / CONFIRMED_IN_PERSON / CORRECTION_REQUIRED / ASSISTED_FALLBACK.
+Contact: UNCONFIRMED / CONFIRMED_IN_PERSON / CORRECTION_REQUIRED / ASSISTED_FALLBACK. CONFIRMED_IN_PERSON is set only by an explicit staff confirmation that the intended guest received the ticket.
 Message: PENDING / SENDING / SENT / DELIVERED / READ / FAILED / DELIVERY_UNKNOWN.
 These do not substitute for the vehicle state. Provider “delivered” is not proof that the intended car owner controls the phone. Read receipts are optional; do not block operations awaiting READ.
 
@@ -64,6 +68,8 @@ Safety hold: active reason, affected actions, author, clearance author/time. A h
 - READY requires current accepted assignee. DELIVERED requires READY, identity verification, no active handover hold and actual delivery confirmation.
 - A late “ready” from a superseded assignee fails cleanly; do not mutate or duplicate the audit event.
 - `parked_by` is the valet who completes parking, not necessarily the registering employee.
+- CANCELLED requires: ticket RECEIVED, `parking_started_at` empty, supervisor+ actor (or the intake valet before the ticket was sent), a reason and an explicit confirmation that the guest has the vehicle and keys. After parking starts the vehicle leaves only by DELIVERED or UNCLAIMED.
+- Key occupancy is released only by verified delivery, an audited relocation of the key, or an explicit audited carryover release.
 - State correction is a new authorized compensating action; never rewrite old history silently.
 - Relocation is explicit with old/new location, mover and time. Proposed rule: supervisor initiates a relocation task; new retrieval waits until its custody is released.
 - Disabling an employee blocks new access immediately but must open an unresolved-custody exception if they hold work. Preserve assignment history until a supervisor physically transfers responsibility. Do not silently mark them free.
@@ -71,7 +77,8 @@ Safety hold: active reason, affected actions, author, clearance author/time. A h
 ## Minimum data model (proposed)
 | Entity | Essential data |
 |---|---|
-| Organization / Venue | IDs, name, timezone, parking/key station configuration |
+| Organization / Venue | IDs, name, timezone, parking zones, key stations (venue-owned) |
+| KeyOccupancy | key station, hook, ticket, occupied/released time, release actor and reason |
 | Event | ID, venue, name, start/end, status, configuration snapshot |
 | Staff / RoleGrant | ID, username if console user, normalized phone, enabled, roles, audit |
 | EventAssignment / Shift | person/event, actual start/end, breaks/unavailable periods |
@@ -93,7 +100,7 @@ Safety hold: active reason, affected actions, author, clearance author/time. A h
 - At most one open shift per person.
 - At most one live capacity-consuming task per valet and one live movement task per vehicle.
 - At most one active retrieval request per ticket.
-- At most one occupied active key slot per `(event_id, key_station_id, hook_number)`.
+- At most one unreleased key occupancy per `(key_station_id, hook_number)`; key stations belong to the venue, so the constraint spans events and carryover cases.
 - Unique logical inbound operation per provider message/action; repeated processing yields the same effect.
 - Foreign keys and same-event validation for assignments, staff, tickets, incidents and exports.
 - Audit app role cannot UPDATE/DELETE audit rows. Database owners still have administrative power; describe history as application-append-only, not magically tamper-proof.

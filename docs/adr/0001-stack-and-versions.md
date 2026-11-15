@@ -1,6 +1,6 @@
 # ADR-0001 — Application stack and versions
 
-- Status: **Proposed — awaiting user approval**
+- Status: **Accepted 2026-11-15** — Django **6.1.3** (latest 6.1 patch on PyPI, checked 15 Nov 2026), subject to the dependency verification recorded below
 - Date: 2026-11-15
 - Requirement basis: docs/05 recommends a modular monolith (React + TypeScript, Django + DRF, PostgreSQL, worker, private object storage). That stack is a **proposed default**, not a business requirement. The business requirements it serves are: transactional source of truth, durable background work, Arabic-first responsive console and deterministic dispatch (no LLM in the request path).
 
@@ -23,6 +23,20 @@ Adopt the docs/05 stack as one repository using the docs/05 layout (`apps/web`, 
 | Background work | Own worker on PostgreSQL tables (ADR-0002) | No Redis or Celery in V1 |
 
 Alternative considered: **Django 5.2 LTS**, with security support until about April 2028. Safer support window, but it lacks 6.x features. Either version needs one framework upgrade within about 18 months: 6.1 → 6.2 is a small hop, 5.2 → 6.2 is a larger one.
+
+## Dependency verification for Django 6.1 (user decision 5)
+| Dependency | Declared Django support (PyPI classifiers / docs, 15 Nov 2026) | Verification in this repo |
+|---|---|---|
+| djangorestframework 3.18.3 | 5.2, 6.0, **6.1** (README/docs) | Full test suite |
+| psycopg 3.3.x | Framework-agnostic | Full test suite on PostgreSQL 18 |
+| pytest-django 4.14.0 (test only) | Classifiers list up to 6.0 | Empirical: full suite runs on 6.1.3 — recorded in PROGRESS.md |
+| drf-spectacular 0.30.0 (schema only) | Classifiers list up to 6.0 | Empirical: schema generation test |
+| phonenumbers, cryptography, pyotp | Framework-agnostic | Unit tests |
+| django-storages | Classifiers up to 5.1 | **Not used in Phases 0–2** (private local storage); re-check before staging S3 |
+Fallback rule: if a required dependency demonstrably fails on 6.1, record the evidence here and move to the latest 5.2 LTS patch.
+
+## Upgrade plan to 6.2 LTS
+When Django 6.2 is released as stable (expected around April 2027 per the x.2 LTS cadence — confirm on djangoproject.com), upgrade within one minor cycle and before 6.1 extended support ends (December 2027): bump on a branch, run the full suite including concurrency/recovery tests, resolve deprecation warnings (run tests with `-W error::DeprecationWarning` in CI ahead of time), then promote through staging.
 
 ## Rejected
 Microservices, Kubernetes, event-stream infrastructure, vector databases, LLM agents in dispatch (docs/05). Also a separate staff app (docs/04).

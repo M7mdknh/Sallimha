@@ -1,6 +1,6 @@
 # ADR-0002 — Worker design and persistent jobs
 
-- Status: **Proposed — awaiting user approval**
+- Status: **Accepted 2026-11-15**
 - Date: 2026-11-15
 - Requirement basis: CLAUDE.md (no in-memory-only locks or timers; durable outbox; authenticated, deduplicated webhooks), docs/03 (durable messaging, recovery from stored deadlines, no external calls under long-lived locks).
 
@@ -26,11 +26,12 @@ Mechanics:
 6. **Heartbeat.** The worker updates `worker_heartbeat` each loop. Readiness and the opening check fail if it goes stale (AT-44).
 7. **Transactional outbox.** Every business command that must notify someone inserts its outbox row in the same transaction as the state change.
 
-## Platform facts to verify in Phase 0 (official Meta documentation; do not assume)
-- Whether template quick-reply buttons accept a per-send payload. If not, bind actions via the replied-to message ID (`context.id`) plus a server-side lookup.
-- Whether a guest's button tap opens the customer-service window (affects ADR-0005 C7).
-- Template category, cost and latency for valet offers sent outside a window.
-- Sender identity fields (phone vs. business-scoped user IDs), and how status webhooks identify the message and transition.
+## Platform facts (verified from documentation 15 Nov 2026 — see `../11_WhatsApp_Platform_Verification.md`; staging re-verification required)
+- Template quick-reply buttons accept a per-send payload (documented); action references ride in it, with `context.id` recorded as secondary evidence.
+- Signature: `X-Hub-Signature-256` HMAC-SHA256 over the raw body; two secrets accepted during rotation.
+- Inbound identity: `from_user_id` (BSUID) is always present; phone may be absent — bindings match on either.
+- Status webhooks: up to three per message; keyed by (message id, status, timestamp) with monotonic rank.
+- Still to verify in staging: whether a button tap opens the 24 h window, code-template category, offer template cost/latency.
 
 ## Alternatives considered
 - **Celery + Redis.** Adds infrastructure, and the broker is not the source of truth. Revisit only with measured need (docs/05).
