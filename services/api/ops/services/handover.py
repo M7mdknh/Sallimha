@@ -85,16 +85,38 @@ def mark_ready(staff, payload: str, now=None) -> str:
         if tokens.state(token, now) != "valid" or not _current(task, staff, token) or \
                 ticket.state != Ticket.State.RETRIEVING:
             return "stale"
-        ticket.state = Ticket.State.READY
-        ticket.ready_at = now
-        ticket.version += 1
-        ticket.save(update_fields=["state", "ready_at", "version"])
         tokens.mark_used(token, now)
-        binding = ticket.bindings.filter(revoked_at__isnull=True).first()
-        if binding is not None:
-            issue_code(ticket, binding, now)
-        _audit("ticket.ready", staff, ticket, task_id=task.id)
+        _apply_ready(ticket, task, staff, now)
     return "ready"
+
+
+def _apply_ready(ticket, task, staff, now, *, relayed_by=None, confirmed_via: str = "") -> None:
+    ticket.state = Ticket.State.READY
+    ticket.ready_at = now
+    ticket.version += 1
+    ticket.save(update_fields=["state", "ready_at", "version"])
+    binding = ticket.bindings.filter(revoked_at__isnull=True).first()
+    if binding is not None:
+        issue_code(ticket, binding, now)
+    extra = {"relayed_by": relayed_by.id, "confirmed_via": confirmed_via} if relayed_by is not None else {}
+    _audit("ticket.ready", staff, ticket, task_id=task.id, **extra)
+
+
+def mark_ready_relayed(actor, task, confirmed_via: str, now=None) -> None:
+    """WhatsApp outage (ADR-0008): the supervisor records the accepted valet's "car ready" report."""
+    from core.errors import DomainError
+
+    now = now or timezone.now()
+    with transaction.atomic():
+        ticket = Ticket.objects.select_for_update(no_key=True).get(pk=task.ticket_id)
+        RetrievalRequest.objects.select_for_update(no_key=True).filter(ticket=ticket,
+                                                                       state=RetrievalRequest.State.ACCEPTED).first()
+        task = Task.objects.select_for_update(no_key=True).get(pk=task.pk)
+        if task.type != Task.Type.RETRIEVAL or task.status != Task.Status.ACCEPTED or \
+                ticket.state != Ticket.State.RETRIEVING:
+            raise DomainError("stale")
+        tokens.revoke(task=task, purposes=["valet_car_ready"], now=now)
+        _apply_ready(ticket, task, task.assignee, now, relayed_by=actor, confirmed_via=confirmed_via)
 
 
 def verify_collection(staff, ticket, code_text: str, now=None) -> tuple[str, int]:

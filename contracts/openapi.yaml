@@ -654,6 +654,70 @@ paths:
           description: ''
         '404':
           description: Not found or out of scope
+  /api/events/{event_id}/intake-on-behalf:
+    post:
+      operationId: events_intake_on_behalf_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntakeOnBehalfRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IntakeOnBehalfRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IntakeOnBehalfRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/events/{event_id}/live:
     get:
       operationId: events_live_retrieve
@@ -704,6 +768,160 @@ paths:
           description: ''
         '404':
           description: Not found or out of scope
+  /api/events/{event_id}/outages/system:
+    post:
+      operationId: events_outages_system_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemOutageRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SystemOutageRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SystemOutageRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/events/{event_id}/people:
+    get:
+      operationId: events_people_list
+      description: Valets assigned to the event and supervisors and above who can
+        act on it (for console selects).
+      parameters:
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PersonRow'
+          description: ''
+        '404':
+          description: Not found or out of scope
+  /api/events/{event_id}/reconcile-intake:
+    post:
+      operationId: events_reconcile_intake_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReconcileIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReconcileIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/events/{event_id}/report:
     get:
       operationId: events_report_retrieve
@@ -1080,6 +1298,138 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/outages:
+    get:
+      operationId: outages_retrieve
+      tags:
+      - outages
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutageStatus'
+          description: ''
+  /api/outages/whatsapp/declare:
+    post:
+      operationId: outages_whatsapp_declare_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - outages
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/outages/whatsapp/end:
+    post:
+      operationId: outages_whatsapp_end_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - outages
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
           description: ''
         '400':
           content:
@@ -1559,13 +1909,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -1623,13 +1973,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -1687,13 +2037,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -1751,13 +2101,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -1815,13 +2165,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -1879,13 +2229,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -1943,13 +2293,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2007,13 +2357,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2071,13 +2421,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2135,13 +2485,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2199,13 +2549,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2263,13 +2613,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2327,13 +2677,269 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/reconcile-handover:
+    post:
+      operationId: tickets_reconcile_handover_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/relay-accept:
+    post:
+      operationId: tickets_relay_accept_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/relay-custody-ack:
+    post:
+      operationId: tickets_relay_custody_ack_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/relay-ready:
+    post:
+      operationId: tickets_relay_ready_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2391,13 +2997,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2455,13 +3061,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2519,13 +3125,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2583,13 +3189,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2647,13 +3253,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2711,13 +3317,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ReleaseCarryoverRequestRequest'
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2909,6 +3515,14 @@ components:
       - retention_preview
       - template_overrides
       - timings
+    ConfirmedViaEnum:
+      enum:
+      - in_person
+      - radio
+      type: string
+      description: |-
+        * `in_person` - in_person
+        * `radio` - radio
     ContactStateEnum:
       enum:
       - UNCONFIRMED
@@ -3279,14 +3893,46 @@ components:
       - status
       - ticket
       - ticket_id
-    KindEnum:
-      enum:
-      - INTAKE
-      - INCIDENT
-      type: string
-      description: |-
-        * `INTAKE` - INTAKE
-        * `INCIDENT` - INCIDENT
+    IntakeOnBehalfRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+        valet_id:
+          type: integer
+        guest_phone:
+          type: string
+          minLength: 1
+          maxLength: 40
+        plate:
+          type: string
+          minLength: 1
+          maxLength: 40
+        description:
+          type: string
+          maxLength: 200
+        zone_code:
+          type: string
+          minLength: 1
+          maxLength: 20
+        detail:
+          type: string
+          maxLength: 80
+        hook_number:
+          type: integer
+          minimum: 1
+        confirmed_via:
+          $ref: '#/components/schemas/ConfirmedViaEnum'
+      required:
+      - confirmed_via
+      - guest_phone
+      - hook_number
+      - plate
+      - reason
+      - valet_id
+      - zone_code
     LiveRequest:
       type: object
       properties:
@@ -3335,6 +3981,11 @@ components:
       properties:
         event:
           $ref: '#/components/schemas/EventBrief'
+        outage:
+          allOf:
+          - $ref: '#/components/schemas/OutageBrief'
+          nullable: true
+          description: 'Declared WhatsApp outage: relayed actions are enabled'
         generated_at:
           type: string
           format: date-time
@@ -3367,6 +4018,7 @@ components:
       - generated_at
       - health
       - not_started
+      - outage
       - requests
       - team
     LoginRequestRequest:
@@ -3426,20 +4078,28 @@ components:
           type: string
           format: date-time
         kind:
-          $ref: '#/components/schemas/KindEnum'
+          $ref: '#/components/schemas/MediaBriefKindEnum'
       required:
       - id
       - kind
       - received_at
+    MediaBriefKindEnum:
+      enum:
+      - INTAKE
+      - INCIDENT
+      type: string
+      description: |-
+        * `INTAKE` - INTAKE
+        * `INCIDENT` - INCIDENT
     MethodEnum:
       enum:
-      - collected_verified
-      - moved_to_storage
+      - in_person_check
+      - known_guest
       - other
       type: string
       description: |-
-        * `collected_verified` - collected_verified
-        * `moved_to_storage` - moved_to_storage
+        * `in_person_check` - in_person_check
+        * `known_guest` - known_guest
         * `other` - other
     MfaIssueResponse:
       type: object
@@ -3516,6 +4176,77 @@ components:
       - whatsapp
       - worker
       - zones
+    OutageBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+        since:
+          type: string
+          format: date-time
+        declared_by:
+          type: string
+        reason:
+          type: string
+      required:
+      - declared_by
+      - id
+      - reason
+      - since
+    OutageRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          $ref: '#/components/schemas/OutageRowKindEnum'
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+        declared_by:
+          type: string
+        reconciliations:
+          type: integer
+      required:
+      - declared_by
+      - ended_at
+      - id
+      - kind
+      - reason
+      - reconciliations
+      - started_at
+    OutageRowKindEnum:
+      enum:
+      - WHATSAPP
+      - SYSTEM
+      type: string
+      description: |-
+        * `WHATSAPP` - WHATSAPP
+        * `SYSTEM` - SYSTEM
+    OutageStatus:
+      type: object
+      properties:
+        whatsapp:
+          allOf:
+          - $ref: '#/components/schemas/OutageBrief'
+          nullable: true
+        windows:
+          type: array
+          items:
+            $ref: '#/components/schemas/OutageRow'
+        time_zone:
+          type: string
+          description: Zone the console's local times are entered in
+      required:
+      - time_zone
+      - whatsapp
+      - windows
     OutboxAttentionStatusEnum:
       enum:
       - DEAD
@@ -3524,6 +4255,19 @@ components:
       description: |-
         * `DEAD` - DEAD
         * `DELIVERY_UNKNOWN` - DELIVERY_UNKNOWN
+    PersonRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+      required:
+      - id
+      - name
+      - role
     ReasonRequestRequest:
       type: object
       properties:
@@ -3533,18 +4277,87 @@ components:
           maxLength: 200
       required:
       - reason
-    ReleaseCarryoverRequestRequest:
+    ReconcileHandoverRequestRequest:
       type: object
       properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+        occurred_at_local:
+          type: string
+          minLength: 1
+          description: When the handover actually happened
+          maxLength: 32
+        delivered_by_id:
+          type: integer
+        verified_by_id:
+          type: integer
         method:
           $ref: '#/components/schemas/MethodEnum'
-        note:
+        evidence:
           type: string
           minLength: 1
           maxLength: 2000
       required:
+      - delivered_by_id
+      - evidence
       - method
-      - note
+      - occurred_at_local
+      - reason
+      - verified_by_id
+    ReconcileIntakeRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+        valet_id:
+          type: integer
+        guest_phone:
+          type: string
+          minLength: 1
+          maxLength: 40
+        plate:
+          type: string
+          minLength: 1
+          maxLength: 40
+        description:
+          type: string
+          maxLength: 200
+        zone_code:
+          type: string
+          minLength: 1
+          maxLength: 20
+        detail:
+          type: string
+          maxLength: 80
+        hook_number:
+          type: integer
+          minimum: 1
+        received_at_local:
+          type: string
+          minLength: 1
+          maxLength: 32
+        parked_at_local:
+          type: string
+          minLength: 1
+          maxLength: 32
+        evidence:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - evidence
+      - guest_phone
+      - hook_number
+      - parked_at_local
+      - plate
+      - reason
+      - received_at_local
+      - valet_id
+      - zone_code
     RequestStateEnum:
       enum:
       - WAITING_FOR_PARKING
@@ -3815,6 +4628,26 @@ components:
           type: integer
       required:
       - staff_id
+    SystemOutageRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+        started_at_local:
+          type: string
+          minLength: 1
+          description: Venue wall-clock time, e.g. 2026-11-16T20:30
+          maxLength: 32
+        ended_at_local:
+          type: string
+          minLength: 1
+          maxLength: 32
+      required:
+      - ended_at_local
+      - reason
+      - started_at_local
     TeamMember:
       type: object
       properties:
@@ -3967,6 +4800,10 @@ components:
           - $ref: '#/components/schemas/MoveBrief'
           nullable: true
           description: A supervisor-initiated relocation in progress
+        offered_to:
+          type: string
+          nullable: true
+          description: Valet the system offered the open task to
         timeline:
           type: array
           items:
@@ -3988,6 +4825,7 @@ components:
       - location
       - media
       - move
+      - offered_to
       - parked_by
       - parking_started
       - phone_masked

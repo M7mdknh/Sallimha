@@ -70,7 +70,9 @@ def transfer_custody(actor, task, to_staff, vehicle_location: str, key_location:
     return transfer
 
 
-def acknowledge_custody(staff, transfer, now=None) -> Task:
+def acknowledge_custody(staff, transfer, now=None, *, relayed_by=None, confirmed_via: str = "") -> Task:
+    """The receiving valet confirms custody (or, during a declared WhatsApp outage, a supervisor records the
+    valet's in-person or radio confirmation — ADR-0008)."""
     now = now or timezone.now()
     with transaction.atomic():
         transfer = CustodyTransfer.objects.select_for_update(no_key=True).get(pk=transfer.pk)
@@ -91,8 +93,12 @@ def acknowledge_custody(staff, transfer, now=None) -> Task:
             ready = tokens.issue("valet_car_ready", staff=staff, task=task, ticket=ticket, generation=task.generation)
             outbox.enqueue("valet.assigned", staff=staff, ticket=ticket, task=task, template="valet.assigned",
                            params={}, buttons=[(ready, "car_ready")], dedupe_key=f"valet.assigned:{task.id}")
-        audit("custody.acknowledged", actor_id=staff.id, actor_label=actor_label(staff), channel="whatsapp",
-              entity_type="ticket", entity_id=ticket.id, event_id=ticket.event_id, summary={"transfer": transfer.id})
+        summary = {"transfer": transfer.id}
+        if relayed_by is not None:
+            summary.update(relayed_by=relayed_by.id, confirmed_via=confirmed_via)
+        audit("custody.acknowledged", actor_id=staff.id, actor_label=actor_label(staff),
+              channel="console" if relayed_by is not None else "whatsapp", entity_type="ticket", entity_id=ticket.id,
+              event_id=ticket.event_id, summary=summary)
     return task
 
 

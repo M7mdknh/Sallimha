@@ -132,17 +132,39 @@ def accept_relocation(staff, payload: str, now=None) -> str:
                 or shifts.open_shift_for(staff, task.event) is None or ticket.state != Ticket.State.PARKED
                 or ticket.id in dispatch_blocked_ticket_ids(task.event)):
             return "stale"
-        task.status = Task.Status.ACCEPTED
-        task.accepted_at = now
-        task.save(update_fields=["status", "accepted_at"])
         tokens.mark_used(token, now)
         tokens.revoke(task=task, purposes=["relocation_decline"], now=now)
-        moved = tokens.issue("relocation_moved", staff=staff, task=task, ticket=ticket, generation=task.generation)
-        outbox.enqueue("valet.relocation_accepted", staff=staff, ticket=ticket, task=task,
-                       template="valet.relocation_accepted", params={"ticket": _t(ticket)},
-                       buttons=[(moved, "moved")], dedupe_key=f"valet.relocation_accepted:{task.id}", now=now)
-        _audit("relocation.accepted", staff, ticket, "whatsapp", task_id=task.id)
+        _apply_acceptance(ticket, task, staff, now)
     return "accepted"
+
+
+def _apply_acceptance(ticket, task, staff, now, *, relayed_by=None, confirmed_via: str = "") -> None:
+    task.status = Task.Status.ACCEPTED
+    task.accepted_at = now
+    task.save(update_fields=["status", "accepted_at"])
+    moved = tokens.issue("relocation_moved", staff=staff, task=task, ticket=ticket, generation=task.generation)
+    outbox.enqueue("valet.relocation_accepted", staff=staff, ticket=ticket, task=task,
+                   template="valet.relocation_accepted", params={"ticket": _t(ticket)},
+                   buttons=[(moved, "moved")], dedupe_key=f"valet.relocation_accepted:{task.id}", now=now)
+    extra = {"relayed_by": relayed_by.id, "confirmed_via": confirmed_via} if relayed_by is not None else {}
+    _audit("relocation.accepted", staff, ticket, "console" if relayed_by is not None else "whatsapp",
+           task_id=task.id, **extra)
+
+
+def accept_relayed(actor, task, confirmed_via: str, now=None) -> None:
+    """WhatsApp outage (ADR-0008): the supervisor records the chosen valet's acceptance of the move."""
+    from ops.services.holds import dispatch_blocked_ticket_ids
+
+    now = now or timezone.now()
+    with transaction.atomic():
+        ticket, task = _lock(task.pk)
+        staff = task.assignee
+        if (task.status != Task.Status.OFFERED or now > task.offer_deadline or not staff.enabled
+                or shifts.open_shift_for(staff, task.event) is None or ticket.state != Ticket.State.PARKED
+                or ticket.id in dispatch_blocked_ticket_ids(task.event)):
+            raise DomainError("stale")
+        tokens.revoke(task=task, purposes=["relocation_accept", "relocation_decline"], now=now)
+        _apply_acceptance(ticket, task, staff, now, relayed_by=actor, confirmed_via=confirmed_via)
 
 
 def decline_relocation(staff, payload: str, now=None) -> str:

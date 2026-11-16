@@ -13,6 +13,7 @@ from django.db.models import F, Max, Q
 from django.utils import timezone
 
 from core.audit import audit
+from core.errors import DomainError
 from core.locks import lock_event
 from messaging import hooks, outbox
 from ops.models import (
@@ -236,28 +237,58 @@ def accept_task(staff, payload: str, now=None) -> str:
         if req.state != RetrievalRequest.State.OFFERED or req.current_task_id != task.id or \
                 ticket.state != Ticket.State.PARKED or ticket.id in dispatch_blocked_ticket_ids(task.event):
             return "stale"
-        task.status = Task.Status.ACCEPTED
-        task.accepted_at = now
-        task.save(update_fields=["status", "accepted_at"])
-        AssignmentAttempt.objects.filter(task=task).update(outcome=AssignmentAttempt.Outcome.ACCEPTED, responded_at=now)
-        req.state = RetrievalRequest.State.ACCEPTED
-        req.accepted_at = now
-        req.save(update_fields=["state", "accepted_at"])
-        ticket.state = Ticket.State.RETRIEVING
-        ticket.version += 1
-        ticket.save(update_fields=["state", "version"])
         tokens.mark_used(token, now)
         tokens.revoke(task=task, purposes=["valet_decline"], now=now)
-        ready = tokens.issue("valet_car_ready", staff=staff, task=task, ticket=ticket, generation=task.generation)
-        outbox.enqueue("valet.assigned", staff=staff, ticket=ticket, task=task, template="valet.assigned", params={},
-                       buttons=[(ready, "car_ready")], dedupe_key=f"valet.assigned:{task.id}", now=now)
-        binding = ticket.bindings.filter(revoked_at__isnull=True).first()
-        if binding is not None:
-            outbox.enqueue("guest.accepted", binding=binding, ticket=ticket, template="guest.accepted", params={},
-                           dedupe_key=f"guest.accepted:{req.id}", now=now)
-        audit("dispatch.accepted", actor_id=staff.id, actor_label=actor_label(staff), channel="whatsapp",
-              entity_type="ticket", entity_id=ticket.id, event_id=ticket.event_id, summary={"task_id": task.id})
+        _apply_acceptance(ticket, req, task, staff, now)
     return "accepted"
+
+
+def _apply_acceptance(ticket, req, task, staff, now, *, relayed_by=None, confirmed_via: str = "") -> None:
+    """State changes of an accepted retrieval offer (caller holds the ticket → request → task locks)."""
+    task.status = Task.Status.ACCEPTED
+    task.accepted_at = now
+    task.save(update_fields=["status", "accepted_at"])
+    AssignmentAttempt.objects.filter(task=task).update(outcome=AssignmentAttempt.Outcome.ACCEPTED, responded_at=now)
+    req.state = RetrievalRequest.State.ACCEPTED
+    req.accepted_at = now
+    req.save(update_fields=["state", "accepted_at"])
+    ticket.state = Ticket.State.RETRIEVING
+    ticket.version += 1
+    ticket.save(update_fields=["state", "version"])
+    ready = tokens.issue("valet_car_ready", staff=staff, task=task, ticket=ticket, generation=task.generation)
+    outbox.enqueue("valet.assigned", staff=staff, ticket=ticket, task=task, template="valet.assigned", params={},
+                   buttons=[(ready, "car_ready")], dedupe_key=f"valet.assigned:{task.id}", now=now)
+    binding = ticket.bindings.filter(revoked_at__isnull=True).first()
+    if binding is not None:
+        outbox.enqueue("guest.accepted", binding=binding, ticket=ticket, template="guest.accepted", params={},
+                       dedupe_key=f"guest.accepted:{req.id}", now=now)
+    summary = {"task_id": task.id}
+    if relayed_by is not None:
+        summary.update(relayed_by=relayed_by.id, confirmed_via=confirmed_via)
+    audit("dispatch.accepted", actor_id=staff.id, actor_label=actor_label(staff),
+          channel="console" if relayed_by is not None else "whatsapp", entity_type="ticket", entity_id=ticket.id,
+          event_id=ticket.event_id, summary=summary)
+
+
+def accept_relayed(actor, task, confirmed_via: str, now=None) -> None:
+    """WhatsApp outage (ADR-0008): a supervisor records that the valet the dispatcher chose accepted by radio or in
+    person. Only the current offer to that valet can be accepted; the supervisor never chooses the valet."""
+    from ops.services.holds import dispatch_blocked_ticket_ids
+
+    now = now or timezone.now()
+    with transaction.atomic():
+        ticket, req, task = _lock_chain(task.pk)
+        if task is None:
+            raise DomainError("invalid_state")
+        staff = task.assignee
+        deadline = min(d for d in (task.offer_deadline, task.hard_deadline) if d) if task.hard_deadline else None
+        if (task.status != Task.Status.OFFERED or deadline is None or now > deadline or not staff.enabled
+                or shifts.open_shift_for(staff, task.event) is None or req.state != RetrievalRequest.State.OFFERED
+                or req.current_task_id != task.id or ticket.state != Ticket.State.PARKED
+                or ticket.id in dispatch_blocked_ticket_ids(task.event)):
+            raise DomainError("stale")
+        tokens.revoke(task=task, purposes=["valet_accept", "valet_decline"], now=now)
+        _apply_acceptance(ticket, req, task, staff, now, relayed_by=actor, confirmed_via=confirmed_via)
 
 
 def decline_task(staff, payload: str, now=None) -> str:

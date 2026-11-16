@@ -128,8 +128,16 @@ class StaffBrief(serializers.Serializer):
     role = serializers.ChoiceField(choices=ROLES)
 
 
+class OutageBrief(serializers.Serializer):
+    id = serializers.IntegerField()
+    since = serializers.DateTimeField()
+    declared_by = serializers.CharField()
+    reason = serializers.CharField()
+
+
 class LiveSnapshot(serializers.Serializer):
     event = EventBrief()
+    outage = OutageBrief(allow_null=True, help_text="Declared WhatsApp outage: relayed actions are enabled")
     generated_at = serializers.DateTimeField()
     health = Health()
     attention = AttentionItem(many=True)
@@ -199,6 +207,7 @@ class TicketDetail(serializers.Serializer):
     holds = HoldBrief(many=True)
     incidents = IncidentBrief(many=True)
     move = MoveBrief(allow_null=True, help_text="A supervisor-initiated relocation in progress")
+    offered_to = serializers.CharField(allow_null=True, help_text="Valet the system offered the open task to")
     timeline = TimelineEntry(many=True)
     allowed_actions = serializers.ListField(child=serializers.CharField(),
                                             help_text="Exception actions the server will accept now")
@@ -566,3 +575,71 @@ class TicketSearchRow(serializers.Serializer):
     vehicle = serializers.CharField()
     location = serializers.CharField(allow_blank=True)
     hook = serializers.IntegerField(allow_null=True)
+
+
+# --- outages (ADR-0008) ------------------------------------------------------------------------------------
+
+CONFIRMED_VIA = ["in_person", "radio"]
+
+
+class OutageRow(serializers.Serializer):
+    id = serializers.IntegerField()
+    kind = serializers.ChoiceField(choices=["WHATSAPP", "SYSTEM"])
+    started_at = serializers.DateTimeField()
+    ended_at = serializers.DateTimeField(allow_null=True)
+    reason = serializers.CharField()
+    declared_by = serializers.CharField()
+    reconciliations = serializers.IntegerField()
+
+
+class OutageStatus(serializers.Serializer):
+    whatsapp = OutageBrief(allow_null=True)
+    windows = OutageRow(many=True)
+    time_zone = serializers.CharField(help_text="Zone the console's local times are entered in")
+
+
+class SystemOutageRequest(ReasonRequest):
+    started_at_local = serializers.CharField(max_length=32, help_text="Venue wall-clock time, e.g. 2026-11-16T20:30")
+    ended_at_local = serializers.CharField(max_length=32)
+
+
+class RelayRequest(serializers.Serializer):
+    confirmed_via = serializers.ChoiceField(choices=CONFIRMED_VIA)
+
+
+class ReconcileHandoverRequest(ReasonRequest):
+    occurred_at_local = serializers.CharField(max_length=32, help_text="When the handover actually happened")
+    delivered_by_id = serializers.IntegerField()
+    verified_by_id = serializers.IntegerField()
+    method = serializers.ChoiceField(choices=["in_person_check", "known_guest", "other"])
+    evidence = serializers.CharField(max_length=2000)
+
+
+class IntakeOnBehalfRequest(ReasonRequest):
+    valet_id = serializers.IntegerField()
+    guest_phone = serializers.CharField(max_length=40)
+    plate = serializers.CharField(max_length=40)
+    description = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    zone_code = serializers.CharField(max_length=20)
+    detail = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    hook_number = serializers.IntegerField(min_value=1)
+    confirmed_via = serializers.ChoiceField(choices=CONFIRMED_VIA)
+
+
+class ReconcileIntakeRequest(ReasonRequest):
+    valet_id = serializers.IntegerField()
+    guest_phone = serializers.CharField(max_length=40)
+    plate = serializers.CharField(max_length=40)
+    description = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    zone_code = serializers.CharField(max_length=20)
+    detail = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    hook_number = serializers.IntegerField(min_value=1)
+    received_at_local = serializers.CharField(max_length=32)
+    parked_at_local = serializers.CharField(max_length=32)
+    evidence = serializers.CharField(max_length=2000)
+
+
+class PersonRow(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    role = serializers.ChoiceField(choices=ROLES)

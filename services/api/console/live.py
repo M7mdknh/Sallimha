@@ -37,6 +37,14 @@ def _hook(ticket) -> int | None:
     return occ.hook_number if occ else None
 
 
+def _outage_brief(org) -> dict | None:
+    from ops.services.outage import active_whatsapp_outage
+
+    window = active_whatsapp_outage(org)
+    return {"id": window.id, "since": window.started_at, "declared_by": window.declared_by.full_name,
+            "reason": window.reason} if window else None
+
+
 def snapshot(event, now) -> dict:
     alerts = sorted(
         Alert.objects.filter(event=event, acknowledged_at__isnull=True).select_related("ticket"),
@@ -79,6 +87,7 @@ def snapshot(event, now) -> dict:
         "event": {"id": event.id, "name": event.name, "status": event.status, "venue": event.venue.name},
         "generated_at": now,
         "health": {"worker": worker_status(now), "whatsapp": whatsapp_status()},
+        "outage": _outage_brief(event.org),
         "attention": [{"id": a.id, "kind": a.kind, "severity": a.severity, "created_at": a.created_at,
                        "ticket": _t(a.ticket) if a.ticket_id else None, "ticket_id": a.ticket_id} for a in alerts],
         "counts": counts,
@@ -116,9 +125,42 @@ def allowed_actions(ticket, req, binding, actor=None) -> list[str]:
         actions.append("assisted_handover")
     if open_case is not None and actor is not None and has_role(actor, Role.MANAGER):
         actions.append("approve_unclaimed" if open_case.status == "PROPOSED" else "release_carryover")
+    actions += _outage_actions(ticket, actor)
     from ops.services import holds, incidents
 
     actions += holds.allowed_actions(ticket) + incidents.allowed_actions(ticket)
+    return actions
+
+
+def _outage_actions(ticket, actor) -> list[str]:
+    """Relayed actions only while a WhatsApp outage is declared; reconciliation (manager+) only when a recorded
+    whole-system outage in the last 30 days could contain the handover (ADR-0008)."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from ops.models import CustodyTransfer, OutageWindow
+    from ops.permissions import has_role
+    from ops.services.outage import active_whatsapp_outage
+
+    actions = []
+    if actor is None:
+        return actions
+    if active_whatsapp_outage(ticket.event.org) is not None:
+        live = ticket.tasks.filter(status__in=LIVE_TASK_STATUSES).first()
+        if live is not None and live.status == "OFFERED" and live.type in ("RETRIEVAL", "RELOCATION"):
+            actions.append("relay_accept")
+        if live is not None and live.status == "ACCEPTED" and live.type == "RETRIEVAL" and \
+                ticket.state == Ticket.State.RETRIEVING:
+            actions.append("relay_ready")
+        if ticket.custody_transfers.filter(kind=CustodyTransfer.Kind.RETRIEVAL_TRANSFER,
+                                           acknowledged_at__isnull=True).exists():
+            actions.append("relay_custody_ack")
+    if has_role(actor, Role.MANAGER) and ticket.state in (Ticket.State.PARKED, Ticket.State.RETRIEVING,
+                                                         Ticket.State.READY) and \
+            OutageWindow.objects.filter(org_id=ticket.event.org_id, kind="SYSTEM",
+                                        ended_at__gte=timezone.now() - timedelta(days=30)).exists():
+        actions.append("reconcile_handover")
     return actions
 
 
@@ -142,6 +184,7 @@ def ticket_detail(ticket, actor) -> dict:
         "request": {"id": req.id, "state": req.state, "requested_at": req.requested_at} if req else None,
         "media": [{"id": m.id, "received_at": m.received_at, "kind": m.kind}
                   for m in Media.objects.filter(ticket=ticket, deleted_at__isnull=True).order_by("id")],
+        "offered_to": live_task.assignee.full_name if live_task and live_task.status == "OFFERED" else None,
         "move": ({"status": live_task.status if live_task.status == "ACCEPTED" else "OFFERED",
                   "valet": live_task.assignee.full_name} if live_task and live_task.type == Task.Type.RELOCATION
                  else None),

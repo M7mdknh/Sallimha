@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.urls import path
 
-from console import views, views_admin
+from console import views, views_admin, views_outage
 from messaging import simulator_api
 
 urlpatterns = [
@@ -61,6 +61,17 @@ urlpatterns = [
     path("config/templates", views_admin.ConfigTemplates.as_view()),
     path("retention/apply", views_admin.ApplyRetention.as_view()),
     path("integrations/whatsapp", views_admin.WhatsAppIntegrationView.as_view()),
+    path("outages", views_outage.outage_status),
+    path("outages/whatsapp/declare", views_outage.DeclareWhatsAppOutage.as_view()),
+    path("outages/whatsapp/end", views_outage.EndWhatsAppOutage.as_view()),
+    path("events/<int:event_id>/outages/system", views_outage.RecordSystemOutage.as_view()),
+    path("events/<int:event_id>/people", views_outage.event_people),
+    path("events/<int:event_id>/intake-on-behalf", views_outage.IntakeOnBehalf.as_view()),
+    path("events/<int:event_id>/reconcile-intake", views_outage.ReconcileIntake.as_view()),
+    path("tickets/<int:ticket_id>/relay-accept", views_outage.RelayAccept.as_view()),
+    path("tickets/<int:ticket_id>/relay-ready", views_outage.RelayReady.as_view()),
+    path("tickets/<int:ticket_id>/relay-custody-ack", views_outage.RelayCustodyAck.as_view()),
+    path("tickets/<int:ticket_id>/reconcile-handover", views_outage.ReconcileHandover.as_view()),
 ]
 
 if settings.SIMULATOR_ENABLED:  # local/test only; settings refuse it elsewhere
