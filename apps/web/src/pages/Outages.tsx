@@ -94,18 +94,27 @@ export function Outages({ me, eventId }: { me: Me; eventId?: number }) {
                   <StatusPill tone="danger" icon="alert" label={t("outageActive")} />
                   <p className="prose">{t("outageActiveBody")}</p>
                   <p className="muted">{o.whatsapp.declared_by} · <Id>{venueTime(o.whatsapp.since, lang)}</Id> · {o.whatsapp.reason}</p>
-                  <CommandForm fields={[{ name: "reason", label: "endReason", kind: "textarea" }]} submitLabel="endOutage"
-                    valets={valets} zone={zone} disabled={poll.stale}
-                    send={(b, k) => api.endOutage(String(b.reason), k)} onDone={poll.refresh} />
+                  {manager ? (
+                    <CommandForm fields={[{ name: "reason", label: "endReason", kind: "textarea" }]} submitLabel="endOutage"
+                      valets={valets} zone={zone} disabled={poll.stale}
+                      send={(b, k) => api.endOutage(String(b.reason), k)} onDone={poll.refresh} />
+                  ) : <p className="muted">{t("outageEndManagers")}</p>}
                 </>
-              ) : (
+              ) : manager ? (
                 <>
                   <p className="prose">{t("declareOutageBody")}</p>
                   <CommandForm fields={[{ name: "reason", label: "reason", kind: "textarea" }]} submitLabel="declareOutage"
                     valets={valets} zone={zone} disabled={poll.stale} destructive
                     send={(b, k) => api.declareOutage(String(b.reason), k)} onDone={poll.refresh} />
                 </>
-              )}
+              ) : eventId ? (
+                <>
+                  <p className="prose">{t("reportOutageBody")}</p>
+                  <CommandForm fields={[{ name: "reason", label: "reportWhat", kind: "textarea" }]} submitLabel="reportOutage"
+                    valets={valets} zone={zone} disabled={poll.stale} destructive
+                    send={(b, k) => api.reportOutage(eventId, String(b.reason), k)} onDone={poll.refresh} />
+                </>
+              ) : null}
             </section>
 
             {o.whatsapp && eventId ? (

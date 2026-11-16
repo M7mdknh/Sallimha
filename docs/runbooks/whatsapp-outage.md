@@ -7,22 +7,26 @@
 - Attention items "Offer not sent yet" or "Repeated unaccepted offers"; guests report no ticket message.
 - Operations fills with "Not delivered" or "Delivery unknown" rows.
 
-## Declare it (supervisor on the stand)
-1. **Outages → Declare WhatsApp outage**, with the reason. Everyone sees a red banner on the live view; every open
-   event gets a critical alert. Tell the team by radio. Every car and key stays with a named person.
-2. While declared, the ticket panel offers **relayed** actions. Each asks how you confirmed it (in person / radio):
+## Report, then declare
+1. The live view shows WhatsApp as **failing** when messages keep failing. The supervisor uses **Outages → Report a
+   WhatsApp problem** (managers get a critical alert) and tells the team by radio. Every car and key stays with a
+   named person.
+2. A **manager** checks (provider status page, Operations) and uses **Outages → Declare WhatsApp outage** with the
+   reason. Everyone sees a red banner; every open event gets a critical alert. Only a manager ends it.
+3. While declared, the ticket panel offers **relayed** actions. Each asks how you confirmed it (in person / radio):
    - **Record valet's acceptance (relayed):** the system still chooses the valet ("Offered to: …"); radio that
      valet, and record their answer. You cannot pick someone else — that would be manual dispatch.
    - **Record car ready (relayed):** the accepted valet reports the car at the stand. Then use
      **Supervisor-assisted handover** and record how you verified the guest.
    - **Record custody received (relayed):** for a custody transfer the receiving valet confirmed in person.
    - **Record valet's acceptance** also applies to a move (relocation) offer.
-3. New arrivals: **Outages → Record an intake for a valet** (valet, guest phone, plate, zone, spot, hook, how
+4. New arrivals: **Outages → Record an intake for a valet** (valet, guest phone, plate, zone, spot, hook, how
    confirmed, reason). The car is recorded as parked by that valet; photos are excepted with your reason; the
    guest's WhatsApp ticket is queued and goes out when WhatsApp returns; their handover uses supervisor
    verification.
-4. Guests who cannot request: **Supervisor-assisted request** (unchanged).
-5. When messages flow again: **Outages → End outage** (the declarer or a manager). Then, in **Operations**, replay
+5. Guests who cannot request: **Supervisor-assisted request** (unchanged).
+6. When messages flow again: a manager uses **Outages → End outage**. Queued messages go out by themselves; anything no
+   longer true (an expired offer, a code for a car already handed over) is never sent (ADR-0010). Then, in **Operations**, replay
    messages that still matter; for "Delivery unknown", check with the recipient first.
 
 ## Whole system down (console unreachable) — continuity procedure

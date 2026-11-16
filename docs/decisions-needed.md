@@ -27,7 +27,7 @@ chat; secrets go straight into the hosting provider's secret store.
 |---|---|---|---|
 | O1 | Named business owner and on-call technical owner for each of the 13 runbooks | P | docs/runbooks/README.md |
 | O2 | Approve the paperless continuity procedure for a whole-system outage (offline log on staff phones, supervisor verification before any handover) | P | docs/runbooks/whatsapp-outage.md; ADR-0008 |
-| O3 | Who may declare a WhatsApp outage: supervisors on the stand (current) or managers only | T | Current rule: a supervisor assigned to an open event, or any manager; only the declarer or a manager ends it |
+| O3 | ~~Who may declare a WhatsApp outage~~ — **decided 2026-11-16: managers and above declare and end; supervisors report** | — | ADR-0008 amendment |
 | O4 | Whether reconciliation after a system outage must include a photo (currently text evidence + offline log reference, verified by a second person) | T | ADR-0008 |
 | O5 | Retention periods for guest phones, intake photos and resolved-incident evidence (currently 0 = never delete) | P | Settings → Data retention |
 | O6 | Time zone per venue (all current venues Asia/Riyadh) | T | Venue setting; the console enters and shows times in it |

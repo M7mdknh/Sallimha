@@ -65,6 +65,7 @@ urlpatterns = [
     path("outages/whatsapp/declare", views_outage.DeclareWhatsAppOutage.as_view()),
     path("outages/whatsapp/end", views_outage.EndWhatsAppOutage.as_view()),
     path("events/<int:event_id>/outages/system", views_outage.RecordSystemOutage.as_view()),
+    path("events/<int:event_id>/outages/report", views_outage.ReportWhatsAppOutage.as_view()),
     path("events/<int:event_id>/people", views_outage.event_people),
     path("events/<int:event_id>/intake-on-behalf", views_outage.IntakeOnBehalf.as_view()),
     path("events/<int:event_id>/reconcile-intake", views_outage.ReconcileIntake.as_view()),

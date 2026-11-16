@@ -29,7 +29,7 @@ def ops(world):
 
 
 def _declared(ops):
-    return outage.declare_whatsapp_outage(ops.supervisor, ops.org, "Meta status page shows an incident")
+    return outage.declare_whatsapp_outage(ops.manager, ops.org, "Meta status page shows an incident")
 
 
 def _offered(ops):
@@ -52,9 +52,9 @@ def test_one_open_outage_per_organisation_declared_and_ended_with_audit(ops):
     with pytest.raises(DomainError) as err:
         _declared(ops)
     assert err.value.code == "outage_already_declared"
-    outage.end_whatsapp_outage(ops.supervisor, ops.org, "Messages flowing again")
+    outage.end_whatsapp_outage(ops.manager, ops.org, "Messages flowing again")
     window.refresh_from_db()
-    assert window.ended_at is not None and window.ended_by == ops.supervisor
+    assert window.ended_at is not None and window.ended_by == ops.manager
     assert {"outage.declared", "outage.ended"} <= set(AuditEvent.objects.values_list("action", flat=True))
     with pytest.raises(DomainError):
         outage.declare_whatsapp_outage(ops.valets[0], ops.org, "valets cannot declare")
@@ -311,19 +311,23 @@ def test_outage_windows_are_bounded_in_age_and_length(ops):
     assert err.value.code == "invalid_window"
 
 
-def test_whatsapp_outage_declared_by_an_assigned_supervisor_and_ended_by_them_or_a_manager(ops):
-    from ops.models import Role
-    from tests.factories import make_staff
+def test_only_managers_declare_or_end_the_organisation_wide_outage_and_supervisors_report_it(ops):
+    """Amended ADR-0008: the outage spans every event, so it is a manager's call; a supervisor reports it for their
+    event (critical alert, once per event) and keeps the relayed actions once it is declared."""
+    from ops.models import Alert
 
-    unassigned = make_staff(ops.org, Role.SUPERVISOR, name="Other venue supervisor")
     with pytest.raises(DomainError) as err:
-        outage.declare_whatsapp_outage(unassigned, ops.org, "no standing")
+        outage.declare_whatsapp_outage(ops.supervisor, ops.org, "supervisors report, managers declare")
     assert err.value.code == "forbidden"
+    outage.report_whatsapp_outage(ops.supervisor, ops.event, "No replies from any valet for 3 minutes")
+    outage.report_whatsapp_outage(ops.supervisor, ops.event, "Still nothing")
+    assert Alert.objects.filter(kind="whatsapp_outage_reported", event=ops.event).count() == 1
+    assert AuditEvent.objects.filter(action="outage.reported").count() == 2
+    Alert.objects.filter(kind="whatsapp_outage_reported").update(acknowledged_at=timezone.now())
+    outage.report_whatsapp_outage(ops.supervisor, ops.event, "Down again later")  # a new report after acknowledgement
+    assert Alert.objects.filter(kind="whatsapp_outage_reported", acknowledged_at__isnull=True).count() == 1
     _declared(ops)
-    other = make_staff(ops.org, Role.SUPERVISOR, name="Second supervisor")
-    from ops.models import EventAssignment
-    EventAssignment.objects.create(event=ops.event, staff=other, assigned_by=ops.manager)
     with pytest.raises(DomainError) as err:
-        outage.end_whatsapp_outage(other, ops.org, "not mine")
+        outage.end_whatsapp_outage(ops.supervisor, ops.org, "not mine to end")
     assert err.value.code == "forbidden"
     outage.end_whatsapp_outage(ops.manager, ops.org, "manager ends it")

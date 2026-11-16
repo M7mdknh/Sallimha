@@ -56,20 +56,31 @@ def active_whatsapp_outage(org) -> OutageWindow | None:
     return OutageWindow.objects.filter(org=org, kind=OutageWindow.Kind.WHATSAPP, ended_at__isnull=True).first()
 
 
-def _has_standing(actor, org) -> bool:
-    """The WhatsApp sender is organisation-wide, so the outage is too. A supervisor may declare it only while
-    assigned to an open event of the organisation (they are on the stand); managers always may."""
-    if has_role(actor, Role.MANAGER):
-        return True
-    return EventAssignment.objects.filter(staff=actor, event__org=org, event__status=Event.Status.OPEN).exists()
+def report_whatsapp_outage(actor, event, reason: str, now=None) -> None:
+    """A supervisor reports that WhatsApp seems down at their event: a critical alert (once per event while it is
+    open) tells managers, who decide whether to declare the organisation-wide outage. Every report is audited."""
+    from ops.services.alerts import raise_alert
+
+    require(actor, Role.SUPERVISOR, event)
+    if not reason.strip():
+        raise DomainError("reason_required")
+    from ops.models import Alert
+
+    reports = Alert.objects.filter(event=event, kind="whatsapp_outage_reported")
+    if not reports.filter(acknowledged_at__isnull=True).exists():  # one open alert per event; a new one after ack
+        raise_alert(event, "whatsapp_outage_reported", severity="critical",
+                    dedupe_key=f"whatsapp_outage_reported:{event.id}:{reports.count()}",
+                    detail={"reported_by": actor.id})
+    _audit("outage.reported", actor, event.id, event.id, entity_type="event", reason=reason.strip()[:200])
 
 
 def declare_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
+    """Organisation-wide (the WhatsApp sender serves every event), so only managers and above declare it."""
     from ops.services.alerts import raise_alert
 
     now = now or timezone.now()
-    require(actor, Role.SUPERVISOR)
-    if actor.org_id != org.id or not _has_standing(actor, org):
+    require(actor, Role.MANAGER)
+    if actor.org_id != org.id:
         raise DomainError("forbidden")
     if not reason.strip():
         raise DomainError("reason_required")
@@ -89,7 +100,7 @@ def declare_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
 
 def end_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
     now = now or timezone.now()
-    require(actor, Role.SUPERVISOR)
+    require(actor, Role.MANAGER)
     if actor.org_id != org.id:
         raise DomainError("forbidden")
     with transaction.atomic():
@@ -97,8 +108,6 @@ def end_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
             org=org, kind=OutageWindow.Kind.WHATSAPP, ended_at__isnull=True).first()
         if window is None:
             raise DomainError("no_active_outage")
-        if window.declared_by_id != actor.id and not has_role(actor, Role.MANAGER):
-            raise DomainError("forbidden")  # only the declarer or a manager ends an organisation-wide outage
         window.ended_at, window.ended_by, window.end_reason = now, actor, reason.strip()[:200]
         window.save(update_fields=["ended_at", "ended_by", "end_reason"])
         _audit("outage.ended", actor, window.id, entity_type="outage", kind="WHATSAPP", reason=window.end_reason)

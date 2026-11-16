@@ -73,6 +73,17 @@ class EndWhatsAppOutage(Command):
         return out(s.IdResponse, {"id": outage.end_whatsapp_outage(actor, actor.org, reason).id})
 
 
+class ReportWhatsAppOutage(Command):
+    @command_schema(s.ReasonRequest, s.OkResponse)
+    @idempotent_post
+    @domain_response
+    def post(self, request, event_id):
+        actor = actor_of(request)
+        reason = validated(s.ReasonRequest, request.data)["reason"]
+        outage.report_whatsapp_outage(actor, scoped_event(actor, event_id), reason)
+        return out(s.OkResponse, {"ok": True})
+
+
 class RecordSystemOutage(Command):
     @command_schema(s.SystemOutageRequest, s.IdResponse)
     @idempotent_post

@@ -138,6 +138,10 @@ const ar = {
   blocksHandover: "يوقف التسليم",
   synthetic: "بيانات تجريبية",
   navOutages: "الأعطال",
+  reportOutage: "الإبلاغ عن مشكلة واتساب",
+  reportOutageBody: "إذا توقفت رسائل واتساب في مناسبتك فأبلغ المدير. يقرر المدير إعلان العطل للمنظمة؛ بعدها تتاح لك الإجراءات المُرحَّلة.",
+  reportWhat: "ما الذي تلاحظه",
+  outageEndManagers: "ينهي المدير العطل عند عودة الرسائل.",
   outagesTitle: "الأعطال والاستمرارية",
   whatsappOutage: "عطل واتساب",
   systemOutage: "توقف النظام بالكامل",
@@ -549,6 +553,10 @@ const en: Record<StringKey, string> = {
   blocksHandover: "Blocks handover",
   synthetic: "Synthetic data",
   navOutages: "Outages",
+  reportOutage: "Report a WhatsApp problem",
+  reportOutageBody: "If WhatsApp messages stop at your event, tell the managers. A manager decides whether to declare the outage for the organisation; relayed actions then become available to you.",
+  reportWhat: "What you are seeing",
+  outageEndManagers: "A manager ends the outage when messages flow again.",
   outagesTitle: "Outages and continuity",
   whatsappOutage: "WhatsApp outage",
   systemOutage: "Whole-system outage",
@@ -849,6 +857,7 @@ const ALERTS: Record<Lang, Record<string, string>> = {
     code_locked: "إيقاف رمز الاستلام بعد محاولات خاطئة", poor_rating: "تقييم سيئ", custody_exception: "عهدة تحتاج حلًا",
     hold_active: "إيقاف سلامة نشط", unclaimed_pending: "مركبة مقترحة كغير مُستلمة",
     relocation_declined: "طلب نقل لم يُقبل", whatsapp_outage: "عطل واتساب معلن",
+    whatsapp_outage_reported: "أبلغ مشرف عن مشكلة في واتساب",
   },
   en: {
     wait_warning: "Request waiting over 4 min", wait_critical: "Request waiting over 6 min",
@@ -859,6 +868,7 @@ const ALERTS: Record<Lang, Record<string, string>> = {
     custody_exception: "Custody needs resolution", hold_active: "Active safety hold",
     unclaimed_pending: "Car proposed as unclaimed",
     relocation_declined: "Move not accepted", whatsapp_outage: "WhatsApp outage declared",
+    whatsapp_outage_reported: "A supervisor reported a WhatsApp problem",
   },
 };
 

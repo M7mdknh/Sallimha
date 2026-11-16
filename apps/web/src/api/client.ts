@@ -85,6 +85,8 @@ export const api = {
   outages: () => call<Schemas["OutageStatus"]>("GET", "/api/outages"),
   declareOutage: (reason: string, key: string) =>
     call<Schemas["IdResponse"]>("POST", "/api/outages/whatsapp/declare", { reason }, key),
+  reportOutage: (eventId: number, reason: string, key: string) =>
+    call<Schemas["OkResponse"]>("POST", `/api/events/${eventId}/outages/report`, { reason }, key),
   endOutage: (reason: string, key: string) =>
     call<Schemas["IdResponse"]>("POST", "/api/outages/whatsapp/end", { reason }, key),
   recordSystemOutage: (eventId: number, body: Schemas["SystemOutageRequestRequest"], key: string) =>

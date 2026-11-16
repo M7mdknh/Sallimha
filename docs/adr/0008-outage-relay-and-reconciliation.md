@@ -6,6 +6,16 @@
   an agreed human continuity procedure, preserve custody, and reconcile records afterward"), CLAUDE.md (no routine
   manual dispatch; holds never bypassed; an acknowledged action is durably committed).
 
+## Amendment 2026-11-16 (owner decision)
+- **Declaring and ending** the organisation-wide WhatsApp outage is for **managers and above** only. Supervisors
+  **report** a problem for their event (critical alert to managers, one open alert per event; every report audited)
+  and, once a manager has declared the outage, perform the relayed actions within their assigned events.
+- **Live intake on a valet's behalf** no longer creates a parked car in one step (see Task 3 of the second
+  2026-11-16 plan): it registers the car (RECEIVED), keeps photos where they can be taken (or requires an explicit
+  exception), and only a separate parking confirmation with location, key hook and the responsible valet parks it.
+  The retrospective reconciliation after a whole-system outage still records an already-parked car with its actual
+  times and evidence.
+
 ## Decision
 ### WhatsApp unavailable, console working
 - A supervisor **declares** a WhatsApp outage (reason, audited, critical alert on every open event). The sender is

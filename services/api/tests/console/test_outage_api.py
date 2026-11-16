@@ -39,9 +39,12 @@ def test_declare_relay_and_end_whatsapp_outage(ops):
     assert "relay_accept" not in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
     assert post(sup, f"/api/tickets/{ticket.id}/relay-accept", {"confirmed_via": "radio"}).json()["code"] == \
         "no_active_outage"
-    assert post(sup, "/api/outages/whatsapp/declare", {"reason": "Provider incident"}).status_code == 200
+    assert post(sup, "/api/outages/whatsapp/declare", {"reason": "Provider incident"}).status_code == 403
+    assert post(sup, f"/api/events/{ops.event.id}/outages/report", {"reason": "No replies"}).status_code == 200
+    assert post(login_as(ops.manager), "/api/outages/whatsapp/declare", {"reason": "Provider incident"}).status_code \
+        == 200
     status = sup.get("/api/outages").json()
-    assert status["whatsapp"]["declared_by"] == ops.supervisor.full_name
+    assert status["whatsapp"]["declared_by"] == ops.manager.full_name
     assert sup.get(f"/api/events/{ops.event.id}/live").json()["outage"]["reason"] == "Provider incident"
     detail = sup.get(f"/api/tickets/{ticket.id}").json()
     assert "relay_accept" in detail["allowed_actions"] and detail["offered_to"] == task.assignee.full_name
@@ -49,13 +52,14 @@ def test_declare_relay_and_end_whatsapp_outage(ops):
     assert "relay_ready" in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
     assert post(sup, f"/api/tickets/{ticket.id}/relay-ready", {"confirmed_via": "in_person"}).status_code == 200
     assert Ticket.objects.get(pk=ticket.pk).state == "READY"
-    assert post(sup, "/api/outages/whatsapp/end", {"reason": "Recovered"}).status_code == 200
+    assert post(sup, "/api/outages/whatsapp/end", {"reason": "Recovered"}).status_code == 403
+    assert post(login_as(ops.manager), "/api/outages/whatsapp/end", {"reason": "Recovered"}).status_code == 200
     assert sup.get("/api/outages").json()["whatsapp"] is None
 
 
 def test_intake_on_behalf_over_http(ops):
     sup = login_as(ops.supervisor)
-    post(sup, "/api/outages/whatsapp/declare", {"reason": "Provider incident"})
+    post(login_as(ops.manager), "/api/outages/whatsapp/declare", {"reason": "Provider incident"})
     people = sup.get(f"/api/events/{ops.event.id}/people").json()
     assert {p["role"] for p in people} >= {"VALET", "SUPERVISOR"}
     resp = post(sup, f"/api/events/{ops.event.id}/intake-on-behalf", {
