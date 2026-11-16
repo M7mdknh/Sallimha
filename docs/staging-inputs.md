@@ -1,5 +1,9 @@
 # Inputs required before a staging deployment
 
+See also: [staging/hosting-options.md](staging/hosting-options.md) (comparison and recommendation),
+[staging/whatsapp-onboarding.md](staging/whatsapp-onboarding.md) (checklist),
+[../infra/staging/oci-riyadh-plan.md](../infra/staging/oci-riyadh-plan.md) (draft, not applied).
+
 Nothing here is a secret value. Values are set in the hosting provider's secret store, never in chat or
 in this repository. Staging is **not deployed** from this branch; this list is what the owner supplies.
 

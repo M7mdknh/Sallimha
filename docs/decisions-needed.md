@@ -6,7 +6,7 @@ chat; secrets go straight into the hosting provider's secret store.
 ## Hosting
 | # | Decision | Blocks | Notes |
 |---|---|---|---|
-| H1 | Hosting provider and account owner | S | Must run one container image as web + always-on worker + release job, managed PostgreSQL 16+ with point-in-time recovery, a private S3-compatible bucket, HTTPS (infra/staging/README.md) |
+| H1 | Hosting provider and account owner — **proposal: Oracle Cloud Riyadh (≈ $162/month staging, estimate); alternative DigitalOcean Frankfurt ($44/month list)**, see docs/staging/hosting-options.md | S | Approve the option and a monthly ceiling; tenancy home region Riyadh is permanent |
 | H2 | Region / data location for guest phones and vehicle photos | S | A legal/business owner decides whether Saudi data-protection rules require in-Kingdom storage (ADR-0004 makes no legal determination) |
 | H3 | Staging and production domain names | S | Staging host for `DJANGO_ALLOWED_HOSTS`; DNS control for TLS |
 | H4 | Recovery targets: RPO (proposed ≤ 15 min) and backup retention | P | Retention of backups also sets how long retired encryption keys must be kept (ADR-0009) |
@@ -16,8 +16,8 @@ chat; secrets go straight into the hosting provider's secret store.
 ## WhatsApp
 | # | Decision / input | Blocks | Notes |
 |---|---|---|---|
-| W1 | Meta Business portfolio verified; WhatsApp Business Account for Sallimha | S | Owner action in Meta Business Manager |
-| W2 | Dedicated staging sender number (test) and later the production number | S | Valets and guests message this number |
+| W1 | Meta Business portfolio and app with WhatsApp; WhatsApp Business Account (verification needed for production, not for testing) | S | docs/staging/whatsapp-onboarding.md A1–A2, B1 |
+| W2 | Staging sender: Meta's test number (allow-listed recipients only) or a dedicated staging number; later the production number | S | Recommended: dedicated staging number for the real journey |
 | W3 | Display name and business profile (Arabic/English) | S | Shown to guests |
 | W4 | Approval of utility templates (AR + EN) for messages sent outside the 24-hour window, incl. the new move messages (relocation offer/accepted/done/cancelled) | S | List in docs/04 and ADR-0007 |
 | W5 | Test handsets: at least 3 valets and 3 guests (synthetic people, real phones) | S | For the Gate 4 rehearsal |
