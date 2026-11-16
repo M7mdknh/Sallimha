@@ -13,6 +13,7 @@ from ops.models import (
     RetrievalRequest,
     Role,
     Shift,
+    Staff,
     Task,
     Ticket,
 )
@@ -83,7 +84,13 @@ def snapshot(event, now) -> dict:
     not_started = [{"staff_id": a.staff_id, "name": a.staff.full_name, "role": a.staff.role}
                    for a in EventAssignment.objects.filter(event=event).select_related("staff")
                    if a.staff_id not in on_shift and a.staff.enabled]
+    assigned = EventAssignment.objects.filter(event=event).values("staff_id")
+    busy = Shift.objects.filter(ended_at__isnull=True).values("staff_id")
+    addable = [{"staff_id": p.id, "name": p.full_name, "role": p.role}
+               for p in Staff.objects.filter(org_id=event.org_id, role=Role.VALET, enabled=True)
+               .exclude(pk__in=assigned).exclude(pk__in=busy).order_by("full_name")]
     return {
+        "addable": addable,
         "event": {"id": event.id, "name": event.name, "status": event.status, "venue": event.venue.name,
                   "time_zone": event.venue.timezone},
         "generated_at": now,

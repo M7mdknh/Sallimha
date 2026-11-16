@@ -147,6 +147,7 @@ class LiveSnapshot(serializers.Serializer):
     requests = LiveRequest(many=True)
     team = TeamMember(many=True)
     not_started = StaffBrief(many=True)
+    addable = StaffBrief(many=True, help_text="Organisation valets not yet on this event who can start a shift")
 
 
 # --- tickets ---------------------------------------------------------------------------------------

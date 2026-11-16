@@ -92,3 +92,19 @@ def test_venue_and_carryover_lists_do_not_query_per_row(ops):
         carryover.propose_unclaimed(ops.supervisor, ticket, custodian="Security", plan="Overnight")
     assert _queries(mgr, "/api/venues") == one_venue
     assert _queries(mgr, "/api/carryover") == one_case
+
+
+def test_a_valet_added_in_staff_can_be_put_on_tonights_team_from_the_live_view(world):
+    """R18: new staff were never offered for an event (only already-assigned people could start a shift)."""
+    sup, mgr = login_as(world.supervisor), login_as(world.manager)
+    created = mgr.post("/api/staff", {"full_name": "New Valet", "phone": "+966551239988", "role": "VALET"},
+                       format="json", HTTP_IDEMPOTENCY_KEY=uuid.uuid4().hex).json()["id"]
+    snapshot = sup.get(f"/api/events/{world.event.id}/live").json()
+    assert created in [p["staff_id"] for p in snapshot["addable"]]
+    assert all(p["role"] == "VALET" for p in snapshot["addable"])  # supervisors cannot widen event scope here
+    started = sup.post(f"/api/events/{world.event.id}/shifts", {"staff_id": created}, format="json",
+                       HTTP_IDEMPOTENCY_KEY=uuid.uuid4().hex)
+    assert started.status_code == 200
+    after = sup.get(f"/api/events/{world.event.id}/live").json()
+    assert created in [m["staff_id"] for m in after["team"]]
+    assert created not in [p["staff_id"] for p in after["addable"]]

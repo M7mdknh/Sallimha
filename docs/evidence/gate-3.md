@@ -1,5 +1,10 @@
 # Gate 3 — operational completeness evidence
 
+> **Superseded in part on 2026-11-16** by [review-2026-11-16.md](review-2026-11-16.md): relocation now follows ADR-0007
+> (tests/ops/test_relocation.py replaces the relocation evidence below), outages ADR-0008, key rotation ADR-0009.
+> Current totals: backend 429, Playwright 39 passed / 3 skipped (desktop + 360 px), CI green on the final commit
+> including the image job. The table below is the record as of `6938705`.
+
 - Build: `6938705` (last code change, branch `build/phase-0-2`). CI on the commit that adds this text is reported in
   the final hand-over. CI caught one defect on `0a4705c` (run 43762749318: the ticket panel offered a manager-only
   approval to supervisors); fixed test-first in `6938705`.

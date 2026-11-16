@@ -75,6 +75,9 @@ The console opens in Arabic; **English** in the top bar switches to English. Lab
    readiness flags only — credentials are never shown or entered in the console.
 
 ### Walkthrough: moving a car (relocation)
+New valets added in **الموظفون** (Staff) are put on tonight's team from the live view: **إضافة فاليه إلى فريق الليلة**
+(Add a valet to tonight's team) starts their shift.
+
 1. As `supervisor`, find a parked car and choose **نقل المركبة** (Relocate car), pick an available valet and a
    reason. The ticket shows *نقل بانتظار القبول* (Move awaiting acceptance); its location does not change.
 2. In the simulator, open that valet's phone, tap **قبول** (Accept), then **تم النقل** (Moved), send the new
@@ -82,6 +85,8 @@ The console opens in Arabic; **English** in the top bar switches to English. Lab
    as the mover.
 
 ### Walkthrough: WhatsApp outage and recovery
+The outage is *declared*, not real: the simulated transport keeps delivering, so messages still appear in the
+simulator. What this walkthrough shows is the relayed actions, their audit records and the reconciliation.
 1. As `supervisor`: **الأعطال** (Outages) → **إعلان عطل واتساب** (Declare WhatsApp outage) with a reason. A red banner
    appears on the live view.
 2. When a guest requests a car, the ticket shows *العرض لدى* (Offered to) the valet the system chose. Record their
@@ -103,8 +108,8 @@ handover, and relocation. Runbooks: [docs/runbooks/](docs/runbooks/README.md).
 | `make lint` | Ruff and TypeScript type check |
 | `make e2e` | Playwright suite (desktop and 360 px mobile); set `PW_CHANNEL=chrome` to use an installed Chrome |
 | `make contract` | Regenerate `contracts/openapi.yaml` (fails on any schema warning) and the console's TypeScript types |
-| `docker build -t sallimha:local . && scripts/smoke-image.sh` | Build the deployable image and run it with staging settings and placeholder secrets |
-| `scripts/rehearse-restore.sh` | Backup and restore rehearsal on the local database (synthetic data) |
+| `docker build -t sallimha:local . && scripts/smoke-image.sh` | Build the deployable image and run it with staging settings and placeholder secrets (needs `make db` running) |
+| `scripts/rehearse-restore.sh` | Backup and restore rehearsal on the local database, synthetic data (needs `make db` running) |
 
 Django refuses to start unless `SALLIMHA_ENV` is `local`, `test`, `staging` or `production`; the Makefile and
 scripts set `local` for you. For a manual command: `cd services/api && SALLIMHA_ENV=local uv run python manage.py …`.

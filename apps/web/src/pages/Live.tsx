@@ -58,6 +58,25 @@ function TicketFinder({ eventId, current, onOpen }: { eventId: number; current?:
   );
 }
 
+/** Puts an organisation valet who is not yet on this event on tonight's team (starts their shift). */
+function AddToTeam({ people, disabled, onStart }: { people: Schemas["StaffBrief"][]; disabled: boolean;
+  onStart: (staffId: number) => void }) {
+  const { t } = useT();
+  const [choice, setChoice] = useState("");
+  return (
+    <form className="inline-form" onSubmit={(e) => { e.preventDefault(); if (choice) { onStart(Number(choice)); setChoice(""); } }}>
+      <label className="field grow">
+        <span>{t("addToTeam")}</span>
+        <select value={choice} onChange={(e) => setChoice(e.target.value)}>
+          <option value="">—</option>
+          {people.map((p) => <option key={p.staff_id} value={p.staff_id}>{p.name}</option>)}
+        </select>
+      </label>
+      <button type="submit" className="btn btn-secondary" data-mutation disabled={disabled || !choice}>{t("startShift")}</button>
+    </form>
+  );
+}
+
 /** Readiness before opening (worker, WhatsApp, zones, hooks, team, carryover, dead letters). */
 function OpeningCheck({ eventId }: { eventId: number }) {
   const { t } = useT();
@@ -222,6 +241,10 @@ export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number
           <OpeningCheck eventId={eventId} />
           <section className="card" aria-labelledby="team-h" role="region">
             <h2 id="team-h"><Icon name="users" /> {t("team")}</h2>
+            {snapshot.addable.length ? (
+              <AddToTeam people={snapshot.addable} disabled={disabled}
+                onStart={(id) => run(`start-${id}`, (k) => api.startShift(eventId, id, k), refresh)} />
+            ) : null}
             {snapshot.team.length === 0 ? <Empty text={t("teamEmpty")} /> : null}
             <ul className="rows">
               {snapshot.team.map((m) => {

@@ -1400,6 +1400,8 @@ export interface components {
             requests: components["schemas"]["LiveRequest"][];
             team: components["schemas"]["TeamMember"][];
             not_started: components["schemas"]["StaffBrief"][];
+            /** @description Organisation valets not yet on this event who can start a shift */
+            addable: components["schemas"]["StaffBrief"][];
         };
         LoginRequestRequest: {
             username: string;

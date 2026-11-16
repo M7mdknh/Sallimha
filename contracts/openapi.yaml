@@ -4023,7 +4023,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StaffBrief'
+        addable:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffBrief'
+          description: Organisation valets not yet on this event who can start a shift
       required:
+      - addable
       - attention
       - counts
       - event
