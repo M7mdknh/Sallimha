@@ -21,7 +21,7 @@ flowchart LR
   API --- DB[(PostgreSQL)]
   W[Worker process] --- DB
   W -->|send| WA
-  API --- B[(Private bucket<br/>photos)]
+  API --- B[(Private photo storage)]
 ```
 Locally, a **simulator** replaces WhatsApp (all results labelled SIMULATED).
 
@@ -134,7 +134,8 @@ outbox, plus a heartbeat the console shows.
   one open shift per person, one key per hook, append-only audit.
 - Guest phones and second-factor secrets are encrypted; lookups use keyed hashes; phones are masked in the console
   and never exported to managers.
-- Photos live in a private bucket and are streamed only through an authorised view.
+- Photos live in private storage (local disk in the demo, a private S3-compatible bucket on staging) and are
+  streamed only through an authorised view.
 - Console: session cookies, CSRF, idempotency keys on every command, second factor for managers and above,
   login throttling, scope checks on every object.
 
