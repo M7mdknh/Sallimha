@@ -1,0 +1,16 @@
+# Never send secrets, local data or build caches into the image build context.
+.env
+.env.*
+!.env.example
+**/node_modules
+**/__pycache__
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+var/
+apps/web/dist
+tests/e2e/test-results
+tests/e2e/playwright-report
+.playwright-mcp
+.superpowers
+.git

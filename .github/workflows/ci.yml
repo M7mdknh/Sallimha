@@ -100,3 +100,22 @@ jobs:
           name: playwright-report
           path: tests/e2e/playwright-report
           retention-days: 7
+
+  image:
+    needs: [backend, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the deployable image (no push)
+        run: docker build -t sallimha:${{ github.sha }} .
+      - name: Django checks inside the image, including the deploy check under staging settings (placeholders only)
+        run: |
+          docker run --rm -e SALLIMHA_ENV=test sallimha:${{ github.sha }} python manage.py check
+          docker run --rm -e SALLIMHA_ENV=staging -e TRUSTED_PROXY_COUNT=1 \
+            -e DJANGO_SECRET_KEY="ci-placeholder-$(openssl rand -hex 24)" \
+            -e FIELD_ENCRYPTION_KEY="$(python3 -c 'import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
+            -e HASH_KEY="ci-placeholder-$(openssl rand -hex 16)" -e WHATSAPP_APP_SECRET=placeholder \
+            -e DATABASE_URL=postgres://u:p@127.0.0.1:5432/x -e DJANGO_ALLOWED_HOSTS=staging.sallimha.test \
+            -e DJANGO_CSRF_TRUSTED_ORIGINS=https://staging.sallimha.test \
+            sallimha:${{ github.sha }} python manage.py check --deploy --fail-level WARNING
+

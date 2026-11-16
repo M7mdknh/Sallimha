@@ -66,6 +66,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -135,7 +136,19 @@ USE_TZ = True
 DISPLAY_TIME_ZONE = "Asia/Riyadh"
 
 STATIC_URL = "static/"
+# The built console (apps/web/dist; /app/console in the image) is served from the same origin as the API.
+CONSOLE_DIST = Path(os.environ.get("CONSOLE_DIST", str(REPO_ROOT / "apps" / "web" / "dist")))
+WHITENOISE_ROOT = str(CONSOLE_DIST) if CONSOLE_DIST.is_dir() else None
 MEDIA_ROOT_PRIVATE = Path(os.environ.get("MEDIA_ROOT_PRIVATE", str(REPO_ROOT / "var" / "media")))
+# Private evidence storage: "local" (development) or "s3" (any S3-compatible private bucket; credentials come from
+# the standard AWS_* variables or the platform's workload identity, never from source).
+MEDIA_STORAGE = os.environ.get("MEDIA_STORAGE", "local")
+MEDIA_S3_BUCKET = os.environ.get("MEDIA_S3_BUCKET", "")
+MEDIA_S3_REGION = os.environ.get("MEDIA_S3_REGION", "")
+MEDIA_S3_ENDPOINT_URL = os.environ.get("MEDIA_S3_ENDPOINT_URL", "")
+MEDIA_S3_SSE = os.environ.get("MEDIA_S3_SSE", "AES256")
+if MEDIA_STORAGE not in {"local", "s3"} or (MEDIA_STORAGE == "s3" and not MEDIA_S3_BUCKET):
+    raise ImproperlyConfigured("MEDIA_STORAGE must be local or s3 (with MEDIA_S3_BUCKET)")
 MEDIA_MAX_BYTES = 10 * 1024 * 1024
 MEDIA_ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
@@ -146,6 +159,14 @@ CSRF_COOKIE_SECURE = not IS_DEV
 SESSION_COOKIE_AGE = 12 * 60 * 60
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+# HTTPS outside local/test. Health probes may arrive over plain HTTP from the platform's load balancer.
+SECURE_SSL_REDIRECT = not IS_DEV
+SECURE_REDIRECT_EXEMPT = [r"^healthz$", r"^readyz$"]
+# Start small on staging; raise (e.g. 31536000) only once HTTPS is confirmed for the whole domain.
+SECURE_HSTS_SECONDS = 0 if IS_DEV else int(os.environ.get("SECURE_HSTS_SECONDS", "3600"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
+SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "0") == "1"
+SECURE_REFERRER_POLICY = "same-origin"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["console.auth.CsrfSessionAuthentication"],
@@ -191,6 +212,10 @@ _PROXIES = os.environ.get("TRUSTED_PROXY_COUNT")
 if _PROXIES is None and not IS_DEV:
     raise ImproperlyConfigured("TRUSTED_PROXY_COUNT must be set explicitly outside local/test (0 = no proxy)")
 TRUSTED_PROXY_COUNT = int(_PROXIES or "0")
+# Behind TLS-terminating proxies, trust their scheme header (only they can set it: the proxy overwrites it).
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if TRUSTED_PROXY_COUNT > 0 else None
+# Preload and subdomain HSTS are domain-owner decisions (docs/decisions-needed.md), not defaults.
+SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
 
 LOGGING = {
     "version": 1,
