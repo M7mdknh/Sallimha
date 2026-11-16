@@ -114,3 +114,26 @@ def test_system_outage_and_reconciliation_use_venue_local_time(ops):
     assert post(mgr, f"/api/tickets/{other.id}/reconcile-handover", outside).json()["code"] == \
         "outside_outage_window"
     assert Reconciliation.objects.count() == 1
+
+
+def test_oversize_relayed_photo_is_refused_before_it_is_read(ops, settings, monkeypatch):
+    """Security Guidance on ec2b0ad (MEDIUM): the size cap must apply before the upload is read into memory."""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from tests.ops.intake_helpers import JPEG
+
+    settings.MEDIA_MAX_BYTES = 1024
+    sup = login_as(ops.supervisor)
+    post(login_as(ops.manager), "/api/outages/whatsapp/declare", {"reason": "Provider incident"})
+    ticket_id = post(sup, f"/api/events/{ops.event.id}/intake-on-behalf", {
+        "valet_id": ops.valets[1].id, "guest_phone": "0501239876", "plate": "QRS 4455", "description": "",
+        "reason": "WhatsApp down", "confirmed_via": "in_person"}).json()["id"]
+    from ops.services import outage
+
+    handed_over = []
+    monkeypatch.setattr(outage, "relay_intake_photo", lambda *a, **k: handed_over.append(len(a[2])))
+    big = SimpleUploadedFile("big.jpg", JPEG + b"0" * 4096, content_type="image/jpeg")
+    resp = sup.post(f"/api/tickets/{ticket_id}/relay-intake-photo", {"photo": big, "confirmed_via": "in_person"},
+                    format="multipart", HTTP_IDEMPOTENCY_KEY=uuid.uuid4().hex)
+    assert resp.status_code == 409 and resp.json()["code"] == "media_too_large"
+    assert handed_over == []  # refused on its declared size, never read and passed on

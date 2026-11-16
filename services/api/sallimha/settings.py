@@ -150,6 +150,9 @@ MEDIA_S3_SSE = os.environ.get("MEDIA_S3_SSE", "AES256")
 if MEDIA_STORAGE not in {"local", "s3"} or (MEDIA_STORAGE == "s3" and not MEDIA_S3_BUCKET):
     raise ImproperlyConfigured("MEDIA_STORAGE must be local or s3 (with MEDIA_S3_BUCKET)")
 MEDIA_MAX_BYTES = 10 * 1024 * 1024
+# Uploads larger than this stream to a temporary file instead of memory; the request body as a whole is capped too.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 MEDIA_ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 SESSION_COOKIE_HTTPONLY = True

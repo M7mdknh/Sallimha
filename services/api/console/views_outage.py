@@ -3,6 +3,7 @@ ops.services.outage; these views only translate venue-local times and look up ob
 
 from datetime import timedelta
 
+from django.conf import settings
 from django.db.models import Count
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
@@ -161,8 +162,10 @@ class RelayIntakePhoto(Command):
         ticket = scoped_ticket(actor, ticket_id)
         data = validated(s.RelayPhotoRequest, request.data)
         upload = data["photo"]
-        outage.relay_intake_photo(actor, ticket, upload.read(), upload.content_type or "",
-                                  confirmed_via=data["confirmed_via"])
+        if upload.size > settings.MEDIA_MAX_BYTES:  # refuse before reading the file into memory
+            raise DomainError("media_too_large")
+        outage.relay_intake_photo(actor, ticket, upload.read(settings.MEDIA_MAX_BYTES + 1),
+                                  upload.content_type or "", confirmed_via=data["confirmed_via"])
         return out(s.OkResponse, {"ok": True})
 
 
