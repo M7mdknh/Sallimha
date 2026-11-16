@@ -12,16 +12,15 @@ Reflects branch `build/phase-0-2` (November 2026). Detailed rules live in docs/0
 | **Manager / Admin / Super admin** | Web console: everything a supervisor sees, plus events, staff, reports, settings, operations, integrations (by role) | — |
 
 ```mermaid
-flowchart LR
+flowchart TB
   G[Guest phone] <-->|WhatsApp| WA[WhatsApp Cloud API]
   V[Valet phone] <-->|WhatsApp| WA
-  WA -->|signed webhook| API[Django API]
-  API -->|outbox via worker| WA
-  S[Supervisor / managers<br/>web console] <-->|HTTPS, same origin| API
-  API --- DB[(PostgreSQL)]
-  W[Worker process] --- DB
-  W -->|send| WA
-  API --- B[(Private photo storage)]
+  S[Console in the browser<br/>supervisors and managers] -->|HTTPS| API
+  WA -->|signed webhook| API[Web process<br/>Django API]
+  API --> DB[(PostgreSQL<br/>incl. message outbox)]
+  API --> B[(Private photo storage)]
+  DB <--> W[Worker process<br/>dispatch, timers, alerts]
+  W -->|sends queued messages| WA
 ```
 Locally, a **simulator** replaces WhatsApp (all results labelled SIMULATED).
 
@@ -68,7 +67,7 @@ sequenceDiagram
   V->>S: "New car" + guest number
   S->>V: Confirm number?
   V->>S: Confirm
-  S->>G: Ticket #001 + "Request my car"
+  S->>G: Ticket number + "Request my car" button
   V->>S: Guest received it (in person)
   V->>S: Plate/description, 4 photos, start parking, location, key hook
   S->>G: Your car is parked
@@ -78,7 +77,7 @@ sequenceDiagram
   V->>S: Car ready (at the stand)
   S->>G: Ready + 6-digit collection code
   G-->>V: Shows the code
-  V->>S: Code (checked; 5 wrong attempts lock it)
+  V->>S: Code (checked, 5 wrong attempts lock it)
   V->>S: Delivered (physical handover)
   S->>G: Thank you + rating buttons
 ```
