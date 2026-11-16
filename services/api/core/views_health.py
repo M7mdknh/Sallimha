@@ -35,7 +35,17 @@ def worker_status(now=None) -> str:
 
 
 def whatsapp_status() -> str:
+    """configured / not_configured / simulated, or "degraded" while sends keep failing (ADR-0010): a message has
+    failed at least twice and nothing has been sent since it was queued."""
+    from messaging.models import MessageOutbox, SimulatorControl
+
+    failing = (MessageOutbox.objects.filter(status=MessageOutbox.Status.PENDING, attempts__gte=2)
+               .order_by("created_at").first())
+    if failing is not None and not MessageOutbox.objects.filter(sent_at__gte=failing.created_at).exists():
+        return "degraded"
     if settings.WHATSAPP_TRANSPORT == "fake":
+        if SimulatorControl.outage_active():
+            return "degraded"
         return "simulated"
     if settings.WHATSAPP_ACCESS_TOKEN and settings.WHATSAPP_PHONE_NUMBER_ID:
         return "configured"

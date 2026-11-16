@@ -39,6 +39,7 @@ class MessageOutbox(models.Model):
         FAILED = "FAILED"
         DELIVERY_UNKNOWN = "DELIVERY_UNKNOWN"
         DEAD = "DEAD"
+        OBSOLETE = "OBSOLETE"  # no longer true when it would be sent (e.g. an expired offer); never delivered
 
     kind = models.CharField(max_length=40)
     staff = models.ForeignKey("ops.Staff", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
@@ -121,9 +122,12 @@ class SimulatedMedia(models.Model):
 
 
 class SimulatorControl(models.Model):
-    """Failure injection for the fake transport (tests and demo only)."""
+    """Failure injection for the fake transport (tests and demo only).
 
-    mode = models.CharField(max_length=12)  # transient | permanent | unknown
+    One-shot modes (transient | permanent | unknown) apply to the next send. The persistent "down" mode simulates a
+    provider outage: every send fails transiently and simulated inbound messages are refused until it is cleared."""
+
+    mode = models.CharField(max_length=12)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @classmethod
@@ -131,11 +135,23 @@ class SimulatorControl(models.Model):
         cls.objects.create(mode=mode)
 
     @classmethod
+    def set_outage(cls, active: bool) -> None:
+        if active and not cls.outage_active():
+            cls.objects.create(mode="down")
+        elif not active:
+            cls.objects.filter(mode="down").delete()
+
+    @classmethod
+    def outage_active(cls) -> bool:
+        return cls.objects.filter(mode="down").exists()
+
+    @classmethod
     def take(cls) -> str | None:
         from django.db import transaction
 
         with transaction.atomic():
-            row = cls.objects.select_for_update(skip_locked=True, no_key=True).order_by("id").first()
+            row = (cls.objects.select_for_update(skip_locked=True, no_key=True).exclude(mode="down")
+                   .order_by("id").first())
             if row is None:
                 return None
             mode = row.mode

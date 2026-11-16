@@ -56,3 +56,14 @@ def test_seed_demo_with_activity_builds_mid_event_state(db):
     assert set(RetrievalRequest.objects.values_list("state", flat=True)) == {"OFFERED", "ACCEPTED"}
     assert Ticket.objects.filter(state="RECEIVED", contact_state="UNCONFIRMED").exists()
     assert {"guest_contact_unconfirmed", "wait_warning"} <= set(Alert.objects.values_list("kind", flat=True))
+
+
+def test_simulated_outage_refuses_inbound_and_reports_degraded(as_supervisor, world):
+    """ADR-0010: a simulated provider outage stops both directions until it is cleared."""
+    assert as_supervisor.post("/api/dev/sim/outage", {"down": True}, format="json").json() == {"down": True}
+    assert as_supervisor.get("/api/dev/sim/outage").json() == {"down": True}
+    refused = as_supervisor.post("/api/dev/sim/send", {"phone": world.valets[0].phone_e164, "text": "مساعدة"},
+                                 format="json")
+    assert refused.status_code == 409 and refused.json()["code"] == "simulated_outage"
+    assert as_supervisor.get(f"/api/events/{world.event.id}/live").json()["health"]["whatsapp"] == "degraded"
+    assert as_supervisor.post("/api/dev/sim/outage", {"down": False}, format="json").json() == {"down": False}

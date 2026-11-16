@@ -206,6 +206,8 @@ if WHATSAPP_TRANSPORT == "fake" and not IS_DEV:
     raise ImproperlyConfigured("WHATSAPP_TRANSPORT=fake is only allowed in local/test environments")
 
 WORKER_HEARTBEAT_STALE_SECONDS = 15
+# How long a message that keeps failing transiently (provider outage) stays queued before it becomes a dead letter.
+OUTBOX_TRANSIENT_RETRY_WINDOW_S = int(os.environ.get("OUTBOX_TRANSIENT_RETRY_WINDOW_S", str(6 * 60 * 60)))
 # Number of trusted reverse proxies appending X-Forwarded-For. Must be explicit outside local/test: a wrong
 # value makes every client look like the proxy and breaks login throttling (Security Guidance, HIGH).
 _PROXIES = os.environ.get("TRUSTED_PROXY_COUNT")

@@ -79,4 +79,5 @@ if settings.SIMULATOR_ENABLED:  # local/test only; settings refuse it elsewhere
         path("dev/sim/phones", simulator_api.phones),
         path("dev/sim/messages", simulator_api.messages),
         path("dev/sim/send", simulator_api.send),
+        path("dev/sim/outage", simulator_api.outage_mode),
     ]

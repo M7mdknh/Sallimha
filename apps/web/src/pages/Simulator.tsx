@@ -8,6 +8,22 @@ import { usePoll } from "../usePoll";
 
 // Development-only WhatsApp simulator. Messages go through the real webhook signature check, inbox and
 // worker, but nothing reaches a real phone. Everything on this page is SIMULATED.
+/** SIMULATED provider outage: every outgoing message fails and incoming messages stop until it is switched off. */
+function SimOutageSwitch() {
+  const { t } = useT();
+  const state = usePoll(api.simOutage, 5_000, []);
+  const down = state.data?.down ?? false;
+  return (
+    <div className={`sim-outage ${down ? "is-down" : ""}`} role="status">
+      <span>{down ? t("simOutageOn") : t("simOutageOff")}</span>
+      <button type="button" className={`btn ${down ? "btn-primary" : "btn-secondary"}`}
+        onClick={async () => { await api.setSimOutage(!down).catch(() => undefined); void state.refresh(); }}>
+        {down ? t("simOutageEnd") : t("simOutageStart")}
+      </button>
+    </div>
+  );
+}
+
 export function Simulator() {
   const { t, error } = useT();
   const phones = usePoll(api.simPhones, 3_000, []);
@@ -53,6 +69,7 @@ export function Simulator() {
     <main className="page sim">
       <h1>{t("simulator")}</h1>
       <p className="sim-banner" role="note"><Icon name="shield" /> {t("simLabel")}</p>
+      <SimOutageSwitch />
       <div className="sim-grid">
         <section className="card" aria-labelledby="phones-h">
           <h2 id="phones-h">{t("simPhones")}</h2>

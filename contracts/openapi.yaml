@@ -389,6 +389,49 @@ paths:
                 items:
                   $ref: '#/components/schemas/SimMessage'
           description: ''
+  /api/dev/sim/outage:
+    get:
+      operationId: dev_sim_outage_retrieve
+      description: 'Simulated provider outage: every send fails and inbound stops
+        until it is switched off (SIMULATED).'
+      tags:
+      - dev-simulator
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimOutage'
+          description: ''
+    post:
+      operationId: dev_sim_outage_create
+      description: 'Simulated provider outage: every send fails and inbound stops
+        until it is switched off (SIMULATED).'
+      tags:
+      - dev-simulator
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimOutageRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SimOutageRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SimOutageRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimOutage'
+          description: ''
   /api/dev/sim/phones:
     get:
       operationId: dev_sim_phones_list
@@ -4522,6 +4565,21 @@ components:
       - id
       - kind
       - provider_message_id
+    SimOutage:
+      type: object
+      properties:
+        down:
+          type: boolean
+          description: SIMULATED provider outage in progress
+      required:
+      - down
+    SimOutageRequestRequest:
+      type: object
+      properties:
+        down:
+          type: boolean
+      required:
+      - down
     SimPhone:
       type: object
       properties:
@@ -5002,11 +5060,13 @@ components:
       - simulated
       - configured
       - not_configured
+      - degraded
       type: string
       description: |-
         * `simulated` - simulated
         * `configured` - configured
         * `not_configured` - not_configured
+        * `degraded` - degraded
     WorkerEnum:
       enum:
       - ok

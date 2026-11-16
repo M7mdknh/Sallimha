@@ -99,6 +99,7 @@ def _release(task, ticket, now, reason: str, actor=None, channel="worker") -> No
     task.release_reason = reason
     task.save(update_fields=["status", "released_at", "release_reason"])
     tokens.revoke(task=task, now=now)
+    outbox.supersede(task=task, kinds=("valet.relocation_offer", "valet.relocation_accepted"), now=now)
     shifts.on_task_released(task.assignee, now)
     if reason in {"declined", "expired"}:
         raise_alert(task.event, "relocation_declined", ticket=ticket, dedupe_key=f"relocation_declined:{task.id}",

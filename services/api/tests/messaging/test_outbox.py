@@ -108,3 +108,29 @@ def test_window_selects_template_when_closed(world):
     outbox.note_inbound(staff=fresh, at=timezone.now() - timedelta(hours=1))
     assert outbox.choose_mode(row, timezone.now()) == "session"
     assert outbox.choose_mode(row, timezone.now() + timedelta(hours=24)) == "template"
+
+
+def test_transient_failures_keep_a_message_queued_through_a_long_outage(valet, settings):
+    """ADR-0010: an outage longer than a few retries must not drop messages; they wait (capped backoff) for the
+    retry window, then become dead letters."""
+    from datetime import timedelta
+
+    SimulatorControl.set_outage(True)
+    row = _enqueue(valet)
+    now = timezone.now()
+    for _ in range(30):  # 30 minutes of failures
+        now += timedelta(minutes=1)
+        outbox.send_due(now)
+    row.refresh_from_db()
+    assert row.status == MessageOutbox.Status.PENDING and row.attempts > 6
+    assert row.next_attempt_at - now <= timedelta(minutes=5)
+    SimulatorControl.set_outage(False)
+    outbox.send_due(row.next_attempt_at)
+    row.refresh_from_db()
+    assert row.status == MessageOutbox.Status.SENT
+    settings.OUTBOX_TRANSIENT_RETRY_WINDOW_S = 60
+    SimulatorControl.set_outage(True)
+    stale = _enqueue(valet, key="window-ends")
+    outbox.send_due(timezone.now() + timedelta(minutes=10))
+    stale.refresh_from_db()
+    assert stale.status == MessageOutbox.Status.DEAD and stale.failure_class == "exhausted"

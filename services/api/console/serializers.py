@@ -13,7 +13,7 @@ EVENT_STATUSES = ["OPEN", "CLOSED"]
 TEAM_STATUSES = ["available", "busy", "unavailable"]
 INCIDENT_STATUSES = ["OPEN", "IN_REVIEW", "RESOLVED"]
 CARRYOVER_STATUSES = ["PROPOSED", "APPROVED", "RELEASED"]
-WHATSAPP_STATUSES = ["simulated", "configured", "not_configured"]
+WHATSAPP_STATUSES = ["simulated", "configured", "not_configured", "degraded"]
 OUTBOX_ATTENTION_STATUSES = ["DEAD", "DELIVERY_UNKNOWN"]
 
 
@@ -653,3 +653,11 @@ class PersonRow(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     role = serializers.ChoiceField(choices=ROLES)
+
+
+class SimOutageRequest(serializers.Serializer):
+    down = serializers.BooleanField()
+
+
+class SimOutage(serializers.Serializer):
+    down = serializers.BooleanField(help_text="SIMULATED provider outage in progress")

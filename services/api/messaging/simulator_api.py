@@ -10,7 +10,8 @@ from rest_framework.decorators import api_view, permission_classes
 
 from console import serializers as cs
 from console.common import IsConsoleStaff, actor_of, domain_response, out, validated
-from messaging.models import SimulatedMedia, SimulatedMessage
+from core.errors import DomainError
+from messaging.models import SimulatedMedia, SimulatedMessage, SimulatorControl
 from messaging.simulator import build_message_payload, post_inbound
 from ops.models import Shift
 
@@ -60,6 +61,8 @@ def messages(request):
 def send(request):
     _guard()
     data = validated(cs.SimSendRequest, request.data)
+    if SimulatorControl.outage_active():
+        raise DomainError("simulated_outage")  # the simulated provider delivers no webhooks while it is down
     phone = data["phone"]
     media_id = None
     if data.get("photo"):
@@ -72,3 +75,15 @@ def send(request):
     SimulatedMessage.objects.create(direction="in", phone=phone, kind="photo" if media_id else "text", body=label,
                                     media_id=media_id or "")
     return out(cs.SimSendResponse, {"ok": True, "simulated": True})
+
+
+@extend_schema(request=cs.SimOutageRequest, responses={200: cs.SimOutage}, tags=["dev-simulator"])
+@api_view(["GET", "POST"])
+@permission_classes([IsConsoleStaff])
+@domain_response
+def outage_mode(request):
+    """Simulated provider outage: every send fails and inbound stops until it is switched off (SIMULATED)."""
+    _guard()
+    if request.method == "POST":
+        SimulatorControl.set_outage(validated(cs.SimOutageRequest, request.data)["down"])
+    return out(cs.SimOutage, {"down": SimulatorControl.outage_active()})

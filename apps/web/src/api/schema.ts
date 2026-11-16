@@ -180,6 +180,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dev/sim/outage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Simulated provider outage: every send fails and inbound stops until it is switched off (SIMULATED). */
+        get: operations["dev_sim_outage_retrieve"];
+        put?: never;
+        /** @description Simulated provider outage: every send fails and inbound stops until it is switched off (SIMULATED). */
+        post: operations["dev_sim_outage_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dev/sim/phones": {
         parameters: {
             query?: never;
@@ -1604,6 +1622,13 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        SimOutage: {
+            /** @description SIMULATED provider outage in progress */
+            down: boolean;
+        };
+        SimOutageRequestRequest: {
+            down: boolean;
+        };
         SimPhone: {
             phone: string;
             label: string;
@@ -1786,9 +1811,10 @@ export interface components {
          * @description * `simulated` - simulated
          *     * `configured` - configured
          *     * `not_configured` - not_configured
+         *     * `degraded` - degraded
          * @enum {string}
          */
-        WhatsAppStatusEnum: "simulated" | "configured" | "not_configured";
+        WhatsAppStatusEnum: "simulated" | "configured" | "not_configured" | "degraded";
         /**
          * @description * `ok` - ok
          *     * `stale` - stale
@@ -2269,6 +2295,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SimMessage"][];
+                };
+            };
+        };
+    };
+    dev_sim_outage_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimOutage"];
+                };
+            };
+        };
+    };
+    dev_sim_outage_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimOutageRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SimOutageRequestRequest"];
+                "multipart/form-data": components["schemas"]["SimOutageRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimOutage"];
                 };
             };
         };

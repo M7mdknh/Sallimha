@@ -3,6 +3,7 @@
 import logging
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import connection, transaction
 from django.utils import timezone
 
@@ -158,6 +159,10 @@ def send_due(now=None, limit: int = 20) -> int:
     transport = get_transport()
     sent = 0
     for row in _claim(now, limit):
+        if not hooks.still_relevant(row):
+            _finish(row.id, now, status=MessageOutbox.Status.OBSOLETE, failure_class="obsolete",
+                    last_error="no longer true when it could be sent")
+            continue
         try:
             payload = render(row, now)
         except PermanentSendError as exc:
@@ -173,7 +178,9 @@ def send_due(now=None, limit: int = 20) -> int:
         try:
             result = transport.send(payload)
         except TransientSendError as exc:
-            if row.attempts >= MAX_ATTEMPTS:
+            # Provider unavailable: keep the message queued (capped backoff) for the retry window rather than a fixed
+            # number of attempts, so an outage of minutes or hours does not drop it (ADR-0010).
+            if now - row.created_at >= timedelta(seconds=settings.OUTBOX_TRANSIENT_RETRY_WINDOW_S):
                 _finish(row.id, now, status=MessageOutbox.Status.DEAD, failure_class="exhausted",
                         last_error=str(exc)[:200])
             else:
@@ -191,6 +198,14 @@ def send_due(now=None, limit: int = 20) -> int:
                     provider_message_id=result.provider_message_id)
             sent += 1
     return sent
+
+
+def supersede(*, task=None, kinds: tuple[str, ...], now=None) -> int:
+    """Marks queued (or dead) messages of these kinds for a task as OBSOLETE when the task they describe ends, so a
+    long outage never leaves stale offers to be sent or replayed."""
+    return MessageOutbox.objects.filter(task=task, kind__in=kinds,
+                                        status__in=[MessageOutbox.Status.PENDING, MessageOutbox.Status.DEAD]).update(
+        status=MessageOutbox.Status.OBSOLETE, failure_class="obsolete", last_error="superseded")
 
 
 def replay(outbox_id: int, now=None) -> bool:

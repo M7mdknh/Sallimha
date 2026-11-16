@@ -128,6 +128,8 @@ export const api = {
   whatsapp: () => call<Schemas["WhatsAppIntegration"]>("GET", "/api/integrations/whatsapp"),
   // CSV downloads are plain links (the JSON client cannot read text/csv).
   exportUrl: (eventId: number, kind: "tickets" | "guest-phones") => `/api/events/${eventId}/export/${kind}.csv`,
+  simOutage: () => call<Schemas["SimOutage"]>("GET", "/api/dev/sim/outage"),
+  setSimOutage: (down: boolean) => call<Schemas["SimOutage"]>("POST", "/api/dev/sim/outage", { down }),
   simPhones: () => call<SimPhone[]>("GET", "/api/dev/sim/phones"),
   simMessages: (phone: string) => call<SimMessage[]>("GET", `/api/dev/sim/messages?phone=${encodeURIComponent(phone)}`),
   simSend: (body: Schemas["SimSendRequestRequest"]) => call<Schemas["SimSendResponse"]>("POST", "/api/dev/sim/send", body),

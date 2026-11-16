@@ -49,6 +49,8 @@ class FakeTransport:
     def send(self, payload: OutboundPayload) -> SendResult:
         from messaging.models import SimulatedMessage, SimulatorControl
 
+        if SimulatorControl.outage_active():
+            raise TransientSendError("simulated provider outage")
         injected = SimulatorControl.take()
         if injected == "transient":
             raise TransientSendError("simulated transient failure")

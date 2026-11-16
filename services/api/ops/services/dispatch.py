@@ -163,6 +163,7 @@ def _release_offer(task, now, outcome: str, reason: str) -> None:
     task.save(update_fields=["status", "released_at", "release_reason"])
     AssignmentAttempt.objects.filter(task=task).update(outcome=outcome, responded_at=now)
     tokens.revoke(task=task, now=now)
+    outbox.supersede(task=task, kinds=("valet.offer",), now=now)
     shifts.on_task_released(task.assignee, now)
     if req.state == RetrievalRequest.State.OFFERED and req.current_task_id == task.id:
         req.state = RetrievalRequest.State.QUEUED
