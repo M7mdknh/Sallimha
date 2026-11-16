@@ -6,7 +6,7 @@ action reference is valid AND the reply's context id is a message we sent to thi
 
 from django.db.models import Q
 
-from core.crypto import keyed_hash
+from core.crypto import keyed_hash, keyed_hash_candidates
 from messaging.models import MessageOutbox
 from ops.models import GuestBinding, Ticket
 
@@ -17,10 +17,15 @@ def sender_hash(inb) -> str:
     return keyed_hash(inb.from_phone, "phone") if inb.from_phone else ""
 
 
+def sender_hashes(inb) -> list[str]:
+    """Current and (during a HASH_KEY rotation) previous hashes of the sender's number."""
+    return keyed_hash_candidates(inb.from_phone, "phone") if inb.from_phone else []
+
+
 def bindings_for_sender(inb):
     match = Q()
     if inb.from_phone:
-        match |= Q(phone_hash=sender_hash(inb))
+        match |= Q(phone_hash__in=sender_hashes(inb))
     if inb.from_user_id:
         match |= Q(wa_user_id=inb.from_user_id)
     if not match:
@@ -34,7 +39,7 @@ def authorize(binding: GuestBinding | None, inb) -> bool:
     if binding is None or binding.revoked_at is not None:
         return False
     if inb.from_phone:
-        if sender_hash(inb) != binding.phone_hash:
+        if binding.phone_hash not in sender_hashes(inb):
             return False
         if inb.from_user_id and not binding.wa_user_id:
             binding.wa_user_id = inb.from_user_id

@@ -35,6 +35,8 @@ def _secret(name: str, dev_default: str) -> str:
 
 
 SECRET_KEY = _secret("DJANGO_SECRET_KEY", "dev-only-insecure-secret-key-not-for-staging-or-production")
+# Rotation without signing everyone out: move the old key here, remove it once sessions have turned over.
+SECRET_KEY_FALLBACKS = [k for k in os.environ.get("DJANGO_SECRET_KEY_FALLBACKS", "").split(",") if k]
 DEBUG = os.environ.get("DJANGO_DEBUG", "1" if IS_DEV else "0") == "1"
 ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
 _DEFAULT_ORIGINS = "http://localhost:5180,http://127.0.0.1:5180"
@@ -44,6 +46,10 @@ CSRF_TRUSTED_ORIGINS = [o for o in _ORIGINS.split(",") if o]
 # Fernet key (urlsafe base64, 32 bytes) for field encryption; HMAC key for keyed hashes.
 FIELD_ENCRYPTION_KEY = _secret("FIELD_ENCRYPTION_KEY", "ZGV2LW9ubHktZmllbGQta2V5LTMyLWJ5dGVzLWxvbmc=")
 HASH_KEY = _secret("HASH_KEY", "dev-only-hash-key")
+# Key rotation (ADR-0009, docs/runbooks/secret-rotation.md): previous keys keep old data readable and findable
+# until `manage.py rotate_keys --verify` reports nothing pending.
+FIELD_ENCRYPTION_KEYS_PREVIOUS = [k for k in os.environ.get("FIELD_ENCRYPTION_KEYS_PREVIOUS", "").split(",") if k]
+HASH_KEY_PREVIOUS = os.environ.get("HASH_KEY_PREVIOUS", "")
 
 INSTALLED_APPS = [
     "django.contrib.auth",

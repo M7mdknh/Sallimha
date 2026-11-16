@@ -6,7 +6,7 @@ inbox row never sends a second reply. Free text is interpreted only inside an ex
 
 import logging
 
-from core.crypto import decrypt_text, encrypt_text, keyed_hash
+from core.crypto import decrypt_text, encrypt_text, keyed_hash_candidates
 from core.errors import DomainError
 from core.phone import normalize_digits
 from messaging import outbox
@@ -36,7 +36,8 @@ ERROR_REPLIES = {
 
 def find_staff(inb: Inbound):
     if inb.from_phone:
-        staff = Staff.objects.filter(phone_hash=keyed_hash(inb.from_phone, "phone"), enabled=True).first()
+        staff = Staff.objects.filter(phone_hash__in=keyed_hash_candidates(inb.from_phone, "phone"),
+                                     enabled=True).first()
         if staff:
             if inb.from_user_id and not staff.wa_user_id:
                 Staff.objects.filter(pk=staff.pk, wa_user_id__isnull=True).update(wa_user_id=inb.from_user_id)

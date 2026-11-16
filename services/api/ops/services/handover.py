@@ -4,7 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.audit import audit
-from core.crypto import constant_time_equals, encrypt_text, keyed_hash, new_code
+from core.crypto import constant_time_equals, encrypt_text, keyed_hash, keyed_hash_candidates, new_code
 from core.phone import normalize_digits
 from messaging import hooks, outbox
 from ops.models import CollectionCode, KeyOccupancy, RetrievalRequest, Task, Ticket
@@ -136,8 +136,9 @@ def verify_collection(staff, ticket, code_text: str, now=None) -> tuple[str, int
         if code.verified_at is not None:
             return "ok", MAX_CODE_ATTEMPTS - code.failed_attempts
         candidate = normalize_digits(code_text or "").strip().replace(" ", "")
-        if candidate.isdigit() and len(candidate) == 6 and constant_time_equals(_verifier(ticket.id, candidate),
-                                                                                 code.verifier):
+        if candidate.isdigit() and len(candidate) == 6 and any(
+                constant_time_equals(verifier, code.verifier)  # current and, mid-rotation, previous hash key
+                for verifier in keyed_hash_candidates(f"{ticket.id}:{candidate}", "collection")):
             code.verified_at = now
             code.verified_by = staff
             code.save(update_fields=["verified_at", "verified_by"])

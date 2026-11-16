@@ -2,7 +2,7 @@
 
 from django.utils import timezone
 
-from core.crypto import keyed_hash, new_token
+from core.crypto import keyed_hash, keyed_hash_candidates, new_token
 from ops.models import ActionToken
 
 PREFIX = "v1:"
@@ -21,7 +21,7 @@ def issue(purpose: str, *, ticket=None, binding=None, staff=None, task=None, gen
 def resolve(payload: str | None, *, lock: bool = True) -> ActionToken | None:
     if not payload or not payload.startswith(PREFIX):
         return None
-    qs = ActionToken.objects.filter(token_hash=keyed_hash(payload[len(PREFIX):], "action"))
+    qs = ActionToken.objects.filter(token_hash__in=keyed_hash_candidates(payload[len(PREFIX):], "action"))
     if lock:
         qs = qs.select_for_update(no_key=True)
     return qs.first()
