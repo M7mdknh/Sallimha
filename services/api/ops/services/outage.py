@@ -310,7 +310,7 @@ def reconcile_handover(actor, ticket, *, outage, occurred_at, delivered_by, veri
             for task in live:
                 delivered_here = task.type == Task.Type.RETRIEVAL and task.assignee_id == delivered_by.id
                 task.status = Task.Status.COMPLETED if delivered_here else Task.Status.RELEASED
-                task.completed_at = now if delivered_here else task.completed_at
+                task.completed_at = occurred_at if delivered_here else task.completed_at
                 task.released_at = None if delivered_here else now
                 task.release_reason = "" if delivered_here else "reconciled_offline_handover"
                 task.save(update_fields=["status", "completed_at", "released_at", "release_reason"])

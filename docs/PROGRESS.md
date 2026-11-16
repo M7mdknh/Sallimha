@@ -2,6 +2,21 @@
 
 Newest first. Status vocabulary: PASS / PASS (SIMULATED) / FAIL / BLOCKED / NOT RUN. Results obtained with the local fake WhatsApp transport are **SIMULATED** and are not real integration evidence.
 
+## 2026-11-16 — Review and staging preparation
+Branch `build/phase-0-2`. Findings and fixes: [evidence/review-2026-11-16.md](evidence/review-2026-11-16.md).
+Decisions needed: [decisions-needed.md](decisions-needed.md). Nothing deployed; WhatsApp still SIMULATED.
+
+- Review (claims re-verified): idempotency keys bound to the request body; CSRF on sign-in/out; `SALLIMHA_ENV` must be
+  explicit; relocation custody rebuilt as offer → acceptance → completion by the mover (ADR-0007); settings saves
+  versioned; venue time zone authoritative; flat list queries.
+- Outages (ADR-0008): declared WhatsApp outage with relayed actions and intake on behalf; recorded system outage
+  with two-person reconciliation (actual vs entry time, evidence, holds respected, no double completion).
+- Key rotation (ADR-0009): multi-key encryption and hashing with `rotate_keys`; Django secret-key fallbacks.
+- Staging preparation: one Docker image, `deploy_check` release gate, private S3 media, backup/restore scripts with
+  a local rehearsal, image smoke test, CI image build.
+- Tests: see the final hand-over for the counts on the final commit. Mobile (360 px) now runs every operational flow;
+  browser zoom is exercised via Chromium page-zoom emulation and CSS layout zoom.
+
 ## 2026-11-16 — Phase 1 finished, contract gap closed, Phase 2 built (Gate 2 and Gate 3 locally)
 Branch `build/phase-0-2`. Backend suite: **360 passed**. Playwright: **27 passed, 5 skipped** (desktop 1280 px +
 mobile 360 px; skips are desktop-only flows). Nothing deployed; WhatsApp is SIMULATED.

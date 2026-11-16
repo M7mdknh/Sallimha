@@ -74,6 +74,24 @@ The console opens in Arabic; **English** in the top bar switches to English. Lab
    **التشغيل الفني** (Operations) for messages needing attention. As `owner`: **التكاملات** (Integrations) shows
    readiness flags only — credentials are never shown or entered in the console.
 
+### Walkthrough: moving a car (relocation)
+1. As `supervisor`, find a parked car and choose **نقل المركبة** (Relocate car), pick an available valet and a
+   reason. The ticket shows *نقل بانتظار القبول* (Move awaiting acceptance); its location does not change.
+2. In the simulator, open that valet's phone, tap **قبول** (Accept), then **تم النقل** (Moved), send the new
+   location (e.g. `C 3`) and the key hook. The console now shows the new location and hook; the valet is recorded
+   as the mover.
+
+### Walkthrough: WhatsApp outage and recovery
+1. As `supervisor`: **الأعطال** (Outages) → **إعلان عطل واتساب** (Declare WhatsApp outage) with a reason. A red banner
+   appears on the live view.
+2. When a guest requests a car, the ticket shows *العرض لدى* (Offered to) the valet the system chose. Record their
+   radio answer with **تسجيل قبول الموظف (مُرحَّل)**, then **تسجيل جاهزية السيارة (مُرحَّل)**, then finish with
+   **تسليم بمساعدة المشرف**. In **الأعطال**, **استلام مركبة نيابة عن موظف** records a new arrival for a valet.
+   **إنهاء العطل** ends the outage.
+3. As `manager`: **الأعطال** → record a past whole-system outage (venue time), reconcile an intake made during it,
+   then on that ticket **تسوية تسليم تم أثناء التوقف** with the actual time, the delivering valet, a different person
+   as verifier, the evidence and a reason.
+
 Other exceptions available on a ticket when its state allows: cancel before parking, withdraw a request (with or
 without custody resolution), custody transfer, intake transfer, phone correction, supervisor-assisted request and
 handover, and relocation. Runbooks: [docs/runbooks/](docs/runbooks/README.md).
@@ -85,6 +103,8 @@ handover, and relocation. Runbooks: [docs/runbooks/](docs/runbooks/README.md).
 | `make lint` | Ruff and TypeScript type check |
 | `make e2e` | Playwright suite (desktop and 360 px mobile); set `PW_CHANNEL=chrome` to use an installed Chrome |
 | `make contract` | Regenerate `contracts/openapi.yaml` (fails on any schema warning) and the console's TypeScript types |
+| `docker build -t sallimha:local . && scripts/smoke-image.sh` | Build the deployable image and run it with staging settings and placeholder secrets |
+| `scripts/rehearse-restore.sh` | Backup and restore rehearsal on the local database (synthetic data) |
 
 Django refuses to start unless `SALLIMHA_ENV` is `local`, `test`, `staging` or `production`; the Makefile and
 scripts set `local` for you. For a manual command: `cd services/api && SALLIMHA_ENV=local uv run python manage.py …`.

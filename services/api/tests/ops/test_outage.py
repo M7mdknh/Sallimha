@@ -188,12 +188,12 @@ def test_reconciliation_closes_the_open_retrieval_and_releases_the_valet(ops):
     window = _system_window(ops)
     ticket, req, task = _offered(ops)
     Ticket.objects.filter(pk=ticket.pk).update(parked_at=window.started_at - timedelta(minutes=5))
-    outage.reconcile_handover(ops.manager, Ticket.objects.get(pk=ticket.pk),
-                              **_handover_args(ops, window, delivered_by=task.assignee))
+    args = _handover_args(ops, window, delivered_by=task.assignee)
+    outage.reconcile_handover(ops.manager, Ticket.objects.get(pk=ticket.pk), **args)
     req.refresh_from_db()
     task.refresh_from_db()
-    assert req.state == RetrievalRequest.State.COMPLETED
-    assert task.status in (Task.Status.COMPLETED, Task.Status.RELEASED)
+    assert req.state == RetrievalRequest.State.COMPLETED and req.completed_at == args["occurred_at"]
+    assert task.status == Task.Status.COMPLETED and task.completed_at == args["occurred_at"]  # actual, not entry
     assert not Task.objects.filter(assignee=task.assignee, status__in=["RESERVED", "OFFERED", "ACCEPTED"]).exists()
 
 
