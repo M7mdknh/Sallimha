@@ -855,6 +855,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tickets/{ticket_id}/relocate-cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_relocate_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tickets/{ticket_id}/relocate-complete": {
         parameters: {
             query?: never;
@@ -1226,6 +1242,16 @@ export interface components {
             /** @description Shown once; deliver out of band */
             otpauth_uri: string;
         };
+        MoveBrief: {
+            status: components["schemas"]["MoveBriefStatusEnum"];
+            valet: string;
+        };
+        /**
+         * @description * `OFFERED` - OFFERED
+         *     * `ACCEPTED` - ACCEPTED
+         * @enum {string}
+         */
+        MoveBriefStatusEnum: "OFFERED" | "ACCEPTED";
         NoteRequestRequest: {
             text: string;
         };
@@ -1424,6 +1450,8 @@ export interface components {
             media: components["schemas"]["MediaBrief"][];
             holds: components["schemas"]["HoldBrief"][];
             incidents: components["schemas"]["IncidentBrief"][];
+            /** @description A supervisor-initiated relocation in progress */
+            move: components["schemas"]["MoveBrief"] | null;
             timeline: components["schemas"]["TimelineEntry"][];
             /** @description Exception actions the server will accept now */
             allowed_actions: string[];
@@ -4231,6 +4259,75 @@ export interface operations {
         };
     };
     tickets_release_carryover_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReleaseCarryoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReleaseCarryoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_relocate_cancel_create: {
         parameters: {
             query?: never;
             header: {

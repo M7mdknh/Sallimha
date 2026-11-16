@@ -74,3 +74,62 @@ export async function noHorizontalOverflow(page: Page, label = "") {
   });
   expect(culprits, `${label} at ${page.viewportSize()?.width}px: ${new URL(page.url()).pathname}`).toEqual([]);
 }
+
+// --- development simulator (every message here is SIMULATED) ---------------------------------------------
+export const VALETS: Record<string, string> = {
+  "ماجد (تجريبي)": "+966550000101", "سارة (تجريبي)": "+966550000102", "فهد (تجريبي)": "+966550000103",
+};
+
+export const mainNav = (page: Page) => page.getByRole("navigation", { name: /التنقل الرئيسي|Main navigation/ });
+
+export async function openSimulator(page: Page) {
+  await mainNav(page).getByRole("link", { name: "المحاكي", exact: true }).click();
+  await expect(page.getByText(/محاكاة — لا تصل أي رسالة إلى هاتف حقيقي/)).toBeVisible();
+}
+
+export async function thread(page: Page, phone: string) {
+  await page.getByRole("button", { name: new RegExp(phone.replace("+", "\\+")) }).click();
+  await expect(page.getByRole("heading", { level: 2, name: phone })).toBeVisible();
+}
+
+export async function say(page: Page, text: string, reply: RegExp) {
+  await page.getByLabel(/رسالة|Message/).fill(text);
+  await page.getByRole("button", { name: /إرسال|Send/ }).click();
+  await expect(page.getByRole("log").locator(".bubble-out").last()).toContainText(reply);
+}
+
+/** Taps a button in the newest message only, so an older message's button is never pressed by mistake. */
+export async function tapButton(page: Page, title: string) {
+  const button = page.getByRole("log").locator(".bubble-out").last().getByRole("button", { name: title });
+  await expect(button).toBeVisible();
+  await button.click();
+}
+
+/** Registers and parks a car through a valet's simulated WhatsApp thread. */
+export async function parkViaSimulator(page: Page, car: { valet: string; guest: string; plate: string;
+  location: string; hook: string }) {
+  await openSimulator(page);
+  await thread(page, car.valet);
+  await say(page, "مركبة جديدة", /أرسل رقم جوال الضيف/);
+  await say(page, car.guest, /هل الرقم/);
+  await tapButton(page, "تأكيد الرقم");
+  await tapButton(page, "نعم، استلمها");
+  await say(page, car.plate, /صور للمركبة/);
+  for (let i = 1; i <= 4; i += 1) {
+    await page.getByRole("button", { name: /صورة|Photo/ }).click();
+    await expect(page.getByRole("log").locator(".bubble-out").last()).toContainText(i < 4 ? `${i} من` : /اكتملت الصور/);
+  }
+  await tapButton(page, "بدء الركن");
+  await say(page, car.location, /خطاف المفتاح/);
+  await say(page, car.hook, /تم الركن/);
+}
+
+/** Opens a ticket's panel from the live view's ticket finder. */
+export async function findTicket(page: Page, eventPath: string, query: string, rowName: RegExp) {
+  await page.goto(eventPath);
+  const finder = page.getByRole("search");
+  await finder.getByLabel(/رقم التذكرة أو جزء من اللوحة|Ticket number or part of the plate/).fill(query);
+  await finder.getByRole("button", { name: /^(بحث|Find)$/ }).click();
+  await page.getByRole("button", { name: rowName }).click();
+  await expect(page.locator(".ticket-panel")).toBeVisible();
+}

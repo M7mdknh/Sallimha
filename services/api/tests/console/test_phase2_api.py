@@ -50,8 +50,17 @@ def test_hold_relocation_and_unclaimed_actions(ops):
     start = post(sup, f"/api/tickets/{ticket.id}/relocate-start", {"to_staff_id": ops.valets[1].id,
                                                                    "reason": "Lane"})
     assert start.status_code == 200
-    assert post(sup, f"/api/tickets/{ticket.id}/relocate-complete",
-                {"zone_code": "B", "detail": "9", "hook_number": 34}).status_code == 200
+    move = {"zone_code": "B", "detail": "9", "hook_number": 34, "confirmed_via": "in_person"}
+    refused = post(sup, f"/api/tickets/{ticket.id}/relocate-complete", move)
+    assert refused.status_code == 409 and refused.json()["code"] == "not_accepted"  # assigned is not moved
+    assert "relocate_complete" not in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
+    from ops.models import Task
+    from tests.ops.test_relocation import _offer_button
+    from tests.wa import tap
+
+    tap(ops.valets[1].phone_e164, _offer_button(Task.objects.get(pk=start.json()["id"]), "accept"))
+    assert "relocate_complete" in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
+    assert post(sup, f"/api/tickets/{ticket.id}/relocate-complete", move).status_code == 200
     assert post(sup, f"/api/tickets/{ticket.id}/propose-unclaimed",
                 {"custodian": "Security", "plan": "Overnight"}).status_code == 200
     assert post(sup, f"/api/tickets/{ticket.id}/approve-unclaimed").status_code == 403
@@ -238,3 +247,13 @@ def test_manager_only_carryover_actions_are_not_offered_to_supervisors(ops):
     post(mgr, f"/api/tickets/{ticket.id}/approve-unclaimed")
     assert "release_carryover" not in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
     assert "release_carryover" in mgr.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
+
+
+def test_relocation_cancel_over_http(ops):
+    ticket = park(ops.valets[0], ops.event, hook=36)
+    sup = login_as(ops.supervisor)
+    post(sup, f"/api/tickets/{ticket.id}/relocate-start", {"to_staff_id": ops.valets[1].id, "reason": "Lane"})
+    assert "relocate_cancel" in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
+    resp = post(sup, f"/api/tickets/{ticket.id}/relocate-cancel", {"reason": "Not needed", "car_returned": False})
+    assert resp.status_code == 200
+    assert "relocate_start" in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]

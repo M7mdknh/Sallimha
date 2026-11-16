@@ -90,10 +90,16 @@ def test_relocation_task_moves_hook_records_custody(ops):
     """AT-33 relocation."""
     ticket = park(ops.valets[0], ops.event, hook=21)
     task = relocation.start_relocation(ops.supervisor, ticket, ops.valets[1], "Blocking emergency lane")
-    assert task.type == Task.Type.RELOCATION and task.status == "ACCEPTED"
+    assert task.type == Task.Type.RELOCATION and task.status == "OFFERED"  # ADR-0007: an offer, not acceptance
     retrieval.request_retrieval(ticket.bindings.get(), ticket)
     assert dispatch.dispatch_event(ops.event.id) == []  # waits until the movement task is released
-    relocation.complete_relocation(ops.supervisor, task, zone_code="B", detail="2", hook_number=22)
+    from tests.ops.test_relocation import _offer_button
+    from tests.wa import tap
+
+    tap(ops.valets[1].phone_e164, _offer_button(task, "accept"))
+    task.refresh_from_db()
+    relocation.complete_relocation(ops.supervisor, task, zone_code="B", detail="2", hook_number=22,
+                                   confirmed_via="radio")
     ticket.refresh_from_db()
     assert ticket.location_zone.code == "B"
     assert KeyOccupancy.objects.get(ticket=ticket, released_at__isnull=True).hook_number == 22

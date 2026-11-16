@@ -174,6 +174,11 @@ class IncidentBrief(serializers.Serializer):
     created_at = serializers.DateTimeField()
 
 
+class MoveBrief(serializers.Serializer):
+    status = serializers.ChoiceField(choices=["OFFERED", "ACCEPTED"])
+    valet = serializers.CharField()
+
+
 class TicketDetail(serializers.Serializer):
     id = serializers.IntegerField()
     ticket = serializers.CharField()
@@ -193,6 +198,7 @@ class TicketDetail(serializers.Serializer):
     media = MediaBrief(many=True)
     holds = HoldBrief(many=True)
     incidents = IncidentBrief(many=True)
+    move = MoveBrief(allow_null=True, help_text="A supervisor-initiated relocation in progress")
     timeline = TimelineEntry(many=True)
     allowed_actions = serializers.ListField(child=serializers.CharField(),
                                             help_text="Exception actions the server will accept now")
@@ -342,6 +348,13 @@ class RelocateCompleteRequest(serializers.Serializer):
     zone_code = serializers.CharField(max_length=20)
     detail = serializers.CharField(max_length=80, required=False, allow_blank=True)
     hook_number = serializers.IntegerField(min_value=1)
+    confirmed_via = serializers.ChoiceField(choices=["in_person", "radio"],
+                                            help_text="How the supervisor confirmed the completed move")
+
+
+class RelocateCancelRequest(ReasonRequest):
+    car_returned = serializers.BooleanField(
+        help_text="Required true once a valet accepted: car and key are back at the recorded location and hook")
 
 
 class ProposeUnclaimedRequest(serializers.Serializer):

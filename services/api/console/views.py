@@ -365,12 +365,27 @@ class RelocateComplete(TicketCommand):
     def run(self, actor, ticket, data):
         from ops.services import relocation
 
-        task = ticket.tasks.filter(type="RELOCATION", status__in=["RESERVED", "OFFERED", "ACCEPTED"]).first()
-        if task is None:
-            raise DomainError("invalid_state")
-        ticket = relocation.complete_relocation(actor, task, zone_code=data["zone_code"],
-                                                detail=data.get("detail", ""), hook_number=data["hook_number"])
+        ticket = relocation.complete_relocation(actor, _live_relocation(ticket), zone_code=data["zone_code"],
+                                                detail=data.get("detail", ""), hook_number=data["hook_number"],
+                                                confirmed_via=data["confirmed_via"])
         return {"id": ticket.id, "state": ticket.state}
+
+
+def _live_relocation(ticket):
+    task = ticket.tasks.filter(type="RELOCATION", status__in=["RESERVED", "OFFERED", "ACCEPTED"]).first()
+    if task is None:
+        raise DomainError("invalid_state")
+    return task
+
+
+@ticket_command(s.RelocateCancelRequest, s.IdResponse)
+class RelocateCancel(TicketCommand):
+    def run(self, actor, ticket, data):
+        from ops.services import relocation
+
+        task = relocation.cancel_relocation(actor, _live_relocation(ticket), reason=data["reason"],
+                                            car_returned=data["car_returned"])
+        return {"id": task.id}
 
 
 @ticket_command(s.ProposeUnclaimedRequest, s.IdResponse)

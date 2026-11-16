@@ -31,6 +31,7 @@ urlpatterns = [
     path("tickets/<int:ticket_id>/assisted-handover", views.AssistedHandover.as_view()),
     path("tickets/<int:ticket_id>/relocate-start", views.RelocateStart.as_view()),
     path("tickets/<int:ticket_id>/relocate-complete", views.RelocateComplete.as_view()),
+    path("tickets/<int:ticket_id>/relocate-cancel", views.RelocateCancel.as_view()),
     path("tickets/<int:ticket_id>/propose-unclaimed", views.ProposeUnclaimed.as_view()),
     path("tickets/<int:ticket_id>/approve-unclaimed", views.ApproveUnclaimed.as_view()),
     path("tickets/<int:ticket_id>/release-carryover", views.ReleaseCarryover.as_view()),

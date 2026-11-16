@@ -11,8 +11,9 @@
 4. Search physically: recorded spot, neighbouring zones, key board around the recorded hook.
 5. Add notes to the incident as facts come in (who checked what, when).
 6. When found: **Clear hold** with the reason. If the car or key was somewhere other than recorded, use
-   **Relocate car** (assigns the move to an available valet at once; tell them in person) and then
-   **Record new location** with the true zone, spot and key hook.
+   **Relocate car**: the chosen valet accepts the move in WhatsApp, moves the car and reports the new zone, spot
+   and key hook. If WhatsApp is unavailable, see [whatsapp-outage.md](whatsapp-outage.md). The car's recorded
+   location changes only when the move is completed.
 
 ## Manager
 - Resolves the incident with the outcome. If the vehicle cannot be found, escalate to the venue and the owner's

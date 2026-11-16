@@ -106,11 +106,12 @@ def allowed_actions(ticket, req, binding, actor=None) -> list[str]:
             and binding is not None:
         actions.append("correct_phone")
     open_case = ticket.carryover_cases.exclude(status="RELEASED").first()
-    moving = ticket.tasks.filter(type="RELOCATION", status__in=["RESERVED", "OFFERED", "ACCEPTED"]).exists()
+    move = ticket.tasks.filter(type="RELOCATION", status__in=["RESERVED", "OFFERED", "ACCEPTED"]).first()
     if ticket.state == Ticket.State.PARKED and req is None and open_case is None:
-        actions += ["assisted_request", "propose_unclaimed"] + ([] if moving else ["relocate_start"])
-    if moving:
-        actions.append("relocate_complete")
+        actions += ["assisted_request", "propose_unclaimed"] + ([] if move else ["relocate_start"])
+    if move is not None:
+        # A move is recorded as done only after the valet accepted it (ADR-0007).
+        actions += (["relocate_complete"] if move.status == "ACCEPTED" else []) + ["relocate_cancel"]
     if ticket.state == Ticket.State.READY:
         actions.append("assisted_handover")
     if open_case is not None and actor is not None and has_role(actor, Role.MANAGER):
@@ -141,6 +142,9 @@ def ticket_detail(ticket, actor) -> dict:
         "request": {"id": req.id, "state": req.state, "requested_at": req.requested_at} if req else None,
         "media": [{"id": m.id, "received_at": m.received_at, "kind": m.kind}
                   for m in Media.objects.filter(ticket=ticket, deleted_at__isnull=True).order_by("id")],
+        "move": ({"status": live_task.status if live_task.status == "ACCEPTED" else "OFFERED",
+                  "valet": live_task.assignee.full_name} if live_task and live_task.type == Task.Type.RELOCATION
+                 else None),
         "holds": holds.brief(ticket),
         "incidents": incidents.brief(ticket),
         "timeline": [{"at": e.occurred_at, "action": e.action, "actor": e.actor_label} for e in timeline],

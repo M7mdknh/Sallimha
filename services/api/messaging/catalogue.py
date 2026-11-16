@@ -153,6 +153,25 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Assigned to you. Fetch the key and the car, then tap “Car ready” at the pickup point.",
     },
     "valet.offer_released": {"ar": "تم تسجيل اعتذارك.", "en": "Declined."},
+    "valet.relocation_offer": {
+        "ar": "طلب نقل مركبة — تذكرة {ticket}. {vehicle}. الموقع الحالي {location}، المفتاح {hook}. السبب: {reason}. "
+        "ينتهي العرض {expires}.",
+        "en": "Move request — ticket {ticket}. {vehicle}. Now at {location}, key {hook}. Reason: {reason}. "
+        "Offer expires {expires}.",
+    },
+    "valet.relocation_accepted": {
+        "ar": "تذكرة {ticket}: النقل مسند إليك. انقل المركبة، ثم اضغط «تم النقل» وأرسل الموقع الجديد ورقم الخطاف.",
+        "en": "Ticket {ticket}: the move is yours. Move the car, then tap “Moved” and send the new location and "
+        "key hook.",
+    },
+    "valet.relocation_done": {
+        "ar": "تم تسجيل النقل — تذكرة {ticket}، {location}، المفتاح {hook}. شكرًا.",
+        "en": "Move recorded — ticket {ticket}, {location}, key {hook}. Thank you.",
+    },
+    "valet.relocation_cancelled": {
+        "ar": "أُلغي طلب نقل التذكرة {ticket}. لا تنقل المركبة.",
+        "en": "The move for ticket {ticket} was cancelled. Do not move the car.",
+    },
     "valet.ask_code": {
         "ar": "تذكرة {ticket}: اطلب من الضيف رمز الاستلام وأرسله هنا.",
         "en": "Ticket {ticket}: ask the guest for the collection code and send it here.",
@@ -233,6 +252,7 @@ BUTTONS: dict[str, dict[str, str]] = {
     "accept": {"ar": "قبول", "en": "Accept"},
     "decline": {"ar": "اعتذار", "en": "Decline"},
     "car_ready": {"ar": "السيارة جاهزة", "en": "Car ready"},
+    "moved": {"ar": "تم النقل", "en": "Moved"},
     "delivered": {"ar": "تم التسليم", "en": "Delivered"},
     "ack_custody": {"ar": "استلمت العهدة", "en": "Custody received"},
     "select_ticket": {"ar": "تذكرة {ticket}", "en": "Ticket {ticket}"},

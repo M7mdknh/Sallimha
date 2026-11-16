@@ -57,9 +57,13 @@ const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Fiel
     REASON] },
   relocate_start: { endpoint: "relocate-start", hint: "action_relocate_start_hint", fields: [
     { name: "to_staff_id", label: "toStaff", kind: "staff", required: true }, REASON] },
-  relocate_complete: { endpoint: "relocate-complete", fields: [
+  relocate_complete: { endpoint: "relocate-complete", hint: "action_relocate_complete_hint", fields: [
     { name: "zone_code", label: "zone", kind: "text", required: true }, { name: "detail", label: "spot", kind: "text" },
-    { name: "hook_number", label: "hook", kind: "number", required: true }] },
+    { name: "hook_number", label: "hook", kind: "number", required: true },
+    { name: "confirmed_via", label: "confirmedVia", kind: "select", required: true,
+      options: [["in_person", "via_in_person"], ["radio", "via_radio"]] }] },
+  relocate_cancel: { endpoint: "relocate-cancel", hint: "action_relocate_cancel_hint", destructive: true, fields: [
+    { name: "car_returned", label: "carReturned", kind: "check" }, REASON] },
   propose_unclaimed: { endpoint: "propose-unclaimed", hint: "action_propose_unclaimed_hint", fields: [
     { name: "custodian", label: "custodian", kind: "text", required: true },
     { name: "plan", label: "plan", kind: "textarea", required: true, max: 2000 }] },
@@ -178,6 +182,10 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
             <StatusPill tone={data.contact_state === "CONFIRMED_IN_PERSON" ? "success" : "warning"}
               icon={data.contact_state === "CONFIRMED_IN_PERSON" ? "check" : "alert"} label={state(data.contact_state)} />
             {data.request ? <StatusPill tone="neutral" icon="clock" label={state(data.request.state)} /> : null}
+            {data.move ? (
+              <StatusPill tone={data.move.status === "ACCEPTED" ? "info" : "warning"} icon="pin"
+                label={`${data.move.status === "ACCEPTED" ? t("moveAccepted") : t("moveOffered")}: ${data.move.valet}`} />
+            ) : null}
           </div>
           <dl className="facts">
             <div><dt>{t("vehicle")}</dt><dd>{data.vehicle}</dd></div>
