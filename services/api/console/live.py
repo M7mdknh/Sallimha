@@ -164,6 +164,9 @@ def _outage_actions(ticket, actor) -> list[str]:
         if ticket.custody_transfers.filter(kind=CustodyTransfer.Kind.RETRIEVAL_TRANSFER,
                                            acknowledged_at__isnull=True).exists():
             actions.append("relay_custody_ack")
+        if ticket.state == Ticket.State.RECEIVED and ticket.parking_started_at is None and \
+                ticket.tasks.filter(type="INTAKE", status="ACCEPTED").exists():
+            actions += ["relay_intake_photo", "relay_parked"]
     if has_role(actor, Role.MANAGER) and ticket.state in (Ticket.State.PARKED, Ticket.State.RETRIEVING,
                                                          Ticket.State.READY) and \
             OutageWindow.objects.filter(org_id=ticket.event.org_id, kind="SYSTEM",

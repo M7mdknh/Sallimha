@@ -626,10 +626,21 @@ class ReconcileHandoverRequest(ReasonRequest):
 
 
 class IntakeOnBehalfRequest(ReasonRequest):
+    """Registers the car in the valet's custody (RECEIVED). Parking is confirmed separately (relay-parked)."""
     valet_id = serializers.IntegerField()
     guest_phone = serializers.CharField(max_length=40)
     plate = serializers.CharField(max_length=40)
     description = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    confirmed_via = serializers.ChoiceField(choices=CONFIRMED_VIA)
+
+
+class RelayPhotoRequest(serializers.Serializer):
+    photo = serializers.FileField(help_text="JPEG, PNG or WebP intake photo (size and content are checked)")
+    confirmed_via = serializers.ChoiceField(choices=CONFIRMED_VIA)
+
+
+class RelayParkedRequest(serializers.Serializer):
+    valet_id = serializers.IntegerField(help_text="The responsible valet: must be the one holding the intake")
     zone_code = serializers.CharField(max_length=20)
     detail = serializers.CharField(max_length=80, required=False, allow_blank=True)
     hook_number = serializers.IntegerField(min_value=1)

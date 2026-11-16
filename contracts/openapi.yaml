@@ -3019,6 +3019,131 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/tickets/{ticket_id}/relay-intake-photo:
+    post:
+      operationId: tickets_relay_intake_photo_create
+      description: |-
+        Multipart upload. Under the idempotency layer the stored fingerprint covers the form fields and the file name;
+        a retry with the same key replays, a new key stores another photo (the console keeps its key until success).
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RelayPhotoRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/relay-parked:
+    post:
+      operationId: tickets_relay_parked_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/tickets/{ticket_id}/relay-ready:
     post:
       operationId: tickets_relay_ready_create
@@ -4014,6 +4139,8 @@ components:
       - ticket_id
     IntakeOnBehalfRequestRequest:
       type: object
+      description: Registers the car in the valet's custody (RECEIVED). Parking is
+        confirmed separately (relay-parked).
       properties:
         reason:
           type: string
@@ -4032,26 +4159,14 @@ components:
         description:
           type: string
           maxLength: 200
-        zone_code:
-          type: string
-          minLength: 1
-          maxLength: 20
-        detail:
-          type: string
-          maxLength: 80
-        hook_number:
-          type: integer
-          minimum: 1
         confirmed_via:
           $ref: '#/components/schemas/ConfirmedViaEnum'
       required:
       - confirmed_via
       - guest_phone
-      - hook_number
       - plate
       - reason
       - valet_id
-      - zone_code
     LiveRequest:
       type: object
       properties:
@@ -4483,6 +4598,18 @@ components:
       - received_at_local
       - valet_id
       - zone_code
+    RelayPhotoRequestRequest:
+      type: object
+      properties:
+        photo:
+          type: string
+          format: binary
+          description: JPEG, PNG or WebP intake photo (size and content are checked)
+        confirmed_via:
+          $ref: '#/components/schemas/ConfirmedViaEnum'
+      required:
+      - confirmed_via
+      - photo
     RequestStateEnum:
       enum:
       - WAITING_FOR_PARKING

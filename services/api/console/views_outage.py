@@ -7,11 +7,21 @@ from django.db.models import Count
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.parsers import MultiPartParser
 from rest_framework.views import APIView
 
 from console import serializers as s
-from console.common import IsConsoleStaff, actor_of, domain_response, idempotent_post, out, scoped_event, validated
-from console.views import TicketCommand, command_schema, ticket_command
+from console.common import (
+    IsConsoleStaff,
+    actor_of,
+    domain_response,
+    idempotent_post,
+    out,
+    scoped_event,
+    scoped_ticket,
+    validated,
+)
+from console.views import IDEMPOTENCY, REFUSALS, TicketCommand, command_schema, ticket_command
 from core.errors import DomainError
 from ops.models import CustodyTransfer, EventAssignment, OutageWindow, Role, Staff, Task
 from ops.permissions import can_access_event
@@ -129,8 +139,31 @@ class IntakeOnBehalf(Command):
         actor = actor_of(request)
         event = scoped_event(actor, event_id)
         data = validated(s.IntakeOnBehalfRequest, request.data)
-        ticket = outage.record_intake(actor, event, confirmed_via=data["confirmed_via"], **_intake_args(actor, data))
+        ticket = outage.start_intake(actor, event, valet=_staff(actor, data["valet_id"]),
+                                     guest_phone=data["guest_phone"], plate=data["plate"],
+                                     description=data.get("description", ""), confirmed_via=data["confirmed_via"],
+                                     reason=data["reason"])
         return out(s.IdResponse, {"id": ticket.id})
+
+
+class RelayIntakePhoto(Command):
+    """Multipart upload. Under the idempotency layer the stored fingerprint covers the form fields and the file name;
+    a retry with the same key replays, a new key stores another photo (the console keeps its key until success)."""
+
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(request={"multipart/form-data": s.RelayPhotoRequest}, responses={200: s.OkResponse, **REFUSALS},
+                   parameters=[IDEMPOTENCY])
+    @idempotent_post
+    @domain_response
+    def post(self, request, ticket_id):
+        actor = actor_of(request)
+        ticket = scoped_ticket(actor, ticket_id)
+        data = validated(s.RelayPhotoRequest, request.data)
+        upload = data["photo"]
+        outage.relay_intake_photo(actor, ticket, upload.read(), upload.content_type or "",
+                                  confirmed_via=data["confirmed_via"])
+        return out(s.OkResponse, {"ok": True})
 
 
 def _window_at(actor, moment) -> OutageWindow:
@@ -185,6 +218,15 @@ class RelayCustodyAck(TicketCommand):
             raise DomainError("stale")
         outage.relay_custody_ack(actor, transfer, confirmed_via=data["confirmed_via"])
         return {"ok": True}
+
+
+@ticket_command(s.RelayParkedRequest, s.TicketStateResponse)
+class RelayParked(TicketCommand):
+    def run(self, actor, ticket, data):
+        ticket = outage.relay_parked(actor, ticket, valet=_staff(actor, data["valet_id"]), zone_code=data["zone_code"],
+                                     detail=data.get("detail", ""), hook_number=data["hook_number"],
+                                     confirmed_via=data["confirmed_via"])
+        return {"id": ticket.id, "state": ticket.state}
 
 
 @ticket_command(s.ReconcileHandoverRequest, s.IdResponse)

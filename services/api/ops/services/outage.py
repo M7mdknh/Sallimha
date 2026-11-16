@@ -160,12 +160,12 @@ def record_intake(actor, event, *, valet, guest_phone: str, plate: str, descript
     reason; the guest's contact is a supervisor-assisted fallback (no in-person receipt confirmation was possible),
     and the WhatsApp ticket is queued for delivery — queued, not delivered.
 
-    Without `outage` this is the WhatsApp-outage path (supervisor+, now). With a recorded system `outage` it is a
-    reconciliation (manager+): `received_at`/`parked_at` are the actual times and must fall inside the window."""
+    Retrospective only: after a whole-system outage a manager records a car that was already parked, with its actual
+    received/parked times inside the recorded window and the evidence. (During a WhatsApp outage use start_intake,
+    relay_intake_photo and relay_parked instead: nothing is parked without its own confirmation.)"""
     now = now or timezone.now()
     if outage is None:
-        _relay_guard(actor, event, confirmed_via)
-        received_at = parked_at = now
+        raise DomainError("invalid_window")
     else:
         require(actor, Role.MANAGER, event)
         _check_window(actor, outage, now)
@@ -179,8 +179,6 @@ def record_intake(actor, event, *, valet, guest_phone: str, plate: str, descript
         raise DomainError("reason_required")
     if not _event_valet(valet, event):
         raise DomainError("receiver_unavailable")
-    if outage is None and shifts.open_shift_for(valet, event) is None:
-        raise DomainError("not_on_shift")
     if not (plate or "").strip():
         raise DomainError("vehicle_unidentified")
     try:
@@ -232,6 +230,81 @@ def record_intake(actor, event, *, valet, guest_phone: str, plate: str, descript
                    zone=zone.code, reason=why)
     except IntegrityError as exc:
         raise DomainError("hook_occupied") from exc
+    return ticket
+
+
+# --- live intake relayed during a declared WhatsApp outage ---------------------------------------------------
+
+def _relay_audit(actor, ticket, step: str, valet, confirmed_via: str, **extra) -> None:
+    _audit("intake.relayed", actor, ticket.id, ticket.event_id, step=step, valet=valet.id,
+           confirmed_via=confirmed_via, **extra)
+
+
+def start_intake(actor, event, *, valet, guest_phone: str, plate: str, description: str, confirmed_via: str,
+                 reason: str, now=None) -> Ticket:
+    """The valet (on shift, free) has taken a car and reports it by radio or in person: the car is registered in
+    their custody (RECEIVED, intake task theirs) and the guest's WhatsApp ticket is queued. It is NOT parked: photos
+    (or an explicit exception) and a separate parking confirmation follow. Guest contact is a supervisor-assisted
+    fallback because the guest could not confirm receipt of the ticket."""
+    from ops.services import intake
+
+    now = now or timezone.now()
+    _relay_guard(actor, event, confirmed_via)
+    if not reason.strip():
+        raise DomainError("reason_required")
+    if not _event_valet(valet, event) or shifts.open_shift_for(valet, event) is None:
+        raise DomainError("not_on_shift")
+    if not (plate or "").strip():
+        raise DomainError("vehicle_unidentified")
+    try:
+        parsed = parse_phone(guest_phone)
+    except PhoneInvalid as exc:
+        raise DomainError("phone_invalid") from exc
+    with transaction.atomic():
+        ticket = intake.register_vehicle(valet, now=now)
+        intake.confirm_guest_phone(valet, ticket, parsed.e164, language="ar", now=now)
+        intake.record_vehicle(valet, ticket, f"{plate} {description or ''}".strip(), now=now)
+        Ticket.objects.filter(pk=ticket.pk).update(contact_state=Ticket.Contact.ASSISTED_FALLBACK)
+        ticket.refresh_from_db()
+        _relay_audit(actor, ticket, "registered", valet, confirmed_via, reason=reason.strip()[:200])
+    return ticket
+
+
+def _intake_owner(ticket):
+    from ops.services import intake
+
+    task = intake.intake_task(ticket)
+    if task is None:
+        raise DomainError("invalid_state")
+    return task.assignee
+
+
+def relay_intake_photo(actor, ticket, data: bytes, content_type: str, *, confirmed_via: str, now=None) -> None:
+    """A photo taken on the supervisor's or valet's device during the outage, kept as intake evidence."""
+    from ops.services import intake
+
+    _relay_guard(actor, ticket.event, confirmed_via)
+    valet = _intake_owner(ticket)
+    intake.attach_intake_media(valet, ticket, data, content_type)
+    _relay_audit(actor, ticket, "photo", valet, confirmed_via)
+
+
+def relay_parked(actor, ticket, *, valet, zone_code: str, detail: str, hook_number: int, confirmed_via: str,
+                 now=None) -> Ticket:
+    """The responsible valet confirms the car is parked: location and key hook. Photos must be complete or excepted.
+    All-or-nothing: a refused hook leaves the ticket exactly as it was."""
+    from ops.services import intake
+
+    now = now or timezone.now()
+    _relay_guard(actor, ticket.event, confirmed_via)
+    if valet.id != _intake_owner(ticket).id:
+        raise DomainError("not_intake_owner")
+    with transaction.atomic():
+        intake.start_parking(valet, ticket, now=now)
+        intake.record_location(valet, ticket, zone_code, detail, now=now)
+        ticket = intake.complete_parking(valet, ticket, int(hook_number), now=now)
+        _relay_audit(actor, ticket, "parked", valet, confirmed_via, zone=zone_code.strip().upper(),
+                     hook=int(hook_number))
     return ticket
 
 

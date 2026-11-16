@@ -58,15 +58,35 @@ def test_declare_relay_and_end_whatsapp_outage(ops):
 
 
 def test_intake_on_behalf_over_http(ops):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from tests.ops.intake_helpers import JPEG
+
     sup = login_as(ops.supervisor)
     post(login_as(ops.manager), "/api/outages/whatsapp/declare", {"reason": "Provider incident"})
     people = sup.get(f"/api/events/{ops.event.id}/people").json()
     assert {p["role"] for p in people} >= {"VALET", "SUPERVISOR"}
     resp = post(sup, f"/api/events/{ops.event.id}/intake-on-behalf", {
         "valet_id": ops.valets[1].id, "guest_phone": "0501239876", "plate": "QRS 4455", "description": "",
-        "zone_code": "B", "detail": "8", "hook_number": 88, "reason": "WhatsApp down", "confirmed_via": "in_person"})
+        "reason": "WhatsApp down", "confirmed_via": "in_person"})
     assert resp.status_code == 200
-    assert Ticket.objects.get(pk=resp.json()["id"]).state == "PARKED"
+    ticket_id = resp.json()["id"]
+    assert Ticket.objects.get(pk=ticket_id).state == "RECEIVED"
+    actions = sup.get(f"/api/tickets/{ticket_id}").json()["allowed_actions"]
+    assert {"relay_intake_photo", "relay_parked"} <= set(actions)
+    for _ in range(4):
+        photo = sup.post(f"/api/tickets/{ticket_id}/relay-intake-photo",
+                         {"photo": SimpleUploadedFile("car.jpg", JPEG, content_type="image/jpeg"),
+                          "confirmed_via": "in_person"}, format="multipart", HTTP_IDEMPOTENCY_KEY=uuid.uuid4().hex)
+        assert photo.status_code == 200, photo.content
+    bad = sup.post(f"/api/tickets/{ticket_id}/relay-intake-photo",
+                   {"photo": SimpleUploadedFile("x.jpg", b"not an image", content_type="image/jpeg"),
+                    "confirmed_via": "in_person"}, format="multipart", HTTP_IDEMPOTENCY_KEY=uuid.uuid4().hex)
+    assert bad.status_code == 409 and bad.json()["code"] == "media_content_mismatch"
+    parked = post(sup, f"/api/tickets/{ticket_id}/relay-parked", {
+        "valet_id": ops.valets[1].id, "zone_code": "B", "detail": "8", "hook_number": 88, "confirmed_via": "radio"})
+    assert parked.status_code == 200
+    assert Ticket.objects.get(pk=ticket_id).state == "PARKED"
 
 
 def test_system_outage_and_reconciliation_use_venue_local_time(ops):

@@ -63,6 +63,21 @@ async function call<T>(method: string, url: string, body?: unknown, idempotencyK
   return data as T;
 }
 
+/** Multipart command (file upload): same CSRF and idempotency rules as call(), without a JSON body. */
+async function callForm<T>(url: string, form: FormData, idempotencyKey: string): Promise<T> {
+  await ensureCsrf();
+  let response: Response;
+  try {
+    response = await fetch(url, { method: "POST", credentials: "same-origin", body: form,
+      headers: { Accept: "application/json", "X-CSRFToken": cookie("csrftoken"), "Idempotency-Key": idempotencyKey } });
+  } catch {
+    throw new ApiError(0, "offline");
+  }
+  const data = response.headers.get("content-type")?.includes("json") ? await response.json() : null;
+  if (!response.ok) throw new ApiError(response.status, data?.code ?? "generic", data?.fields);
+  return data as T;
+}
+
 export const newKey = () => crypto.randomUUID();
 
 export const api = {
@@ -85,6 +100,12 @@ export const api = {
   outages: () => call<Schemas["OutageStatus"]>("GET", "/api/outages"),
   declareOutage: (reason: string, key: string) =>
     call<Schemas["IdResponse"]>("POST", "/api/outages/whatsapp/declare", { reason }, key),
+  relayPhoto: (ticketId: number, photo: File, confirmedVia: string, key: string) => {
+    const form = new FormData();
+    form.append("photo", photo);
+    form.append("confirmed_via", confirmedVia);
+    return callForm<Schemas["OkResponse"]>(`/api/tickets/${ticketId}/relay-intake-photo`, form, key);
+  },
   reportOutage: (eventId: number, reason: string, key: string) =>
     call<Schemas["OkResponse"]>("POST", `/api/events/${eventId}/outages/report`, { reason }, key),
   endOutage: (reason: string, key: string) =>

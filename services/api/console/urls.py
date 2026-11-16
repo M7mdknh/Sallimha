@@ -70,6 +70,8 @@ urlpatterns = [
     path("events/<int:event_id>/intake-on-behalf", views_outage.IntakeOnBehalf.as_view()),
     path("events/<int:event_id>/reconcile-intake", views_outage.ReconcileIntake.as_view()),
     path("tickets/<int:ticket_id>/relay-accept", views_outage.RelayAccept.as_view()),
+    path("tickets/<int:ticket_id>/relay-intake-photo", views_outage.RelayIntakePhoto.as_view()),
+    path("tickets/<int:ticket_id>/relay-parked", views_outage.RelayParked.as_view()),
     path("tickets/<int:ticket_id>/relay-ready", views_outage.RelayReady.as_view()),
     path("tickets/<int:ticket_id>/relay-custody-ack", views_outage.RelayCustodyAck.as_view()),
     path("tickets/<int:ticket_id>/reconcile-handover", views_outage.ReconcileHandover.as_view()),

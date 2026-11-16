@@ -4,6 +4,7 @@ import { api, atLeast, type Me, type Schemas } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Empty, Id, PageData, StaleBanner, StatusPill } from "../components/States";
 import { useT, type StringKey } from "../strings";
+import { navigate } from "../router";
 import { useCommand } from "../useCommand";
 import { usePoll } from "../usePoll";
 import { currentZone, venueTime } from "../venueTime";
@@ -67,6 +68,10 @@ function CommandForm({ fields, submitLabel, valets, zone, disabled, destructive,
   );
 }
 
+const LIVE_INTAKE: Field[] = [
+  { name: "valet_id", label: "valetLabel", kind: "valet" }, { name: "guest_phone", label: "phone", ltr: true },
+  { name: "plate", label: "plateLabel", ltr: true }, { name: "description", label: "vehicle", required: false }];
+
 const INTAKE: Field[] = [
   { name: "valet_id", label: "valetLabel", kind: "valet" }, { name: "guest_phone", label: "phone", ltr: true },
   { name: "plate", label: "plateLabel", ltr: true }, { name: "description", label: "vehicle", required: false },
@@ -121,10 +126,11 @@ export function Outages({ me, eventId }: { me: Me; eventId?: number }) {
               <section className="card" aria-labelledby="intake-h">
                 <h2 id="intake-h"><Icon name="car" /> {t("intakeOnBehalf")}</h2>
                 <p className="muted">{t("intakeOnBehalfHint")}</p>
-                <CommandForm fields={[...INTAKE, { name: "confirmed_via", label: "confirmedVia", kind: "via" },
+                <CommandForm fields={[...LIVE_INTAKE, { name: "confirmed_via", label: "confirmedVia", kind: "via" },
                   { name: "reason", label: "reason", kind: "textarea" }]} submitLabel="recordIntake" valets={valets}
                   zone={zone} disabled={poll.stale}
-                  send={(b, k) => api.intakeOnBehalf(eventId, b as Schemas["IntakeOnBehalfRequestRequest"], k)}
+                  send={(b, k) => api.intakeOnBehalf(eventId, b as Schemas["IntakeOnBehalfRequestRequest"], k)
+                    .then((r) => navigate(`/events/${eventId}/tickets/${r.id}`))}
                   onDone={poll.refresh} />
               </section>
             ) : null}

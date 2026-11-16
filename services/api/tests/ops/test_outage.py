@@ -118,31 +118,78 @@ def test_relayed_move_acceptance(ops):
     assert move.status == Task.Status.ACCEPTED
 
 
-def test_intake_on_behalf_during_outage_parks_with_fallback_contact_and_queued_ticket(ops):
+def _start_intake(ops, **over):
+    args = dict(valet=ops.valets[1], guest_phone="0501239876", plate="QRS 4455", description="Tahoe black",
+                confirmed_via="in_person", reason="WhatsApp down")
+    args.update(over)
+    return outage.start_intake(ops.supervisor, ops.event, **args)
+
+
+def test_live_intake_on_behalf_registers_the_car_but_does_not_park_it(ops):
     _declared(ops)
-    ticket = outage.record_intake(ops.supervisor, ops.event, valet=ops.valets[1], guest_phone="0501239876",
-                                  plate="QRS 4455", description="Tahoe black", zone_code="B", detail="8",
-                                  hook_number=88, reason="WhatsApp down", confirmed_via="in_person")
-    assert ticket.state == Ticket.State.PARKED and ticket.parked_by == ops.valets[1]
+    ticket = _start_intake(ops)
+    assert ticket.state == Ticket.State.RECEIVED and ticket.parked_at is None and ticket.parked_by is None
     assert ticket.registered_by == ops.valets[1] and ticket.contact_state == Ticket.Contact.ASSISTED_FALLBACK
-    assert ticket.photos_exception_reason and KeyOccupancy.objects.get(ticket=ticket).hook_number == 88
+    assert ticket.vehicle_plate == "QRS 4455"
+    assert Task.objects.get(ticket=ticket, type="INTAKE").status == "ACCEPTED"  # the valet holds the car
+    assert not KeyOccupancy.objects.filter(ticket=ticket).exists()
     queued = MessageOutbox.objects.get(kind="guest.ticket", ticket=ticket)
     assert queued.status == MessageOutbox.Status.PENDING  # queued, not delivered
-    record = AuditEvent.objects.get(action="intake.recorded_on_behalf", entity_id=ticket.id)
+    record = AuditEvent.objects.get(action="intake.relayed", entity_id=ticket.id)
     assert record.actor_id == ops.supervisor.id and record.summary["valet"] == ops.valets[1].id
 
 
-def test_intake_on_behalf_refused_without_outage_and_on_an_occupied_hook(ops):
-    args = dict(valet=ops.valets[1], guest_phone="0501239876", plate="QRS 4455", description="", zone_code="B",
-                detail="8", hook_number=31, reason="WhatsApp down", confirmed_via="in_person")
+def test_relayed_parking_needs_photos_and_the_responsible_valet_with_location_and_hook(ops):
+    from tests.ops.intake_helpers import JPEG
+
+    _declared(ops)
+    ticket = _start_intake(ops)
+    parked = dict(zone_code="B", detail="8", hook_number=88, confirmed_via="radio")
     with pytest.raises(DomainError) as err:
-        outage.record_intake(ops.supervisor, ops.event, **args)
-    assert err.value.code == "no_active_outage"
+        outage.relay_parked(ops.supervisor, ticket, valet=ops.valets[1], **parked)
+    assert err.value.code == "photos_incomplete"
+    for _ in range(4):
+        outage.relay_intake_photo(ops.supervisor, ticket, JPEG, "image/jpeg", confirmed_via="in_person")
+    with pytest.raises(DomainError) as err:
+        outage.relay_parked(ops.supervisor, ticket, valet=ops.valets[2], **parked)
+    assert err.value.code == "not_intake_owner"  # a different parker goes through intake transfer first
+    outage.relay_parked(ops.supervisor, ticket, valet=ops.valets[1], **parked)
+    ticket.refresh_from_db()
+    assert ticket.state == Ticket.State.PARKED and ticket.parked_by == ops.valets[1]
+    assert ticket.location_zone.code == "B" and KeyOccupancy.objects.get(ticket=ticket).hook_number == 88
+    assert AuditEvent.objects.filter(action="intake.relayed", entity_id=ticket.id).count() == 6
+
+
+def test_missing_photos_need_an_explicit_exception(ops):
+    from ops.services import intake
+
+    _declared(ops)
+    ticket = _start_intake(ops)
+    intake.except_intake_requirement(ops.supervisor, ticket, "photos", "Phone camera unavailable during outage")
+    outage.relay_parked(ops.supervisor, ticket, valet=ops.valets[1], zone_code="B", detail="8", hook_number=88,
+                        confirmed_via="radio")
+    assert Ticket.objects.get(pk=ticket.pk).state == Ticket.State.PARKED
+
+
+def test_relayed_parking_on_an_occupied_hook_changes_nothing(ops):
+    from ops.services import intake
+
     park(ops.valets[0], ops.event, hook=31)
     _declared(ops)
+    ticket = _start_intake(ops)
+    intake.except_intake_requirement(ops.supervisor, ticket, "photos", "No camera")
     with pytest.raises(DomainError) as err:
-        outage.record_intake(ops.supervisor, ops.event, **args)
+        outage.relay_parked(ops.supervisor, ticket, valet=ops.valets[1], zone_code="B", detail="8", hook_number=31,
+                            confirmed_via="radio")
     assert err.value.code == "hook_occupied"
+    ticket.refresh_from_db()
+    assert ticket.state == Ticket.State.RECEIVED and ticket.parking_started_at is None
+
+
+def test_live_intake_on_behalf_is_refused_without_a_declared_outage(ops):
+    with pytest.raises(DomainError) as err:
+        _start_intake(ops)
+    assert err.value.code == "no_active_outage"
 
 
 # --- Whole-system outage: recorded window and reconciliation ------------------------------------------------

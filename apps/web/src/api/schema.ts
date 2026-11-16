@@ -1034,6 +1034,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tickets/{ticket_id}/relay-intake-photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Multipart upload. Under the idempotency layer the stored fingerprint covers the form fields and the file name;
+         *     a retry with the same key replays, a new key stores another photo (the console keeps its key until success).
+         */
+        post: operations["tickets_relay_intake_photo_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/relay-parked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["tickets_relay_parked_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tickets/{ticket_id}/relay-ready": {
         parameters: {
             query?: never;
@@ -1394,15 +1430,13 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /** @description Registers the car in the valet's custody (RECEIVED). Parking is confirmed separately (relay-parked). */
         IntakeOnBehalfRequestRequest: {
             reason: string;
             valet_id: number;
             guest_phone: string;
             plate: string;
             description?: string;
-            zone_code: string;
-            detail?: string;
-            hook_number: number;
             confirmed_via: components["schemas"]["ConfirmedViaEnum"];
         };
         LiveRequest: {
@@ -1570,6 +1604,14 @@ export interface components {
             received_at_local: string;
             parked_at_local: string;
             evidence: string;
+        };
+        RelayPhotoRequestRequest: {
+            /**
+             * Format: binary
+             * @description JPEG, PNG or WebP intake photo (size and content are checked)
+             */
+            photo: string;
+            confirmed_via: components["schemas"]["ConfirmedViaEnum"];
         };
         /**
          * @description * `WAITING_FOR_PARKING` - WAITING_FOR_PARKING
@@ -5210,6 +5252,142 @@ export interface operations {
         };
     };
     tickets_relay_custody_ack_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconcileHandoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReconcileHandoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReconcileHandoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_relay_intake_photo_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["RelayPhotoRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_relay_parked_create: {
         parameters: {
             query?: never;
             header: {

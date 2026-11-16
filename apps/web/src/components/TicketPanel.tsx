@@ -67,6 +67,10 @@ const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Fiel
     { name: "confirmed_via", label: "confirmedVia", kind: "select", required: true,
       options: [["in_person", "via_in_person"], ["radio", "via_radio"]] }] },
   relay_accept: { endpoint: "relay-accept", hint: "action_relay_accept_hint", fields: [VIA] },
+  relay_parked: { endpoint: "relay-parked", hint: "action_relay_parked_hint", fields: [
+    { name: "valet_id", label: "responsibleValet", kind: "valet", required: true },
+    { name: "zone_code", label: "zone", kind: "text", required: true }, { name: "detail", label: "spot", kind: "text" },
+    { name: "hook_number", label: "hook", kind: "number", required: true }, VIA] },
   relay_ready: { endpoint: "relay-ready", hint: "action_relay_ready_hint", fields: [VIA] },
   relay_custody_ack: { endpoint: "relay-custody-ack", hint: "action_relay_custody_ack_hint", fields: [VIA] },
   reconcile_handover: { endpoint: "reconcile-handover", hint: "action_reconcile_handover_hint", destructive: true,
@@ -88,6 +92,51 @@ const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Fiel
       ["other", "release_other"]] },
     { name: "note", label: "note", kind: "textarea", required: true, max: 2000 }] },
 };
+
+/** Relayed intake photo (declared WhatsApp outage): taken with this device's camera, kept as intake evidence. */
+function RelayPhoto({ ticketId, count, disabled, onDone }: { ticketId: number; count: number; disabled: boolean;
+  onDone: () => void }) {
+  const { t, error } = useT();
+  const [file, setFile] = useState<File | null>(null);
+  const [via, setVia] = useState("");
+  const [problem, setProblem] = useState("");
+  const [busy, setBusy] = useState(false);
+  const key = useRef(newKey());
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!file || !via) return setProblem(error("invalid_input"));
+    setBusy(true);
+    setProblem("");
+    try {
+      await api.relayPhoto(ticketId, file, via, key.current);
+      key.current = newKey();
+      setFile(null);
+      onDone();
+    } catch (err) {
+      setProblem(error(err instanceof ApiError ? err.code : "generic"));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <form className="action-form" onSubmit={submit} noValidate>
+      <p className="muted">{t("action_relay_intake_photo_hint")} ({t("photos")}: {count})</p>
+      <label className="field"><span>{t("photo")}</span>
+        <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
+      <label className="field"><span>{t("confirmedVia")}</span>
+        <select value={via} onChange={(e) => setVia(e.target.value)}>
+          <option value="">—</option>
+          <option value="in_person">{t("via_in_person")}</option>
+          <option value="radio">{t("via_radio")}</option>
+        </select></label>
+      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
+      <button type="submit" className="btn btn-primary" data-mutation disabled={disabled || busy}>
+        {t("action_relay_intake_photo")}
+      </button>
+    </form>
+  );
+}
 
 function ActionForm({ action, ticketId, team, holds, people, disabled, onDone }: { action: string; ticketId: number;
   team: Schemas["TeamMember"][]; holds: Schemas["HoldBrief"][]; people: Schemas["PersonRow"][]; disabled: boolean;
@@ -247,6 +296,18 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
           ) : null}
           <div className="actions">
             {data.allowed_actions.length === 0 ? <p className="muted">{t("noActions")}</p> : null}
+            {data.allowed_actions.includes("relay_intake_photo") ? (
+              <div className="action">
+                <button type="button" className="btn btn-secondary btn-block" aria-expanded={open === "relay_intake_photo"}
+                  onClick={() => setOpen(open === "relay_intake_photo" ? null : "relay_intake_photo")}>
+                  {t("action_relay_intake_photo")}
+                </button>
+                {open === "relay_intake_photo" ? (
+                  <RelayPhoto ticketId={ticketId} count={data.media.length} disabled={disabled}
+                    onDone={() => { void refresh(); onChanged(); }} />
+                ) : null}
+              </div>
+            ) : null}
             {data.allowed_actions.filter((a) => ACTIONS[a]).map((a) => (
               <div key={a} className="action">
                 <button type="button" className="btn btn-secondary btn-block" aria-expanded={open === a}

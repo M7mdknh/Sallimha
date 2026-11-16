@@ -85,17 +85,24 @@ New valets added in **الموظفون** (Staff) are put on tonight's team from 
    as the mover.
 
 ### Walkthrough: WhatsApp outage and recovery
-The outage is *declared*, not real: the simulated transport keeps delivering, so messages still appear in the
-simulator. What this walkthrough shows is the relayed actions, their audit records and the reconciliation.
-1. As `supervisor`: **الأعطال** (Outages) → **إعلان عطل واتساب** (Declare WhatsApp outage) with a reason. A red banner
-   appears on the live view.
-2. When a guest requests a car, the ticket shows *العرض لدى* (Offered to) the valet the system chose. Record their
-   radio answer with **تسجيل قبول الموظف (مُرحَّل)**, then **تسجيل جاهزية السيارة (مُرحَّل)**, then finish with
-   **تسليم بمساعدة المشرف**. In **الأعطال**, **استلام مركبة نيابة عن موظف** records a new arrival for a valet.
-   **إنهاء العطل** ends the outage.
-3. As `manager`: **الأعطال** → record a past whole-system outage (venue time), reconcile an intake made during it,
-   then on that ticket **تسوية تسليم تم أثناء التوقف** with the actual time, the delivering valet, a different person
-   as verifier, the evidence and a reason.
+This uses a real (simulated) provider failure: while it lasts, nothing is sent or received.
+1. As `supervisor`, in **المحاكي** (Simulator) press **محاكاة انقطاع واتساب** (Simulate WhatsApp outage). Messages from
+   the simulated phones are now refused, and within a minute the live view shows *واتساب: متعطل* (WhatsApp: failing).
+2. Request a parked car with **طلب إحضار بمساعدة المشرف**: the dispatcher still chooses a valet, but the offer cannot
+   reach them; the ticket shows *العرض لدى* (Offered to).
+3. **الأعطال** (Outages) → **الإبلاغ عن مشكلة واتساب** (Report a WhatsApp problem). Then, as `manager` (a second
+   browser or private window), **الأعطال** → **إعلان عطل واتساب** (Declare WhatsApp outage). Supervisors cannot declare.
+4. As `supervisor`, on the ticket: **تسجيل قبول الموظف (مُرحَّل)** for the offered valet, **تسجيل جاهزية السيارة
+   (مُرحَّل)**, then **تسليم بمساعدة المشرف**.
+5. A new arrival: **الأعطال** → **استلام مركبة نيابة عن موظف** (valet, guest phone, plate). The car is registered in the
+   valet's custody, *not parked*. On its ticket add a photo with **إضافة صورة استلام (مُرحَّل)** (or record a photo
+   exception), then **تأكيد الركن (مُرحَّل)** with the responsible valet, zone, spot and key hook.
+6. As `manager`, **إنهاء العطل** (End outage); in the simulator press **إنهاء الانقطاع المحاكى**. Queued messages arrive
+   (the new guest receives their ticket); messages no longer true are never sent (no offer that expired, no collection
+   code for the car already handed over).
+7. Optional: as `manager`, record a past whole-system outage in **الأعطال** (venue time), reconcile an intake made
+   during it, then **تسوية تسليم تم أثناء التوقف** on that ticket with the actual time, the delivering valet, a
+   different person as verifier, the evidence and a reason.
 
 Other exceptions available on a ticket when its state allows: cancel before parking, withdraw a request (with or
 without custody resolution), custody transfer, intake transfer, phone correction, supervisor-assisted request and
