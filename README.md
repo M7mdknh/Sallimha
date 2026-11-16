@@ -7,6 +7,7 @@ WhatsApp-first valet operations: valets work entirely in WhatsApp; supervisors a
 behaviour runs through a **simulated** transport and simulator page; no real WhatsApp account has been
 connected. Evidence: [docs/evidence/gate-2.md](docs/evidence/gate-2.md), [docs/evidence/gate-3.md](docs/evidence/gate-3.md).
 Staging inputs: [docs/staging-inputs.md](docs/staging-inputs.md).
+Pages, roles and flows at a glance: [docs/SYSTEM_OVERVIEW.md](docs/SYSTEM_OVERVIEW.md).
 
 ## Local demo
 
