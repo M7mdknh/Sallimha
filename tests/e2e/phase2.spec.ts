@@ -7,15 +7,16 @@ import { type Account, loginAs, noHorizontalOverflow } from "./helpers";
 const NAV = {
   live: "التشغيل المباشر", incidents: "البلاغات", events: "المناسبات", staff: "الموظفون",
   carryover: "المركبات المتبقية", settings: "الإعدادات", operations: "التشغيل الفني", integrations: "التكاملات",
-  simulator: "المحاكي",
+  simulator: "المحاكي", outages: "الأعطال",
 } as const;
 type Link = keyof typeof NAV;
 
 const ROLES: Record<Account, { links: Link[]; forbidden?: string }> = {
-  supervisor: { links: ["live", "incidents", "simulator"], forbidden: "/staff" },
-  manager: { links: ["live", "incidents", "events", "staff", "carryover", "simulator"], forbidden: "/settings" },
-  admin: { links: ["live", "incidents", "events", "staff", "carryover", "settings", "operations", "simulator"],
-    forbidden: "/integrations" },
+  supervisor: { links: ["live", "incidents", "outages", "simulator"], forbidden: "/staff" },
+  manager: { links: ["live", "incidents", "outages", "events", "staff", "carryover", "simulator"],
+    forbidden: "/settings" },
+  admin: { links: ["live", "incidents", "outages", "events", "staff", "carryover", "settings", "operations",
+    "simulator"], forbidden: "/integrations" },
   owner: { links: Object.keys(NAV) as Link[] },
 };
 

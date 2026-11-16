@@ -10,6 +10,7 @@ import { Icon } from "./Icon";
 export function navLinks(me: Me, eventId?: number): [string, StringKey][] {
   const links: [string, StringKey][] = [eventId ? [`/events/${eventId}`, "live"] : ["/events", "events"]];
   if (eventId) links.push([`/events/${eventId}/incidents`, "navIncidents"]);
+  links.push(["/outages", "navOutages"]);
   if (atLeast(me, "MANAGER")) links.push(["/manage", "navEvents"], ["/staff", "navStaff"], ["/carryover", "navCarryover"]);
   if (atLeast(me, "ADMIN")) links.push(["/settings", "navSettings"], ["/operations", "navOperations"]);
   if (atLeast(me, "SUPER_ADMIN")) links.push(["/integrations", "navIntegrations"]);

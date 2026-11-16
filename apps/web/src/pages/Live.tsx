@@ -143,6 +143,13 @@ export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number
         </p>
       </div>
       <StaleBanner show={stale} />
+      {snapshot.outage ? (
+        <div className="outage-banner" role="status">
+          <Icon name="alert" />
+          <span>{t("outageBanner")} — {snapshot.outage.declared_by}, {time(snapshot.outage.since)}.</span>
+          <a href="/outages" onClick={(e) => { e.preventDefault(); navigate("/outages"); }}>{t("navOutages")}</a>
+        </div>
+      ) : null}
       {problem ? <p className="form-error" role="alert">{problem}</p> : null}
 
       <div className="live-grid">

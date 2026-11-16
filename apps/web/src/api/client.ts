@@ -82,6 +82,18 @@ export const api = {
     call<Record<string, unknown>>("POST", `/api/tickets/${ticketId}/${action}`, body, key),
   searchTickets: (eventId: number, q: string) =>
     call<Schemas["TicketSearchRow"][]>("GET", `/api/events/${eventId}/tickets?q=${encodeURIComponent(q)}`),
+  outages: () => call<Schemas["OutageStatus"]>("GET", "/api/outages"),
+  declareOutage: (reason: string, key: string) =>
+    call<Schemas["IdResponse"]>("POST", "/api/outages/whatsapp/declare", { reason }, key),
+  endOutage: (reason: string, key: string) =>
+    call<Schemas["IdResponse"]>("POST", "/api/outages/whatsapp/end", { reason }, key),
+  recordSystemOutage: (eventId: number, body: Schemas["SystemOutageRequestRequest"], key: string) =>
+    call<Schemas["IdResponse"]>("POST", `/api/events/${eventId}/outages/system`, body, key),
+  people: (eventId: number) => call<Schemas["PersonRow"][]>("GET", `/api/events/${eventId}/people`),
+  intakeOnBehalf: (eventId: number, body: Schemas["IntakeOnBehalfRequestRequest"], key: string) =>
+    call<Schemas["IdResponse"]>("POST", `/api/events/${eventId}/intake-on-behalf`, body, key),
+  reconcileIntake: (eventId: number, body: Schemas["ReconcileIntakeRequestRequest"], key: string) =>
+    call<Schemas["IdResponse"]>("POST", `/api/events/${eventId}/reconcile-intake`, body, key),
   incidents: (eventId: number) => call<Schemas["IncidentSummary"][]>("GET", `/api/events/${eventId}/incidents`),
   incident: (id: number) => call<Schemas["IncidentDetail"]>("GET", `/api/incidents/${id}`),
   incidentNote: (id: number, text: string, key: string) =>

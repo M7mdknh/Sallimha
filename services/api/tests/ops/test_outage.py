@@ -275,3 +275,55 @@ def test_offline_intake_is_reconciled_with_its_actual_times(ops):
                              received_at=window.ended_at + timedelta(minutes=1),
                              parked_at=window.ended_at + timedelta(minutes=2), evidence="log")
     assert err.value.code == "outside_outage_window"
+
+
+# --- Security Guidance findings on dafc68a (2x MEDIUM) -------------------------------------------------------
+
+def test_reconciliation_needs_a_second_person_as_verifier_and_a_valet_from_the_event(ops):
+    """Two-person attestation: the recorder cannot also be the verifier; the delivering person must be a valet
+    assigned to the event."""
+    from ops.models import Role
+    from tests.factories import make_staff
+
+    window = _system_window(ops)
+    ticket = _parked_earlier(ops)
+    with pytest.raises(DomainError) as err:
+        outage.reconcile_handover(ops.manager, ticket, **_handover_args(ops, window, verified_by=ops.manager))
+    assert err.value.code == "verifier_must_differ"
+    stranger = make_staff(ops.org, Role.VALET, name="Not on this event")
+    with pytest.raises(DomainError) as err:
+        outage.reconcile_handover(ops.manager, ticket, **_handover_args(ops, window, delivered_by=stranger))
+    assert err.value.code == "receiver_unavailable"
+    with pytest.raises(DomainError) as err:
+        outage.reconcile_handover(ops.manager, ticket, **_handover_args(ops, window, delivered_by=ops.supervisor))
+    assert err.value.code == "receiver_unavailable"
+
+
+def test_outage_windows_are_bounded_in_age_and_length(ops):
+    now = timezone.now()
+    with pytest.raises(DomainError) as err:
+        outage.record_system_outage(ops.manager, ops.org, started_at=now - timedelta(days=31),
+                                    ended_at=now - timedelta(days=31) + timedelta(hours=1), reason="old")
+    assert err.value.code == "invalid_window"
+    with pytest.raises(DomainError) as err:
+        outage.record_system_outage(ops.manager, ops.org, started_at=now - timedelta(hours=30),
+                                    ended_at=now - timedelta(hours=1), reason="too long")
+    assert err.value.code == "invalid_window"
+
+
+def test_whatsapp_outage_declared_by_an_assigned_supervisor_and_ended_by_them_or_a_manager(ops):
+    from ops.models import Role
+    from tests.factories import make_staff
+
+    unassigned = make_staff(ops.org, Role.SUPERVISOR, name="Other venue supervisor")
+    with pytest.raises(DomainError) as err:
+        outage.declare_whatsapp_outage(unassigned, ops.org, "no standing")
+    assert err.value.code == "forbidden"
+    _declared(ops)
+    other = make_staff(ops.org, Role.SUPERVISOR, name="Second supervisor")
+    from ops.models import EventAssignment
+    EventAssignment.objects.create(event=ops.event, staff=other, assigned_by=ops.manager)
+    with pytest.raises(DomainError) as err:
+        outage.end_whatsapp_outage(other, ops.org, "not mine")
+    assert err.value.code == "forbidden"
+    outage.end_whatsapp_outage(ops.manager, ops.org, "manager ends it")

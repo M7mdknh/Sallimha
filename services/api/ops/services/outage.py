@@ -11,6 +11,8 @@ apart from the entry time, names the responsible staff and the verifier, records
 completes a ticket twice and never overrides a safety hold.
 """
 
+from datetime import timedelta
+
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -23,6 +25,7 @@ from ops.models import (
     AssistedVerification,
     CustodyTransfer,
     Event,
+    EventAssignment,
     GuestBinding,
     KeyOccupancy,
     OutageWindow,
@@ -38,6 +41,8 @@ from ops.services import shifts, tokens
 
 CONFIRMED_VIA = ("in_person", "radio")
 FINAL_STATES = (Ticket.State.DELIVERED, Ticket.State.CANCELLED)
+MAX_WINDOW = timedelta(hours=24)  # a recorded whole-system outage longer than this needs an engineer, not the console
+MAX_AGE = timedelta(days=30)  # reconciliation is for recent outages only
 
 
 def _audit(action, actor, entity_id, event_id=None, entity_type="ticket", **summary):
@@ -51,12 +56,20 @@ def active_whatsapp_outage(org) -> OutageWindow | None:
     return OutageWindow.objects.filter(org=org, kind=OutageWindow.Kind.WHATSAPP, ended_at__isnull=True).first()
 
 
+def _has_standing(actor, org) -> bool:
+    """The WhatsApp sender is organisation-wide, so the outage is too. A supervisor may declare it only while
+    assigned to an open event of the organisation (they are on the stand); managers always may."""
+    if has_role(actor, Role.MANAGER):
+        return True
+    return EventAssignment.objects.filter(staff=actor, event__org=org, event__status=Event.Status.OPEN).exists()
+
+
 def declare_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
     from ops.services.alerts import raise_alert
 
     now = now or timezone.now()
     require(actor, Role.SUPERVISOR)
-    if actor.org_id != org.id:
+    if actor.org_id != org.id or not _has_standing(actor, org):
         raise DomainError("forbidden")
     if not reason.strip():
         raise DomainError("reason_required")
@@ -84,6 +97,8 @@ def end_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
             org=org, kind=OutageWindow.Kind.WHATSAPP, ended_at__isnull=True).first()
         if window is None:
             raise DomainError("no_active_outage")
+        if window.declared_by_id != actor.id and not has_role(actor, Role.MANAGER):
+            raise DomainError("forbidden")  # only the declarer or a manager ends an organisation-wide outage
         window.ended_at, window.ended_by, window.end_reason = now, actor, reason.strip()[:200]
         window.save(update_fields=["ended_at", "ended_by", "end_reason"])
         _audit("outage.ended", actor, window.id, entity_type="outage", kind="WHATSAPP", reason=window.end_reason)
@@ -153,7 +168,7 @@ def record_intake(actor, event, *, valet, guest_phone: str, plate: str, descript
             raise DomainError("evidence_required")
     if not reason.strip():
         raise DomainError("reason_required")
-    if valet.org_id != event.org_id or valet.role != Role.VALET or not valet.enabled:
+    if not _event_valet(valet, event):
         raise DomainError("receiver_unavailable")
     if outage is None and shifts.open_shift_for(valet, event) is None:
         raise DomainError("not_on_shift")
@@ -221,7 +236,7 @@ def record_system_outage(actor, org, *, started_at, ended_at, reason: str, now=N
         raise DomainError("forbidden")
     if not reason.strip():
         raise DomainError("reason_required")
-    if not (started_at < ended_at <= now):
+    if not (started_at < ended_at <= now) or ended_at - started_at > MAX_WINDOW or started_at < now - MAX_AGE:
         raise DomainError("invalid_window")
     with transaction.atomic():
         overlapping = OutageWindow.objects.select_for_update().filter(
@@ -239,8 +254,14 @@ def record_system_outage(actor, org, *, started_at, ended_at, reason: str, now=N
 def _check_window(actor, outage, now) -> None:
     if outage.org_id != actor.org_id:
         raise DomainError("forbidden")
-    if outage.kind != OutageWindow.Kind.SYSTEM or outage.ended_at is None or outage.ended_at > now:
+    if outage.kind != OutageWindow.Kind.SYSTEM or outage.ended_at is None or outage.ended_at > now or \
+            outage.ended_at < now - MAX_AGE:
         raise DomainError("invalid_window")
+
+
+def _event_valet(person, event) -> bool:
+    return (person.org_id == event.org_id and person.role == Role.VALET and person.enabled
+            and EventAssignment.objects.filter(event=event, staff=person).exists())
 
 
 def reconcile_handover(actor, ticket, *, outage, occurred_at, delivered_by, verified_by, method: str,
@@ -263,7 +284,9 @@ def reconcile_handover(actor, ticket, *, outage, occurred_at, delivered_by, veri
         raise DomainError("reason_required")
     if not (has_role(verified_by, Role.SUPERVISOR) and can_access_event(verified_by, ticket.event)):
         raise DomainError("verifier_not_authorized")
-    if delivered_by.org_id != ticket.event.org_id:
+    if verified_by.id == actor.id:
+        raise DomainError("verifier_must_differ")  # two people attest an after-the-fact handover
+    if not _event_valet(delivered_by, ticket.event):
         raise DomainError("receiver_unavailable")
     try:
         with transaction.atomic():

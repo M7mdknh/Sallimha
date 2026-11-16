@@ -11,6 +11,7 @@ import { Live } from "./pages/Live";
 import { Login } from "./pages/Login";
 import { Manage } from "./pages/Manage";
 import { Operations } from "./pages/Operations";
+import { Outages } from "./pages/Outages";
 import { Report } from "./pages/Report";
 import { Settings } from "./pages/Settings";
 import { Simulator } from "./pages/Simulator";
@@ -56,6 +57,7 @@ export function App() {
     "/settings": () => <Settings />,
     "/operations": () => <Operations />,
     "/integrations": () => <Integrations />,
+    "/outages": () => <Outages me={me} eventId={lastEvent()} />,
   };
   let page = <Events />;
   if (scoped && scoped[2] === "incidents") page = <Incidents eventId={eventId!} incidentId={sub} me={me} />;

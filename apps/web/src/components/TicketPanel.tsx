@@ -7,12 +7,15 @@ import { usePoll } from "../usePoll";
 import { Icon } from "./Icon";
 import { Id, LoadFailed, SkeletonRows, StatusPill } from "./States";
 
-type Field = { name: string; label: StringKey; kind: "text" | "textarea" | "number" | "staff" | "check" | "select" | "hold";
+type Field = { name: string; label: StringKey; kind: "text" | "textarea" | "number" | "staff" | "check" | "select" | "hold"
+    | "datetime" | "valet" | "verifier";
   options?: [string, StringKey][]; required?: boolean; initial?: boolean; max?: number };
 
 export const INCIDENT_CATEGORIES = ["missing_vehicle", "key_issue", "damage", "identity_dispute", "notification_failure",
   "operational_delay", "complaint"] as const;
 const REASON: Field = { name: "reason", label: "reason", kind: "textarea", required: true };
+const VIA: Field = { name: "confirmed_via", label: "confirmedVia", kind: "select", required: true,
+  options: [["in_person", "via_in_person"], ["radio", "via_radio"]] };
 
 // Each action maps to a console command; the server re-checks permission, scope and state.
 const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Field[]; destructive?: boolean }> = {
@@ -62,6 +65,16 @@ const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Fiel
     { name: "hook_number", label: "hook", kind: "number", required: true },
     { name: "confirmed_via", label: "confirmedVia", kind: "select", required: true,
       options: [["in_person", "via_in_person"], ["radio", "via_radio"]] }] },
+  relay_accept: { endpoint: "relay-accept", hint: "action_relay_accept_hint", fields: [VIA] },
+  relay_ready: { endpoint: "relay-ready", hint: "action_relay_ready_hint", fields: [VIA] },
+  relay_custody_ack: { endpoint: "relay-custody-ack", hint: "action_relay_custody_ack_hint", fields: [VIA] },
+  reconcile_handover: { endpoint: "reconcile-handover", hint: "action_reconcile_handover_hint", destructive: true,
+    fields: [{ name: "occurred_at_local", label: "occurredAt", kind: "datetime", required: true },
+      { name: "delivered_by_id", label: "deliveredBy", kind: "valet", required: true },
+      { name: "verified_by_id", label: "verifiedBy", kind: "verifier", required: true },
+      { name: "method", label: "verification", kind: "select", required: true, options: [
+        ["in_person_check", "method_in_person_check"], ["known_guest", "method_known_guest"], ["other", "method_other"]] },
+      { name: "evidence", label: "evidence", kind: "textarea", required: true, max: 2000 }, REASON] },
   relocate_cancel: { endpoint: "relocate-cancel", hint: "action_relocate_cancel_hint", destructive: true, fields: [
     { name: "car_returned", label: "carReturned", kind: "check" }, REASON] },
   propose_unclaimed: { endpoint: "propose-unclaimed", hint: "action_propose_unclaimed_hint", fields: [
@@ -75,8 +88,9 @@ const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Fiel
     { name: "note", label: "note", kind: "textarea", required: true, max: 2000 }] },
 };
 
-function ActionForm({ action, ticketId, team, holds, disabled, onDone }: { action: string; ticketId: number;
-  team: Schemas["TeamMember"][]; holds: Schemas["HoldBrief"][]; disabled: boolean; onDone: () => void }) {
+function ActionForm({ action, ticketId, team, holds, people, disabled, onDone }: { action: string; ticketId: number;
+  team: Schemas["TeamMember"][]; holds: Schemas["HoldBrief"][]; people: Schemas["PersonRow"][]; disabled: boolean;
+  onDone: () => void }) {
   const { t, error } = useT();
   const spec = ACTIONS[action];
   const [values, setValues] = useState<Record<string, string | boolean>>(() =>
@@ -98,7 +112,7 @@ function ActionForm({ action, ticketId, team, holds, disabled, onDone }: { actio
     for (const f of spec.fields) {
       const v = values[f.name];
       body[f.name] = f.kind === "check" ? Boolean(v)
-        : f.kind === "number" || f.kind === "staff" || f.kind === "hold" ? Number(v) : String(v ?? "").trim();
+        : ["number", "staff", "hold", "valet", "verifier"].includes(f.kind) ? Number(v) : String(v ?? "").trim();
     }
     try {
       await api.ticketAction(ticketId, spec.endpoint, body, key.current);
@@ -134,6 +148,15 @@ function ActionForm({ action, ticketId, team, holds, disabled, onDone }: { actio
                   <option value="">—</option>
                   {available.map((m) => <option key={m.staff_id} value={m.staff_id}>{m.name}</option>)}
                 </select>
+              ) : f.kind === "valet" || f.kind === "verifier" ? (
+                <select value={String(values[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)}>
+                  <option value="">—</option>
+                  {people.filter((p) => (f.kind === "valet" ? p.role === "VALET" : p.role !== "VALET"))
+                    .map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              ) : f.kind === "datetime" ? (
+                <input type="datetime-local" dir="ltr" value={String(values[f.name] ?? "")}
+                  onChange={(e) => set(f.name, e.target.value)} />
               ) : f.kind === "hold" ? (
                 <select value={String(values[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)}>
                   <option value="">—</option>
@@ -165,6 +188,7 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
   team: Schemas["TeamMember"][]; disabled: boolean; onClose: () => void; onChanged: () => void }) {
   const { t, state } = useT();
   const { data, error, refresh } = usePoll(() => api.ticket(ticketId), 5_000, [ticketId]);
+  const people = usePoll(() => api.people(eventId), 60_000, [eventId]);
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -182,6 +206,7 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
             <StatusPill tone={data.contact_state === "CONFIRMED_IN_PERSON" ? "success" : "warning"}
               icon={data.contact_state === "CONFIRMED_IN_PERSON" ? "check" : "alert"} label={state(data.contact_state)} />
             {data.request ? <StatusPill tone="neutral" icon="clock" label={state(data.request.state)} /> : null}
+            {data.offered_to ? <StatusPill tone="warning" icon="user" label={`${t("offeredTo")}: ${data.offered_to}`} /> : null}
             {data.move ? (
               <StatusPill tone={data.move.status === "ACCEPTED" ? "info" : "warning"} icon="pin"
                 label={`${data.move.status === "ACCEPTED" ? t("moveAccepted") : t("moveOffered")}: ${data.move.valet}`} />
@@ -228,7 +253,8 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
                   {t(`action_${a}` as StringKey)}
                 </button>
                 {open === a ? (
-                  <ActionForm action={a} ticketId={ticketId} team={team} holds={data.holds} disabled={disabled}
+                  <ActionForm action={a} ticketId={ticketId} team={team} holds={data.holds} people={people.data ?? []}
+                    disabled={disabled}
                     onDone={() => { setOpen(null); void refresh(); onChanged(); }} />
                 ) : null}
               </div>

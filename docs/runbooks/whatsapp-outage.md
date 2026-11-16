@@ -7,31 +7,44 @@
 - Attention items "Offer not sent yet" or "Repeated unaccepted offers"; guests report no ticket message.
 - Operations fills with "Not delivered" or "Delivery unknown" rows.
 
-## What still works, and what does not
-- **Works:** the console (live view, ticket finder, holds, incidents, notes), supervisor-assisted requests (the
-  request keeps its place in the queue), supervisor-assisted handover for a car already marked ready, and
-  withdrawal with custody resolution.
-- **Does not work:** valets cannot receive or accept offers, mark a car ready, or confirm a custody transfer;
-  guests receive no ticket or collection code. There is no manual dispatch control, by design. Messages are kept
-  and retried; the queue keeps each request's original age, so offers resume in order when WhatsApp returns.
+## Declare it (supervisor on the stand)
+1. **Outages → Declare WhatsApp outage**, with the reason. Everyone sees a red banner on the live view; every open
+   event gets a critical alert. Tell the team by radio. Every car and key stays with a named person.
+2. While declared, the ticket panel offers **relayed** actions. Each asks how you confirmed it (in person / radio):
+   - **Record valet's acceptance (relayed):** the system still chooses the valet ("Offered to: …"); radio that
+     valet, and record their answer. You cannot pick someone else — that would be manual dispatch.
+   - **Record car ready (relayed):** the accepted valet reports the car at the stand. Then use
+     **Supervisor-assisted handover** and record how you verified the guest.
+   - **Record custody received (relayed):** for a custody transfer the receiving valet confirmed in person.
+   - **Record valet's acceptance** also applies to a move (relocation) offer.
+3. New arrivals: **Outages → Record an intake for a valet** (valet, guest phone, plate, zone, spot, hook, how
+   confirmed, reason). The car is recorded as parked by that valet; photos are excepted with your reason; the
+   guest's WhatsApp ticket is queued and goes out when WhatsApp returns; their handover uses supervisor
+   verification.
+4. Guests who cannot request: **Supervisor-assisted request** (unchanged).
+5. When messages flow again: **Outages → End outage** (the declarer or a manager). Then, in **Operations**, replay
+   messages that still matter; for "Delivery unknown", check with the recipient first.
 
-## Immediately (supervisor)
-1. Tell the team by radio that WhatsApp is degraded. Every car and key stays with a named person.
-2. Short outage: keep cars parked and tell waiting guests there is a short delay. Requests stay queued.
-3. Guests who cannot request by WhatsApp: **Find a ticket** → **Supervisor-assisted request** (reason: "WhatsApp
-   outage").
-4. Longer outage with guests waiting: switch to the **agreed human continuity procedure** (to be written and
-   agreed by the business owner before launch; docs/03): the supervisor dispatches by radio and keeps a paper log
-   per car — ticket number, valet, key hook, time out, who verified the guest and how.
+## Whole system down (console unreachable) — continuity procedure
+_The business owner must approve this procedure before launch._ Proposed, paperless:
+1. The supervisor announces "system down" by radio with the time.
+2. Each valet keeps an **offline log on their own phone** (notes app), one line per action:
+   `time · ticket number (or plate if new) · action (received / parked / handed over / moved) · zone spot · hook ·
+   who verified the guest and how`.
+3. Nothing is handed over without a supervisor verifying the guest in person (photos/plate/description they can
+   still recall or see on the car, the WhatsApp ticket on the guest's phone).
+4. Keys stay on the board; a key off the board is always with a named person.
 
-## Technical (on call)
-1. Check provider status *(provider)* and `/readyz` (`whatsapp` field); check the worker is running (live view).
-2. Transient failures retry with backoff on their own. Permanent failures become dead letters.
-3. Never bulk-resend. Messages marked **Delivery unknown** may already have arrived.
-
-## After recovery
-- Admin opens **Operations**: replay "Not delivered" rows that still matter; for "Delivery unknown", check with the
-  recipient first and only then use **Send again anyway**.
-- Reconcile the paper log. **Open item:** the console has no action yet to record a delivery that happened on
-  paper during an outage. Until it exists, record each such car as an incident (category "Notification failure")
-  with the log line, and keep the ticket open for a manager decision. This needs a product decision before launch.
+## After the system recovers (manager)
+1. **Outages → Record outage window**: start and end in venue time (Asia/Riyadh for Saudi venues), in the past,
+   at most 24 hours long and within 30 days.
+2. For each car *received* during the window: **Reconcile an intake made during the outage** with the actual
+   received and parked times, the valet, the evidence (the log line) and a reason.
+3. For each car *handed over* during the window: open the ticket (**Find a ticket**) → **Reconcile a handover made
+   during the outage**: actual time, the valet who handed over, the supervisor who verified the guest (someone
+   other than you), method, evidence and reason. The ticket becomes Delivered at the actual time; the request and
+   tasks close and the key hook is released at that time. A safety hold must be cleared first, with its reason.
+4. The system refuses conflicts: times outside the window or before parking, a second reconciliation, or a ticket
+   already delivered. Raise an incident only for genuine problems (damage, disputes) — never to stand in for the
+   delivery record.
+5. Check the opening check and **Operations** before resuming normal work.
