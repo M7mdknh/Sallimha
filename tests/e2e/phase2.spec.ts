@@ -65,7 +65,8 @@ async function say(page: Page, text: string, reply: RegExp) {
 }
 
 async function tap(page: Page, title: string) {
-  const button = page.getByRole("log").getByRole("button", { name: title }).last();
+  // Newest message only: an older message's button (e.g. from the other project's run) is never pressed.
+  const button = page.getByRole("log").locator(".bubble-out").last().getByRole("button", { name: title });
   await expect(button).toBeVisible();
   await button.click();
 }
@@ -80,7 +81,7 @@ async function action(page: Page, label: string, fill: (form: ReturnType<Page["l
 }
 
 test("supervisor finds a parked car, places and clears a hold, and opens an incident", async ({ page }, info) => {
-  test.skip(info.project.name !== "desktop", "the exception flow runs once, on desktop");
+  const n = info.project.name === "desktop" ? "1" : "2"; // per-project data: both projects share one database
   test.setTimeout(240_000);
   await loginAs(page, "supervisor");
   const eventPath = new URL(page.url()).pathname;
@@ -88,25 +89,25 @@ test("supervisor finds a parked car, places and clears a hold, and opens an inci
   await simulator(page);
   await thread(page, "+966550000103");
   await say(page, "مركبة جديدة", /أرسل رقم جوال الضيف/);
-  await say(page, "0501234599", /هل الرقم/);
+  await say(page, `05012345${n}9`, /هل الرقم/);
   await tap(page, "تأكيد الرقم");
   await tap(page, "نعم، استلمها");
-  await say(page, "PLT 7788 لكزس رمادية", /صور للمركبة/);
+  await say(page, `PLT ${n}788 لكزس رمادية`, /صور للمركبة/);
   for (let i = 1; i <= 4; i += 1) {
     await page.getByRole("button", { name: /صورة|Photo/ }).click();
     await expect(page.getByRole("log").locator(".bubble-out").last()).toContainText(i < 4 ? `${i} من` : /اكتملت الصور/);
   }
   await tap(page, "بدء الركن");
   await say(page, "B 7", /خطاف المفتاح/);
-  await say(page, "77", /تم الركن/);
+  await say(page, `4${n}`, /تم الركن/);
 
   await page.goto(eventPath);
   const finder = page.getByRole("search");
-  await finder.getByLabel(/رقم التذكرة أو جزء من اللوحة/).fill("PLT");
+  await finder.getByLabel(/رقم التذكرة أو جزء من اللوحة/).fill(`PLT ${n}788`);
   await finder.getByRole("button", { name: "بحث" }).click();
-  await page.getByRole("button", { name: /PLT 7788/ }).click();
+  await page.getByRole("button", { name: new RegExp(`PLT ${n}788`) }).click();
   const panel = page.locator(".ticket-panel");
-  await expect(panel).toContainText("77");
+  await expect(panel).toContainText(`4${n}`);
 
   await action(page, "إيقاف سلامة", async (form) => {
     await form.getByLabel("السبب").fill("المفتاح يحتاج تحققًا");
@@ -134,9 +135,9 @@ test("supervisor finds a parked car, places and clears a hold, and opens an inci
 
   // End of night: the car was not collected. The supervisor proposes; a manager approves (next test).
   await page.goto(eventPath);
-  await page.getByRole("search").getByLabel(/رقم التذكرة أو جزء من اللوحة/).fill("PLT");
+  await page.getByRole("search").getByLabel(/رقم التذكرة أو جزء من اللوحة/).fill(`PLT ${n}788`);
   await page.getByRole("search").getByRole("button", { name: "بحث" }).click();
-  await page.getByRole("button", { name: /PLT 7788/ }).click();
+  await page.getByRole("button", { name: new RegExp(`PLT ${n}788`) }).click();
   await action(page, "اقتراح غير مُستلمة", async (form) => {
     await form.getByLabel("الجهة المسؤولة").fill("أمن المكان (تجريبي)");
     await form.getByLabel("الخطة").fill("تبقى المركبة حتى الصباح ويُتواصل مع الضيف");
@@ -150,7 +151,7 @@ test("supervisor finds a parked car, places and clears a hold, and opens an inci
 });
 
 test("manager resolves the incident, approves the unclaimed car and releases its key", async ({ page }, info) => {
-  test.skip(info.project.name !== "desktop", "continues the desktop exception flow");
+  const n = info.project.name === "desktop" ? "1" : "2";
   test.setTimeout(120_000);
   await loginAs(page, "manager");
   await nav(page).getByRole("link", { name: NAV.incidents, exact: true }).click();
@@ -160,9 +161,9 @@ test("manager resolves the incident, approves the unclaimed car and releases its
   await expect(page.locator(".ticket-panel")).toContainText("خدش سابق موثّق");
 
   await nav(page).getByRole("link", { name: NAV.carryover, exact: true }).click();
-  await page.locator(".rows .row-button").first().click();
+  await page.locator(".rows .row-button").first().click(); // only this project's case is still open
   const panel = page.locator(".ticket-panel");
-  await expect(panel).toContainText("77");
+  await expect(panel).toContainText(`4${n}`);
   await action(page, "اعتماد غير مُستلمة", async () => {});
   await expect(panel.getByText("غير مُستلمة", { exact: true })).toBeVisible();
   await action(page, "تحرير المفتاح والمركبة", async (form) => {
@@ -208,16 +209,16 @@ test("management pages hold their layout at every width in both languages", asyn
 });
 
 test("manager creates and closes an event, and sees the report without guest phone export", async ({ page }, info) => {
-  test.skip(info.project.name !== "desktop", "runs once");
+  const n = info.project.name === "desktop" ? "1" : "2";
   await loginAs(page, "manager");
   const eventId = new URL(page.url()).pathname.split("/")[2];
   await nav(page).getByRole("link", { name: NAV.events, exact: true }).click();
   await page.getByText("مناسبة جديدة").click();
   await page.getByLabel("المكان").selectOption({ index: 1 });
-  await page.getByLabel("الاسم").fill("ليلة اختبار الإغلاق (تجريبي)");
+  await page.getByLabel("الاسم").fill(`ليلة اختبار الإغلاق ${n} (تجريبي)`);
   await page.getByLabel("موعد البدء").fill("2026-12-01T19:00");
   await page.getByRole("button", { name: "إنشاء" }).click();
-  const row = page.locator("li").filter({ hasText: "ليلة اختبار الإغلاق" });
+  const row = page.locator("li").filter({ hasText: `ليلة اختبار الإغلاق ${n}` });
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "إغلاق المناسبة" }).click();
   await row.getByRole("button", { name: "تأكيد" }).click();

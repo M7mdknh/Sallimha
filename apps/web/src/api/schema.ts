@@ -1178,6 +1178,7 @@ export interface components {
          */
         CategoryEnum: "missing_vehicle" | "key_issue" | "damage" | "identity_dispute" | "notification_failure" | "operational_delay" | "complaint";
         ConfigResponse: {
+            version: number;
             timings: {
                 [key: string]: number;
             };
@@ -1209,8 +1210,8 @@ export interface components {
         CreateEventRequestRequest: {
             venue_id: number;
             name: string;
-            /** Format: date-time */
-            starts_at: string;
+            /** @description Venue wall-clock time without an offset, e.g. 2026-12-01T19:00 */
+            starts_at_local: string;
         };
         CreateStaffRequestRequest: {
             full_name: string;
@@ -1257,6 +1258,7 @@ export interface components {
             name: string;
             status: components["schemas"]["EventStatusEnum"];
             venue: string;
+            time_zone: string;
         };
         EventReport: {
             event_id: number;
@@ -1285,6 +1287,8 @@ export interface components {
             status: components["schemas"]["EventStatusEnum"];
             /** Format: date-time */
             starts_at: string;
+            /** @description The venue's IANA time zone; console times are shown in it */
+            time_zone: string;
         };
         Health: {
             worker: components["schemas"]["WorkerEnum"];
@@ -1554,6 +1558,8 @@ export interface components {
             incident_evidence: components["schemas"]["RetentionCategory"];
         };
         RetentionRequestRequest: {
+            /** @description The settings version this change was based on */
+            version: number;
             retention_days: {
                 [key: string]: number;
             };
@@ -1681,6 +1687,8 @@ export interface components {
             en: string;
         };
         TemplatesRequestRequest: {
+            /** @description The settings version this change was based on */
+            version: number;
             /** @description null restores the catalogue wording for that message */
             overrides: {
                 [key: string]: components["schemas"]["TemplateCopyRequest"] | null;
@@ -1745,6 +1753,8 @@ export interface components {
             actor: string;
         };
         TimingsRequestRequest: {
+            /** @description The settings version this change was based on */
+            version: number;
             timings: {
                 [key: string]: number;
             };
@@ -1759,6 +1769,7 @@ export interface components {
         VenueRow: {
             id: number;
             name: string;
+            time_zone: string;
             zones: string[];
             key_hooks: number;
         };

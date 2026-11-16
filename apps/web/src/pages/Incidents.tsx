@@ -7,10 +7,7 @@ import { navigate } from "../router";
 import { useT, type StringKey } from "../strings";
 import { useCommand } from "../useCommand";
 import { usePoll } from "../usePoll";
-
-export const riyadhTime = (iso: string, lang: string) =>
-  new Date(iso).toLocaleString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-GB",
-    { timeZone: "Asia/Riyadh", dateStyle: "short", timeStyle: "short" });
+import { venueTime } from "../venueTime";
 
 function TextCommand({ label, field, empty, disabled, submit }: { label: StringKey; field: StringKey; empty: string;
   disabled: boolean; submit: (text: string, key: string) => Promise<unknown> }) {
@@ -59,7 +56,7 @@ function IncidentDetail({ incidentId, eventId, me, disabled, onChanged }: { inci
             </div>
             <p className="prose">{i.description}</p>
             <dl className="facts">
-              <div><dt>{t("openedAt")}</dt><dd><Id>{riyadhTime(i.created_at, lang)}</Id></dd></div>
+              <div><dt>{t("openedAt")}</dt><dd><Id>{venueTime(i.created_at, lang)}</Id></dd></div>
               <div><dt>{t("ticket")}</dt><dd>{i.ticket && i.ticket_id ? (
                 <a href={`/events/${eventId}/tickets/${i.ticket_id}`}
                   onClick={(e) => { e.preventDefault(); navigate(`/events/${eventId}/tickets/${i.ticket_id}`); }}>
@@ -74,7 +71,7 @@ function IncidentDetail({ incidentId, eventId, me, disabled, onChanged }: { inci
               <ol className="notes">
                 {i.notes.map((n, idx) => (
                   <li key={idx}>
-                    <span className="row-meta">{n.author} · <Id>{riyadhTime(n.created_at, lang)}</Id></span>
+                    <span className="row-meta">{n.author} · <Id>{venueTime(n.created_at, lang)}</Id></span>
                     <p>{n.text}</p>
                   </li>
                 ))}
@@ -121,7 +118,7 @@ export function Incidents({ eventId, incidentId, me }: { eventId: number; incide
                         </span>
                         <StatusPill tone={i.status === "RESOLVED" ? "success" : i.status === "OPEN" ? "warning" : "info"}
                           icon={i.status === "RESOLVED" ? "check" : "clock"} label={state(i.status)} />
-                        <span className="row-meta"><Id>{riyadhTime(i.created_at, lang)}</Id></span>
+                        <span className="row-meta"><Id>{venueTime(i.created_at, lang)}</Id></span>
                         <span className="row-meta clamp">{i.description}</span>
                       </button>
                     </li>

@@ -7,20 +7,21 @@ import { navigate } from "../router";
 import { useT } from "../strings";
 import { useCommand } from "../useCommand";
 import { usePoll } from "../usePoll";
-import { riyadhTime } from "./Incidents";
+import { DEFAULT_ZONE, venueTime } from "../venueTime";
 
 function NewEvent({ disabled, onDone }: { disabled: boolean; onDone: () => void }) {
   const { t } = useT();
   const venues = usePoll(api.venues, 60_000, []);
   const [form, setForm] = useState({ venue_id: "", name: "", starts_at: "" });
+  const zone = venues.data?.find((v) => String(v.id) === form.venue_id)?.time_zone ?? DEFAULT_ZONE;
   const { run, busy, problem, setProblem } = useCommand();
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!form.venue_id || !form.name.trim() || !form.starts_at) return setProblem(t("error_invalid_input"));
-    // datetime-local has no zone: it is read in the operator's local time (Riyadh on site).
-    const body = { venue_id: Number(form.venue_id), name: form.name.trim(), starts_at: new Date(form.starts_at).toISOString() };
+    // The wall-clock time is sent as typed; the server reads it in the venue's zone (never the browser's).
+    const body = { venue_id: Number(form.venue_id), name: form.name.trim(), starts_at_local: form.starts_at };
     await run((key) => api.createEvent(body, key), () => { setForm({ venue_id: "", name: "", starts_at: "" }); onDone(); });
   }
   return (
@@ -36,7 +37,7 @@ function NewEvent({ disabled, onDone }: { disabled: boolean; onDone: () => void 
               </select></label>
             <label className="field"><span>{t("name")}</span>
               <input value={form.name} maxLength={160} onChange={(e) => set("name", e.target.value)} /></label>
-            <label className="field"><span>{t("startsAt")}</span>
+            <label className="field"><span>{t("startsAt")} ({zone})</span>
               <input type="datetime-local" dir="ltr" value={form.starts_at} onChange={(e) => set("starts_at", e.target.value)} /></label>
             {problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
             <div className="span-all">
@@ -92,7 +93,7 @@ export function Manage() {
                   <li key={e.id} className="row" data-testid={`event-${e.id}`}>
                     <span className="row-title">{e.name}</span>
                     <span className="row-meta">{e.venue}</span>
-                    <span className="row-meta">{riyadhTime(e.starts_at, lang)}</span>
+                    <span className="row-meta">{venueTime(e.starts_at, lang, e.time_zone)}</span>
                     <StatusPill tone={e.status === "OPEN" ? "success" : "neutral"} icon={e.status === "OPEN" ? "check" : "clock"}
                       label={state(e.status)} />
                     <span className="row-actions">

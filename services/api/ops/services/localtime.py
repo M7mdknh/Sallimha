@@ -12,12 +12,16 @@ def venue_zone(event) -> ZoneInfo:
 
 
 def parse_local(event, value: str) -> datetime:
-    """'2026-11-16T20:30' (no offset) at the event's venue → aware datetime. Offsets are refused so a browser's
-    zone can never leak in."""
+    return parse_local_at(event.venue, value)
+
+
+def parse_local_at(venue, value: str) -> datetime:
+    """'2026-11-16T20:30' (no offset) at the venue → aware datetime. Offsets are refused so a browser's zone can
+    never leak in."""
     try:
         parsed = datetime.fromisoformat((value or "").strip())
     except ValueError as exc:
         raise DomainError("invalid_time") from exc
     if parsed.tzinfo is not None:
         raise DomainError("invalid_time")
-    return parsed.replace(tzinfo=venue_zone(event))
+    return parsed.replace(tzinfo=ZoneInfo(venue.timezone or "Asia/Riyadh"))

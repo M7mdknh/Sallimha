@@ -1,6 +1,7 @@
 """Phase 2 console endpoints: server-side role matrix (AT-20, AT-59), contract shapes and audited actions."""
 
 import uuid
+from datetime import UTC
 
 import pytest
 
@@ -8,6 +9,10 @@ from ops.models import Incident, Role, Ticket
 from tests.console.conftest import login_as
 from tests.factories import make_staff, open_shift
 from tests.ops.intake_helpers import park
+
+
+def _version(client):
+    return client.get("/api/config").json()["version"]
 
 
 def post(client, url, data=None):
@@ -86,7 +91,8 @@ def test_directory_config_and_integrations_role_matrix(ops):
     assert post(mgr, f"/api/staff/{staff_id}/deactivate", {"reason": "Left"}).status_code == 200
     assert mgr.get("/api/config").status_code == 403
     assert adm.get("/api/config").status_code == 200
-    assert post(adm, "/api/config/timings", {"timings": {"offer_window_s": 40}}).status_code == 200
+    timings = {"version": _version(adm), "timings": {"offer_window_s": 40}}
+    assert post(adm, "/api/config/timings", timings).status_code == 200
     assert adm.get("/api/integrations/whatsapp").status_code == 403
     integration = root.get("/api/integrations/whatsapp").json()
     assert integration["status"] == "simulated" and "token" not in str(integration).lower().replace("_configured", "")
@@ -119,11 +125,11 @@ def test_event_create_and_close(ops):
     mgr = login_as(ops.manager)
     venues = mgr.get("/api/venues").json()
     created = post(mgr, "/api/events", {"venue_id": venues[0]["id"], "name": "New night",
-                                        "starts_at": "2026-11-20T18:00:00Z"})
+                                        "starts_at_local": "2026-11-20T18:00"})
     assert created.status_code == 200
     assert post(mgr, f"/api/events/{created.json()['id']}/close").status_code == 200
     assert post(login_as(ops.supervisor), "/api/events", {"venue_id": venues[0]["id"], "name": "x",
-                                                          "starts_at": "2026-11-20T18:00:00Z"}).status_code == 403
+                                                          "starts_at_local": "2026-11-20T18:00"}).status_code == 403
 
 
 def test_ticket_export_neutralises_spreadsheet_formulas(ops):
@@ -138,7 +144,7 @@ def test_event_create_rejects_another_orgs_venue_as_not_found(ops):
 
     foreign = make_venue(make_org("Other Org"), name="Elsewhere")
     resp = post(login_as(ops.manager), "/api/events", {"venue_id": foreign.id, "name": "x",
-                                                       "starts_at": "2026-11-20T18:00:00Z"})
+                                                       "starts_at_local": "2026-11-20T18:00"})
     assert resp.status_code == 404
 
 
@@ -166,14 +172,17 @@ def test_admin_operations_round_trip(ops, settings):
     assert row["ticket_id"] == ticket.id and row["status"] == "APPROVED" and row["hook"] == 41
     assert row["event"] == ops.event.name and row["event_id"] == ops.event.id and row["location"].startswith("A")
 
-    assert post(adm, "/api/config/retention", {"retention_days": {"guest_contact": 30}}).status_code == 200
+    days = {"version": _version(adm), "retention_days": {"guest_contact": 30}}
+    assert post(adm, "/api/config/retention", days).status_code == 200
     assert adm.get("/api/config").json()["retention_days"]["guest_contact"] == 30
     assert set(post(adm, "/api/retention/apply").json()) == {"guest_contact", "intake_photos", "incident_evidence"}
 
     copy = {"ar": "تم ركن مركبتك يا ضيفنا. تذكرتك {ticket}.", "en": "Parked. Ticket {ticket}."}
-    assert post(adm, "/api/config/templates", {"overrides": {"guest.parked": copy}}).status_code == 200
+    override = {"version": _version(adm), "overrides": {"guest.parked": copy}}
+    assert post(adm, "/api/config/templates", override).status_code == 200
     assert adm.get("/api/config").json()["template_overrides"] == {"guest.parked": copy}
-    assert post(adm, "/api/config/templates", {"overrides": {"guest.parked": None}}).status_code == 200
+    reset = {"version": _version(adm), "overrides": {"guest.parked": None}}
+    assert post(adm, "/api/config/templates", reset).status_code == 200
     assert adm.get("/api/config").json()["template_overrides"] == {}
 
     leaver = make_staff(ops.org, Role.VALET)
@@ -257,3 +266,26 @@ def test_relocation_cancel_over_http(ops):
     resp = post(sup, f"/api/tickets/{ticket.id}/relocate-cancel", {"reason": "Not needed", "car_returned": False})
     assert resp.status_code == 200
     assert "relocate_start" in sup.get(f"/api/tickets/{ticket.id}").json()["allowed_actions"]
+
+
+def test_event_start_is_entered_in_the_venues_time_zone(ops):
+    """R13: the console used the browser's zone; the venue's zone (default Asia/Riyadh) is now authoritative."""
+    from datetime import datetime
+
+    from ops.models import Event, Venue
+
+    mgr = login_as(ops.manager)
+    venue = Venue.objects.get(pk=ops.event.venue_id)
+    row = next(v for v in mgr.get("/api/venues").json() if v["id"] == venue.id)
+    assert row["time_zone"] == "Asia/Riyadh"
+    created = post(mgr, "/api/events", {"venue_id": venue.id, "name": "Riyadh night",
+                                        "starts_at_local": "2026-12-01T19:00"}).json()
+    assert Event.objects.get(pk=created["id"]).starts_at == datetime(2026, 12, 1, 16, 0, tzinfo=UTC)
+    Venue.objects.filter(pk=venue.id).update(timezone="Asia/Dubai")
+    other = post(mgr, "/api/events", {"venue_id": venue.id, "name": "Dubai night",
+                                      "starts_at_local": "2026-12-01T19:00"}).json()
+    assert Event.objects.get(pk=other["id"]).starts_at == datetime(2026, 12, 1, 15, 0, tzinfo=UTC)
+    offset = post(mgr, "/api/events", {"venue_id": venue.id, "name": "x", "starts_at_local": "2026-12-01T19:00+05:00"})
+    assert offset.status_code == 409 and offset.json()["code"] == "invalid_time"
+    listed = next(e for e in mgr.get("/api/events/").json() if e["id"] == other["id"])
+    assert listed["time_zone"] == "Asia/Dubai"

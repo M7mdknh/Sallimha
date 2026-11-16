@@ -4,6 +4,7 @@ import { ApiError, api, newKey, type Schemas } from "../api/client";
 import { navigate } from "../router";
 import { useT, type StringKey } from "../strings";
 import { usePoll } from "../usePoll";
+import { currentZone, venueClock } from "../venueTime";
 import { Icon } from "./Icon";
 import { Id, LoadFailed, SkeletonRows, StatusPill } from "./States";
 
@@ -140,7 +141,7 @@ function ActionForm({ action, ticketId, team, holds, people, disabled, onDone }:
             </>
           ) : (
             <>
-              <span>{t(f.label)}</span>
+              <span>{t(f.label)}{f.kind === "datetime" ? ` (${currentZone()})` : ""}</span>
               {f.kind === "textarea" ? (
                 <textarea rows={2} maxLength={f.max ?? 200} value={String(values[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)} />
               ) : f.kind === "staff" ? (
@@ -262,7 +263,7 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
           </div>
           <details className="timeline">
             <summary>{t("timeline")} ({data.timeline.length})</summary>
-            <ol>{data.timeline.map((e, i) => <li key={i}><Id>{new Date(e.at).toLocaleTimeString("en-GB", { timeZone: "Asia/Riyadh" })}</Id> {e.action}</li>)}</ol>
+            <ol>{data.timeline.map((e, i) => <li key={i}><Id>{venueClock(e.at, "en")}</Id> {e.action}</li>)}</ol>
           </details>
         </>
       )}

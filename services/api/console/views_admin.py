@@ -5,6 +5,8 @@ import csv
 import io
 
 from django.conf import settings
+from django.db.models import Prefetch, Sum
+from django.db.models.functions import Coalesce
 from django.http import Http404, HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -16,9 +18,10 @@ from console.common import IsConsoleStaff, actor_of, domain_response, idempotent
 from console.views import REFUSALS, command_schema
 from core.audit import audit
 from core.views_health import whatsapp_status
-from ops.models import Incident, KeyStation, Role, Staff, Venue
+from ops.models import Incident, KeyOccupancy, Role, Staff, Venue
 from ops.permissions import actor_label, require
 from ops.services import carryover, config, events, incidents, opening, reports, retention, staffdir
+from ops.services.localtime import parse_local_at
 
 READ_REFUSALS = {403: s.ErrorResponse, 404: OpenApiResponse(description="Not found or out of scope")}
 
@@ -171,12 +174,10 @@ class Venues(Command):
     def get(self, request):
         actor = actor_of(request)
         require(actor, Role.MANAGER)
-        rows = []
-        for v in Venue.objects.filter(org_id=actor.org_id).prefetch_related("zones").order_by("name"):
-            hooks = sum(KeyStation.objects.filter(venue=v).values_list("hook_count", flat=True))
-            rows.append({"id": v.id, "name": v.name, "key_hooks": hooks,
-                         "zones": [z.code for z in v.zones.all() if z.active]})
-        return out(s.VenueRow, rows)
+        venues = (Venue.objects.filter(org_id=actor.org_id).prefetch_related("zones")
+                  .annotate(hooks=Coalesce(Sum("key_stations__hook_count"), 0)).order_by("name"))
+        return out(s.VenueRow, [{"id": v.id, "name": v.name, "time_zone": v.timezone, "key_hooks": v.hooks,
+                                 "zones": [z.code for z in v.zones.all() if z.active]} for v in venues])
 
 
 class CreateEvent(Command):
@@ -189,7 +190,8 @@ class CreateEvent(Command):
         venue = Venue.objects.filter(pk=data["venue_id"], org_id=actor.org_id).first()
         if venue is None:
             raise Http404
-        return out(s.IdResponse, {"id": events.create_event(actor, venue, data["name"], data["starts_at"]).id})
+        starts_at = parse_local_at(venue, data["starts_at_local"])
+        return out(s.IdResponse, {"id": events.create_event(actor, venue, data["name"], starts_at).id})
 
 
 class CloseEvent(Command):
@@ -296,9 +298,11 @@ class CarryoverRegister(Command):
         actor = actor_of(request)
         require(actor, Role.MANAGER)
         rows = []
-        for case in carryover.register(actor.org):
+        held = Prefetch("ticket__key_occupancies", queryset=KeyOccupancy.objects.filter(released_at__isnull=True),
+                        to_attr="held_keys")
+        for case in carryover.register(actor.org).prefetch_related(held):
             ticket = case.ticket
-            occ = ticket.key_occupancies.filter(released_at__isnull=True).first()
+            occ = ticket.held_keys[0] if ticket.held_keys else None
             rows.append({"id": case.id, "ticket": _t(ticket), "ticket_id": ticket.id, "event": ticket.event.name,
                          "event_id": ticket.event_id,
                          "status": case.status, "custodian": case.custodian, "plan": case.plan,
@@ -318,7 +322,8 @@ class Config(Command):
 
         actor = actor_of(request)
         require(actor, Role.ADMIN)
-        return out(s.ConfigResponse, {"timings": config.current_timings(actor.org),
+        return out(s.ConfigResponse, {"version": config.get_config(actor.org).version,
+                                      "timings": config.current_timings(actor.org),
                                       "retention_days": config.retention_days(actor.org),
                                       "template_overrides": config.template_overrides(actor.org),
                                       "catalogue": MESSAGES, "retention_preview": retention.preview(actor.org)})
@@ -330,7 +335,8 @@ class ConfigTimings(Command):
     @domain_response
     def post(self, request):
         actor = actor_of(request)
-        config.update_timings(actor, actor.org, validated(s.TimingsRequest, request.data)["timings"])
+        data = validated(s.TimingsRequest, request.data)
+        config.update_timings(actor, actor.org, data["timings"], expected_version=data["version"])
         return out(s.OkResponse, {"ok": True})
 
 
@@ -340,7 +346,8 @@ class ConfigRetention(Command):
     @domain_response
     def post(self, request):
         actor = actor_of(request)
-        config.update_retention(actor, actor.org, validated(s.RetentionRequest, request.data)["retention_days"])
+        data = validated(s.RetentionRequest, request.data)
+        config.update_retention(actor, actor.org, data["retention_days"], expected_version=data["version"])
         return out(s.OkResponse, {"ok": True})
 
 
@@ -350,8 +357,10 @@ class ConfigTemplates(Command):
     @domain_response
     def post(self, request):
         actor = actor_of(request)
-        overrides = validated(s.TemplatesRequest, request.data)["overrides"]
-        config.update_templates(actor, actor.org, {k: dict(v) if v is not None else None for k, v in overrides.items()})
+        data = validated(s.TemplatesRequest, request.data)
+        config.update_templates(actor, actor.org, {k: dict(v) if v is not None else None
+                                                   for k, v in data["overrides"].items()},
+                                expected_version=data["version"])
         return out(s.OkResponse, {"ok": True})
 
 

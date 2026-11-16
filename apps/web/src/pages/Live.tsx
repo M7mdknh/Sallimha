@@ -7,6 +7,7 @@ import { TicketPanel } from "../components/TicketPanel";
 import { navigate } from "../router";
 import { useT } from "../strings";
 import { usePoll } from "../usePoll";
+import { rememberZone, venueClock } from "../venueTime";
 
 const CHECK_FIELDS = [["zones", "zones"], ["key_hooks", "keyHooks"], ["assigned_not_started", "assignedNotStarted"],
   ["carryover_unresolved", "carryoverUnresolved"], ["dead_letters", "deadLetters"]] as const;
@@ -129,8 +130,8 @@ export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number
     );
   }
   const snapshot: LiveSnapshot = data;
-  const time = (iso: string | number) =>
-    new Date(iso).toLocaleTimeString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-GB", { timeZone: "Asia/Riyadh" });
+  rememberZone(snapshot.event.time_zone);
+  const time = (iso: string | number) => venueClock(iso, lang, snapshot.event.time_zone);
 
   return (
     <main className={`page live ${ticketId ? "has-panel" : ""}`}>

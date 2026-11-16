@@ -33,12 +33,20 @@ def retention_days(org) -> dict:
     return {key: int(get_config(org).retention_days.get(key, 0)) for key in RETENTION_KEYS}
 
 
+def _lock_config(org, expected_version):
+    cfg = OperatingConfig.objects.select_for_update(no_key=True).get(pk=get_config(org).pk)
+    if expected_version is not None and cfg.version != expected_version:
+        raise DomainError("stale_settings")
+    cfg.version += 1
+    return cfg
+
+
 def _audit(action, actor, org, before, after):
     audit(action, actor_id=actor.id, actor_label=actor_label(actor), channel="console", entity_type="org",
           entity_id=org.id, summary={"before": before, "after": after})
 
 
-def update_timings(actor, org, changes: dict) -> dict:
+def update_timings(actor, org, changes: dict, expected_version: int | None = None) -> dict:
     require(actor, Role.ADMIN)
     if actor.org_id != org.id:
         raise DomainError("forbidden")
@@ -49,10 +57,10 @@ def update_timings(actor, org, changes: dict) -> dict:
         if not low <= value <= high:
             raise DomainError("invalid_setting")
     with transaction.atomic():
-        cfg = OperatingConfig.objects.select_for_update(no_key=True).get(pk=get_config(org).pk)
+        cfg = _lock_config(org, expected_version)
         before = current_timings(org)
         cfg.timings = {**cfg.timings, **changes}
-        cfg.save(update_fields=["timings", "updated_at"])
+        cfg.save(update_fields=["timings", "version", "updated_at"])
         after = {**before, **changes}
         if after["offer_window_s"] > after["hard_limit_s"]:
             raise DomainError("invalid_setting")
@@ -79,7 +87,7 @@ def _safe_template(template: str) -> bool:
                for _, field, spec, conv in parts)
 
 
-def update_templates(actor, org, overrides: dict) -> dict:
+def update_templates(actor, org, overrides: dict, expected_version: int | None = None) -> dict:
     """Wording only: placeholders must match the catalogue, and buttons keep their actions (AT-47).
     A None value removes that override, restoring the catalogue wording."""
     from messaging.catalogue import MESSAGES
@@ -97,16 +105,16 @@ def update_templates(actor, org, overrides: dict) -> dict:
             if not text.strip() or not _safe_template(text) or _fields(text) != _fields(MESSAGES[key][lang]):
                 raise DomainError("placeholders_mismatch")
     with transaction.atomic():
-        cfg = OperatingConfig.objects.select_for_update(no_key=True).get(pk=get_config(org).pk)
+        cfg = _lock_config(org, expected_version)
         before = {k: cfg.template_overrides.get(k) for k in overrides}
         merged = {**cfg.template_overrides, **overrides}
         cfg.template_overrides = {k: v for k, v in merged.items() if v is not None}
-        cfg.save(update_fields=["template_overrides", "updated_at"])
+        cfg.save(update_fields=["template_overrides", "version", "updated_at"])
         _audit("config.templates", actor, org, before, overrides)
     return cfg.template_overrides
 
 
-def update_retention(actor, org, days: dict) -> dict:
+def update_retention(actor, org, days: dict, expected_version: int | None = None) -> dict:
     require(actor, Role.ADMIN)
     if actor.org_id != org.id:
         raise DomainError("forbidden")
@@ -114,10 +122,10 @@ def update_retention(actor, org, days: dict) -> dict:
         if key not in RETENTION_KEYS or not isinstance(value, int) or isinstance(value, bool) or value < 0:
             raise DomainError("invalid_setting")
     with transaction.atomic():
-        cfg = OperatingConfig.objects.select_for_update(no_key=True).get(pk=get_config(org).pk)
+        cfg = _lock_config(org, expected_version)
         before = retention_days(org)
         cfg.retention_days = {**cfg.retention_days, **days}
-        cfg.save(update_fields=["retention_days", "updated_at"])
+        cfg.save(update_fields=["retention_days", "version", "updated_at"])
         _audit("config.retention", actor, org, before, {**before, **days})
     return retention_days(org)
 

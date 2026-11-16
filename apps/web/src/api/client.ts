@@ -117,12 +117,13 @@ export const api = {
   replay: (id: number, key: string) => call<Schemas["OkResponse"]>("POST", `/api/ops/dead-letters/${id}/replay`, {}, key),
   carryover: () => call<Schemas["CarryoverRow"][]>("GET", "/api/carryover"),
   config: () => call<Schemas["ConfigResponse"]>("GET", "/api/config"),
-  saveTimings: (timings: Record<string, number>, key: string) =>
-    call<Schemas["OkResponse"]>("POST", "/api/config/timings", { timings }, key),
-  saveRetention: (retention_days: Record<string, number>, key: string) =>
-    call<Schemas["OkResponse"]>("POST", "/api/config/retention", { retention_days }, key),
-  saveTemplates: (overrides: Record<string, Schemas["TemplateCopyRequest"] | null>, key: string) =>
-    call<Schemas["OkResponse"]>("POST", "/api/config/templates", { overrides }, key),
+  // Every settings save names the version it was based on; a stale one is refused (409 stale_settings).
+  saveTimings: (timings: Record<string, number>, version: number, key: string) =>
+    call<Schemas["OkResponse"]>("POST", "/api/config/timings", { timings, version }, key),
+  saveRetention: (retention_days: Record<string, number>, version: number, key: string) =>
+    call<Schemas["OkResponse"]>("POST", "/api/config/retention", { retention_days, version }, key),
+  saveTemplates: (overrides: Record<string, Schemas["TemplateCopyRequest"] | null>, version: number, key: string) =>
+    call<Schemas["OkResponse"]>("POST", "/api/config/templates", { overrides, version }, key),
   applyRetention: (key: string) => call<Schemas["RetentionResult"]>("POST", "/api/retention/apply", {}, key),
   whatsapp: () => call<Schemas["WhatsAppIntegration"]>("GET", "/api/integrations/whatsapp"),
   // CSV downloads are plain links (the JSON client cannot read text/csv).

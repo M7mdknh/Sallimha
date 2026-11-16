@@ -84,7 +84,8 @@ def snapshot(event, now) -> dict:
                    for a in EventAssignment.objects.filter(event=event).select_related("staff")
                    if a.staff_id not in on_shift and a.staff.enabled]
     return {
-        "event": {"id": event.id, "name": event.name, "status": event.status, "venue": event.venue.name},
+        "event": {"id": event.id, "name": event.name, "status": event.status, "venue": event.venue.name,
+                  "time_zone": event.venue.timezone},
         "generated_at": now,
         "health": {"worker": worker_status(now), "whatsapp": whatsapp_status()},
         "outage": _outage_brief(event.org),

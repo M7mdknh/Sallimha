@@ -3,7 +3,7 @@ import { Empty, Id, PageData, StaleBanner, StatusPill } from "../components/Stat
 import { navigate } from "../router";
 import { useT, type StringKey } from "../strings";
 import { usePoll } from "../usePoll";
-import { riyadhTime } from "./Incidents";
+import { venueTime } from "../venueTime";
 
 /** Cars and keys kept past their event. Each row opens the ticket panel, where approval and release happen. */
 export function Carryover() {
@@ -27,7 +27,7 @@ export function Carryover() {
                       label={t(`carry_${c.status}` as StringKey)} />
                     <span className="row-meta">{t("location")}: <Id>{c.location || "—"}</Id> · {t("key")}: <Id>{c.hook ?? "—"}</Id></span>
                     <span className="row-meta">{t("custodian")}: {c.custodian}</span>
-                    <span className="row-meta">{t("proposedAt")}: <Id>{riyadhTime(c.proposed_at, lang)}</Id></span>
+                    <span className="row-meta">{t("proposedAt")}: <Id>{venueTime(c.proposed_at, lang)}</Id></span>
                   </button>
                 </li>
               ))}

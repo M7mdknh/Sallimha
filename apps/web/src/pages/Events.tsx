@@ -5,6 +5,7 @@ import { Empty, LoadFailed, SkeletonRows, StatusPill } from "../components/State
 import { navigate } from "../router";
 import { useT } from "../strings";
 import { usePoll } from "../usePoll";
+import { rememberZone } from "../venueTime";
 
 export function Events() {
   const { t, state } = useT();
@@ -12,6 +13,7 @@ export function Events() {
   const open = data?.filter((e) => e.status === "OPEN") ?? [];
 
   useEffect(() => {
+    if (open.length === 1) rememberZone(open[0].time_zone);
     if (open.length === 1) navigate(`/events/${open[0].id}`, true);
   }, [open.length]); // eslint-disable-line react-hooks/exhaustive-deps
 

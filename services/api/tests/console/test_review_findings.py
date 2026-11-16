@@ -47,3 +47,48 @@ def test_login_and_logout_require_csrf(world, path):
     client = APIClient(enforce_csrf_checks=True)
     resp = client.post(path, {"username": "sup", "password": "correct horse battery 9"}, format="json")
     assert resp.status_code == 403
+
+
+def test_second_admin_saving_stale_settings_is_refused_not_silently_overwritten(world):
+    """R12: two admins editing settings — the later save based on an old read must not overwrite the earlier."""
+    from ops.models import Role
+    from tests.factories import make_staff
+
+    first, second = login_as(make_staff(world.org, Role.ADMIN)), login_as(make_staff(world.org, Role.ADMIN))
+    version = first.get("/api/config").json()["version"]
+    assert second.get("/api/config").json()["version"] == version
+    ok = second.post("/api/config/timings", {"timings": {"offer_window_s": 40}, "version": version}, format="json",
+                     HTTP_IDEMPOTENCY_KEY=uuid.uuid4().hex)
+    assert ok.status_code == 200
+    stale = first.post("/api/config/timings", {"timings": {"offer_window_s": 50}, "version": version}, format="json",
+                       HTTP_IDEMPOTENCY_KEY=uuid.uuid4().hex)
+    assert stale.status_code == 409 and stale.json()["code"] == "stale_settings"
+    after = first.get("/api/config").json()
+    assert after["timings"]["offer_window_s"] == 40 and after["version"] == version + 1
+
+
+def _queries(client, url):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    with CaptureQueriesContext(connection) as ctx:
+        assert client.get(url).status_code == 200
+    return len(ctx.captured_queries)
+
+
+def test_venue_and_carryover_lists_do_not_query_per_row(ops):
+    """R14: query counts stay flat as rows grow (they used to add a query per venue / per carryover case)."""
+    from ops.models import KeyStation, Venue
+    from ops.services import carryover
+
+    mgr = login_as(ops.manager)
+    first = park(ops.valets[0], ops.event, hook=11)
+    carryover.propose_unclaimed(ops.supervisor, first, custodian="Security", plan="Overnight")
+    one_venue, one_case = _queries(mgr, "/api/venues"), _queries(mgr, "/api/carryover")
+    for i in range(3):
+        venue = Venue.objects.create(org=ops.org, name=f"Extra {i}")
+        KeyStation.objects.create(venue=venue, name="Board", hook_count=50)
+        ticket = park(ops.valets[0], ops.event, hook=20 + i, phone=f"+96650100{i:04d}")
+        carryover.propose_unclaimed(ops.supervisor, ticket, custodian="Security", plan="Overnight")
+    assert _queries(mgr, "/api/venues") == one_venue
+    assert _queries(mgr, "/api/carryover") == one_case

@@ -3491,6 +3491,8 @@ components:
     ConfigResponse:
       type: object
       properties:
+        version:
+          type: integer
         timings:
           type: object
           additionalProperties:
@@ -3515,6 +3517,7 @@ components:
       - retention_preview
       - template_overrides
       - timings
+      - version
     ConfirmedViaEnum:
       enum:
       - in_person
@@ -3544,12 +3547,14 @@ components:
           type: string
           minLength: 1
           maxLength: 160
-        starts_at:
+        starts_at_local:
           type: string
-          format: date-time
+          minLength: 1
+          description: Venue wall-clock time without an offset, e.g. 2026-12-01T19:00
+          maxLength: 32
       required:
       - name
-      - starts_at
+      - starts_at_local
       - venue_id
     CreateStaffRequestRequest:
       type: object
@@ -3650,10 +3655,13 @@ components:
           $ref: '#/components/schemas/EventStatusEnum'
         venue:
           type: string
+        time_zone:
+          type: string
       required:
       - id
       - name
       - status
+      - time_zone
       - venue
     EventReport:
       type: object
@@ -3710,11 +3718,15 @@ components:
         starts_at:
           type: string
           format: date-time
+        time_zone:
+          type: string
+          description: The venue's IANA time zone; console times are shown in it
       required:
       - id
       - name
       - starts_at
       - status
+      - time_zone
       - venue
     Health:
       type: object
@@ -4409,6 +4421,10 @@ components:
     RetentionRequestRequest:
       type: object
       properties:
+        version:
+          type: integer
+          minimum: 1
+          description: The settings version this change was based on
         retention_days:
           type: object
           additionalProperties:
@@ -4416,6 +4432,7 @@ components:
             minimum: 0
       required:
       - retention_days
+      - version
     RetentionResult:
       type: object
       properties:
@@ -4735,6 +4752,10 @@ components:
     TemplatesRequestRequest:
       type: object
       properties:
+        version:
+          type: integer
+          minimum: 1
+          description: The settings version this change was based on
         overrides:
           type: object
           additionalProperties:
@@ -4744,6 +4765,7 @@ components:
           description: null restores the catalogue wording for that message
       required:
       - overrides
+      - version
     TicketDetail:
       type: object
       properties:
@@ -4908,12 +4930,17 @@ components:
     TimingsRequestRequest:
       type: object
       properties:
+        version:
+          type: integer
+          minimum: 1
+          description: The settings version this change was based on
         timings:
           type: object
           additionalProperties:
             type: integer
       required:
       - timings
+      - version
     TypeEnum:
       enum:
       - INTAKE
@@ -4931,6 +4958,8 @@ components:
           type: integer
         name:
           type: string
+        time_zone:
+          type: string
         zones:
           type: array
           items:
@@ -4941,6 +4970,7 @@ components:
       - id
       - key_hooks
       - name
+      - time_zone
       - zones
     WhatsAppIntegration:
       type: object

@@ -6,7 +6,7 @@ import { Empty, Id, PageData, StaleBanner, StatusPill } from "../components/Stat
 import { useT } from "../strings";
 import { useCommand } from "../useCommand";
 import { usePoll } from "../usePoll";
-import { riyadhTime } from "./Incidents";
+import { venueTime } from "../venueTime";
 
 function Replay({ row, disabled, onDone }: { row: Schemas["DeadLetter"]; disabled: boolean; onDone: () => void }) {
   const { t } = useT();
@@ -57,7 +57,7 @@ export function Operations() {
                     label={r.status === "DEAD" ? t("statusDead") : t("statusUnknown")} />
                   <span className="row-meta">{t("recipient")}: {r.recipient}</span>
                   <span className="row-meta">{t("failure")}: <Id>{r.failure_class || r.last_error || "—"}</Id></span>
-                  <span className="row-meta"><Id>{riyadhTime(r.created_at, lang)}</Id></span>
+                  <span className="row-meta"><Id>{venueTime(r.created_at, lang)}</Id></span>
                   <Replay row={r} disabled={poll.stale} onDone={poll.refresh} />
                 </li>
               ))}

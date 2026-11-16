@@ -96,7 +96,7 @@ def events(request):
     actor = actor_of(request)
     rows = events_for(actor).select_related("venue").order_by("status", "-starts_at")
     return out(s.EventSummary, [{"id": e.id, "name": e.name, "venue": e.venue.name, "status": e.status,
-                                 "starts_at": e.starts_at} for e in rows])
+                                 "starts_at": e.starts_at, "time_zone": e.venue.timezone} for e in rows])
 
 
 @extend_schema(responses={200: s.LiveSnapshot, 404: OpenApiResponse(description="Not found or out of scope")})

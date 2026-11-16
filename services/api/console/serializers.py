@@ -66,6 +66,7 @@ class EventSummary(serializers.Serializer):
     venue = serializers.CharField()
     status = serializers.ChoiceField(choices=EVENT_STATUSES)
     starts_at = serializers.DateTimeField()
+    time_zone = serializers.CharField(help_text="The venue's IANA time zone; console times are shown in it")
 
 
 class EventBrief(serializers.Serializer):
@@ -73,6 +74,7 @@ class EventBrief(serializers.Serializer):
     name = serializers.CharField()
     status = serializers.ChoiceField(choices=EVENT_STATUSES)
     venue = serializers.CharField()
+    time_zone = serializers.CharField()
 
 
 class Health(serializers.Serializer):
@@ -437,6 +439,7 @@ class MfaIssueResponse(serializers.Serializer):
 class VenueRow(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    time_zone = serializers.CharField()
     zones = serializers.ListField(child=serializers.CharField())
     key_hooks = serializers.IntegerField()
 
@@ -444,7 +447,8 @@ class VenueRow(serializers.Serializer):
 class CreateEventRequest(serializers.Serializer):
     venue_id = serializers.IntegerField()
     name = serializers.CharField(max_length=160)
-    starts_at = serializers.DateTimeField()
+    starts_at_local = serializers.CharField(max_length=32,
+                                            help_text="Venue wall-clock time without an offset, e.g. 2026-12-01T19:00")
 
 
 class StageStat(serializers.Serializer):
@@ -540,6 +544,7 @@ class TemplateCopy(serializers.Serializer):
 
 
 class ConfigResponse(serializers.Serializer):
+    version = serializers.IntegerField()
     timings = serializers.DictField(child=serializers.IntegerField())
     retention_days = serializers.DictField(child=serializers.IntegerField())
     template_overrides = serializers.DictField(child=TemplateCopy())
@@ -547,15 +552,19 @@ class ConfigResponse(serializers.Serializer):
     retention_preview = RetentionPreview()
 
 
-class TimingsRequest(serializers.Serializer):
+class SettingsVersion(serializers.Serializer):
+    version = serializers.IntegerField(min_value=1, help_text="The settings version this change was based on")
+
+
+class TimingsRequest(SettingsVersion):
     timings = serializers.DictField(child=serializers.IntegerField())
 
 
-class RetentionRequest(serializers.Serializer):
+class RetentionRequest(SettingsVersion):
     retention_days = serializers.DictField(child=serializers.IntegerField(min_value=0))
 
 
-class TemplatesRequest(serializers.Serializer):
+class TemplatesRequest(SettingsVersion):
     overrides = serializers.DictField(child=TemplateCopy(allow_null=True),
                                       help_text="null restores the catalogue wording for that message")
 

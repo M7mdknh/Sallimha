@@ -65,4 +65,6 @@ class OperatingConfig(models.Model):
     timings = models.JSONField(default=dict)
     retention_days = models.JSONField(default=dict)  # guest_contact | intake_photos | incident_evidence
     template_overrides = models.JSONField(default=dict)  # template key -> {"ar": ..., "en": ...}
+    # Optimistic concurrency: every console save names the version it was based on (stale saves are refused).
+    version = models.PositiveIntegerField(default=1)
     updated_at = models.DateTimeField(auto_now=True)

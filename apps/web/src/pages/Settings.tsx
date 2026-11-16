@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 
-import { api, type Schemas } from "../api/client";
+import { ApiError, api, type Schemas } from "../api/client";
 import { Icon } from "../components/Icon";
 import { PageData, StaleBanner, StatusPill } from "../components/States";
 import { useT, type StringKey } from "../strings";
@@ -9,9 +9,10 @@ import { usePoll } from "../usePoll";
 
 type Config = Schemas["ConfigResponse"];
 
-function NumberGroup({ title, hint, prefix, values, extra, disabled, save, children }: { title: StringKey; hint?: StringKey; prefix: string;
-  values: Record<string, number>; extra?: (key: string) => React.ReactNode; disabled: boolean;
-  save: (values: Record<string, number>, key: string) => Promise<unknown>; children?: React.ReactNode }) {
+function NumberGroup({ title, hint, prefix, values, extra, disabled, save, children }: { title: StringKey;
+  hint?: StringKey; prefix: string; values: Record<string, number>; extra?: (key: string) => React.ReactNode;
+  disabled: boolean; save: (values: Record<string, number>, key: string) => Promise<unknown>;
+  children?: React.ReactNode }) {
   const { t } = useT();
   const [draft, setDraft] = useState<Record<string, string>>(() =>
     Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v)])));
@@ -76,7 +77,9 @@ function ApplyRetention({ disabled, onDone }: { disabled: boolean; onDone: () =>
   );
 }
 
-function Templates({ config, disabled, onDone }: { config: Config; disabled: boolean; onDone: () => void }) {
+function Templates({ config, disabled, guard }: { config: Config; disabled: boolean;
+  guard: <T>(p: Promise<T>) => Promise<T> }) {
+  const version = config.version;
   const { t } = useT();
   const keys = Object.keys(config.catalogue).sort();
   const [selected, setSelected] = useState(keys[0] ?? "");
@@ -95,7 +98,7 @@ function Templates({ config, disabled, onDone }: { config: Config; disabled: boo
       <p className="muted">{t("templatesHint")}</p>
       <form className="form-grid wording" noValidate onSubmit={(e) => {
         e.preventDefault();
-        void run((key) => api.saveTemplates({ [selected]: { ar: draft.ar, en: draft.en } }, key), onDone);
+        void run((key) => guard(api.saveTemplates({ [selected]: { ar: draft.ar, en: draft.en } }, version, key)));
       }}>
         <label className="field span-all"><span>{t("chooseTemplate")}</span>
           <select value={selected} dir="ltr" onChange={(e) => pick(e.target.value)}>
@@ -114,9 +117,7 @@ function Templates({ config, disabled, onDone }: { config: Config; disabled: boo
           <button type="submit" className="btn btn-primary" data-mutation disabled={disabled || busy}>{t("save")}</button>
           {customised ? (
             <button type="button" className="btn btn-quiet" data-mutation disabled={disabled || busy}
-              onClick={() => run((key) => api.saveTemplates({ [selected]: null }, key), () => {
-                setDraft({ ar: config.catalogue[selected].ar, en: config.catalogue[selected].en }); onDone();
-              })}>
+              onClick={() => run((key) => guard(api.saveTemplates({ [selected]: null }, version, key)))}>
               {t("resetWording")}
             </button>
           ) : null}
@@ -127,23 +128,34 @@ function Templates({ config, disabled, onDone }: { config: Config; disabled: boo
 }
 
 export function Settings() {
-  const { t } = useT();
+  const { t, error } = useT();
   const poll = usePoll(api.config, 60_000, []);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  // Page-level outcome: the forms restart from the server's values after every save, so they cannot keep it.
+  const guard = <T,>(p: Promise<T>) => p.then((r) => { setNotice({ ok: true, text: t("saved") }); return r; },
+    (err) => {
+      if (err instanceof ApiError && err.code === "stale_settings") setNotice({ ok: false, text: error("stale_settings") });
+      throw err;
+    }).finally(poll.refresh);
   return (
     <main className="page">
       <h1>{t("settingsTitle")}</h1>
       <StaleBanner show={poll.stale} />
+      {notice ? <p className={notice.ok ? "muted" : "form-error"} role={notice.ok ? "status" : "alert"}>{notice.text}</p> : null}
       <PageData poll={poll}>
         {(c) => (
           <>
-            <NumberGroup title="timings" prefix="timing" values={c.timings} disabled={poll.stale}
-              save={(v, key) => api.saveTimings(v, key).then(poll.refresh)} />
-            <NumberGroup title="retention" hint="retentionHint" prefix="ret" values={c.retention_days} disabled={poll.stale}
+            {/* Keyed by version: after any save (here or by another admin) the forms restart from the server's
+                values, and a save based on an older version is refused by the server (stale_settings). */}
+            <NumberGroup key={`t${c.version}`} title="timings" prefix="timing" values={c.timings} disabled={poll.stale}
+              save={(v, key) => guard(api.saveTimings(v, c.version, key))} />
+            <NumberGroup key={`r${c.version}`} title="retention" hint="retentionHint" prefix="ret" values={c.retention_days}
+              disabled={poll.stale}
               extra={(k) => `${t("eligible")}: ${c.retention_preview[k as keyof typeof c.retention_preview]?.eligible ?? 0}`}
-              save={(v, key) => api.saveRetention(v, key).then(poll.refresh)}>
+              save={(v, key) => guard(api.saveRetention(v, c.version, key))}>
               <ApplyRetention disabled={poll.stale} onDone={poll.refresh} />
             </NumberGroup>
-            <Templates config={c} disabled={poll.stale} onDone={poll.refresh} />
+            <Templates key={`m${c.version}`} config={c} disabled={poll.stale} guard={guard} />
           </>
         )}
       </PageData>
