@@ -42,10 +42,13 @@ class S3Storage:
 
     def __init__(self):
         import boto3
+        from botocore.config import Config
 
         self.bucket = settings.MEDIA_S3_BUCKET
+        style = settings.MEDIA_S3_ADDRESSING_STYLE or ("path" if settings.MEDIA_S3_ENDPOINT_URL else "auto")
         self.client = boto3.client("s3", region_name=settings.MEDIA_S3_REGION or None,
-                                   endpoint_url=settings.MEDIA_S3_ENDPOINT_URL or None)
+                                   endpoint_url=settings.MEDIA_S3_ENDPOINT_URL or None,
+                                   config=Config(s3={"addressing_style": style}))
 
     def put(self, key: str, data: bytes, content_type: str) -> None:
         extra = {"ServerSideEncryption": settings.MEDIA_S3_SSE} if settings.MEDIA_S3_SSE else {}

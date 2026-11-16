@@ -55,3 +55,15 @@ def test_console_streams_s3_media_only_within_scope(s3, world):
     assert s3.head_object(Bucket=BUCKET, Key=item.storage_key)["ContentLength"] == len(JPEG)
     resp = login_as(world.supervisor).get(f"/api/media/{item.id}")
     assert resp.status_code == 200 and b"".join(resp.streaming_content if resp.streaming else [resp.content]) == JPEG
+
+
+def test_custom_s3_endpoints_use_path_style_addressing(settings):
+    """Oracle Object Storage's S3-compatible endpoint (and most non-AWS providers) expect path-style addressing."""
+    settings.MEDIA_STORAGE, settings.MEDIA_S3_BUCKET, settings.MEDIA_S3_REGION = "s3", BUCKET, "me-riyadh-1"
+    settings.MEDIA_S3_ENDPOINT_URL = "https://example-namespace.compat.objectstorage.me-riyadh-1.oraclecloud.com"
+    settings.MEDIA_S3_ADDRESSING_STYLE = "path"
+    media.reset_storage()
+    client = media.storage().client
+    assert client.meta.config.s3["addressing_style"] == "path"
+    assert client.meta.endpoint_url == settings.MEDIA_S3_ENDPOINT_URL
+    media.reset_storage()

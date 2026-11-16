@@ -103,6 +103,8 @@ p { margin: 0; }
 .pill-info { background: var(--sl-tint-info); color: var(--sl-info); }
 .pill-neutral { background: var(--sl-tint-neutral); color: var(--sl-muted); }
 .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Long labels (e.g. alert names) wrap inside list rows instead of pushing the row wider than the screen. */
+.row .pill { white-space: normal; max-width: 100%; }
 
 /* --- rows ------------------------------------------------------------------------------- */
 .rows, .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }

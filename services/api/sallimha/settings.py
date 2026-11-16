@@ -147,6 +147,8 @@ MEDIA_S3_BUCKET = os.environ.get("MEDIA_S3_BUCKET", "")
 MEDIA_S3_REGION = os.environ.get("MEDIA_S3_REGION", "")
 MEDIA_S3_ENDPOINT_URL = os.environ.get("MEDIA_S3_ENDPOINT_URL", "")
 MEDIA_S3_SSE = os.environ.get("MEDIA_S3_SSE", "AES256")
+# path | virtual | auto; defaults to path for custom (non-AWS) endpoints such as Oracle's S3-compatible API.
+MEDIA_S3_ADDRESSING_STYLE = os.environ.get("MEDIA_S3_ADDRESSING_STYLE", "")
 if MEDIA_STORAGE not in {"local", "s3"} or (MEDIA_STORAGE == "s3" and not MEDIA_S3_BUCKET):
     raise ImproperlyConfigured("MEDIA_STORAGE must be local or s3 (with MEDIA_S3_BUCKET)")
 MEDIA_MAX_BYTES = 10 * 1024 * 1024
