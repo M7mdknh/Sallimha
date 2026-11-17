@@ -11,7 +11,7 @@
 1. Open **Operations**. Each row shows the message type, ticket, recipient (staff name or "guest") and the
    failure class.
 2. **Not delivered:** fix the cause first (for example a template not approved, or a number that cannot
-   receive WhatsApp). Then **Send again**. The same message row is re-queued once; a second replay does nothing.
+   receive WhatsApp). Only customers receive messages; staff work in the app. Then **Send again**. The same message row is re-queued once; a second replay does nothing.
 3. **Delivery unknown:** ask the recipient whether it arrived. Only if it did not, choose **Send again**, then
    **Send again anyway**. This may duplicate a message, which is why the worker never does it automatically.
 4. If the message is no longer relevant (the guest already left), leave it and note it in an incident.

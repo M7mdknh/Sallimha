@@ -13,6 +13,6 @@
 | `HASH_KEY` | Same steps with `HASH_KEY` / `HASH_KEY_PREVIOUS`, preferably together with the field key. Keep `HASH_KEY_PREVIOUS` until the events open at rotation time have closed (guests' WhatsApp buttons hash with the old key) | Lookups accept both keys during the overlap; login-throttle counters reset |
 | Staff MFA secrets | Admin uses **Issue two-factor setup** per person | That person's old authenticator stops working |
 
-After any rotation: check `/readyz`, the live view health line and one simulated or test send on staging.
+After any rotation: check `/readyz`, the health line in Operations and one simulated or test send on staging.
 Recovery: an interrupted `rotate_keys --apply` is safe to rerun. To restore a backup taken before a rotation, put
 the key it was written with back into the matching `…_PREVIOUS` variable and run `rotate_keys --apply` (ADR-0009).

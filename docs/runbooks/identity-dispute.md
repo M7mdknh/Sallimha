@@ -1,6 +1,6 @@
 # Identity dispute at handover
 
-**Owner:** business — _to be named_; manager on duty resolves.
+**Owner:** business — _to be named_; admin on duty resolves.
 
 ## Signs
 - "Request from an unbound number", "Collection code locked after wrong attempts", or a person at the stand
@@ -14,7 +14,7 @@
 4. If verified: **Clear hold** with the reason. Once the car is ready at the stand, use **Supervisor-assisted
    handover**, choosing the verification method and writing what was checked. The handover is recorded
    against you. (If the car is still parked, a **Supervisor-assisted request** brings it through the normal queue.)
-5. If not verified: keep the hold, keep the car parked, and call the manager. Do not give the key.
+5. If not verified: keep the hold, keep the car parked, and call the admin on duty. Do not give the key.
 
-## Manager
+## Admin
 - Decides the outcome, records it when resolving the incident, and involves venue security or police when needed.

@@ -1,5 +1,7 @@
 # 04 — WhatsApp contract and content
 
+> **Channels after [ADR-0011](adr/0011-staff-app-and-three-roles.md):** WhatsApp is the customers' channel only (ticket, request, status, code, rating, help). Valet messages, buttons and action tokens below are retired from the pilot (kept in code behind `STAFF_CHANNEL=whatsapp`); the valet's steps are in the staff app. Customer free text is stored and raised to the event team.
+
 ## Channels
 Approved baseline: guests and valets use WhatsApp. Supervisors/managers/admins use the web console. A staff registration app is not silently introduced as a dependency. It may be proposed later with evidence if the WhatsApp intake experience proves too slow.
 

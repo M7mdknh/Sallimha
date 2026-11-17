@@ -1,5 +1,7 @@
 # 02 — Roles, states and durable records
 
+> **Roles after [ADR-0011](adr/0011-staff-app-and-three-roles.md):** VALET, SUPERVISOR, ADMIN. Every capability listed below for Manager, Admin or Super admin belongs to ADMIN (migrated with an audit record per person); nothing a manager could do moved to supervisors. Valets act in the staff app on their own task only. The current permission map is in ADR-0011; states and records are unchanged.
+
 ## Permission model
 All console actions require authenticated staff, role permission and event scope. UI hiding is not authorization. Managers/admins inherit lower-role permissions unless specifically restricted. Valets operate through registered WhatsApp identity; they are not console administrators.
 

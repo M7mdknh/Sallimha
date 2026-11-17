@@ -1,5 +1,7 @@
 # 01 — Final operating approach
 
+> **Superseded in part by [ADR-0011](adr/0011-staff-app-and-three-roles.md) (user mandate, 17 Nov 2026):** customers use WhatsApp; valets and supervisors use the staff web app on phones and tablets; the roles are Valet, Supervisor and Admin. Everything below about valets acting in WhatsApp, or about managers and super admins, reads accordingly; the operating process itself (intake, parking, request, automatic dispatch, verified handover, custody, holds, incidents) is unchanged.
+
 ## Status and intent
 The business workflow below consolidates the five original operating guides, the user's sketch, their clarifications, and the process enhancements they approved. Detailed controls marked **Proposed default** are implementation choices for review, not claims about the old system.
 

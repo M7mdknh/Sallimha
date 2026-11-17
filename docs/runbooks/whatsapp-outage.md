@@ -1,54 +1,57 @@
-# WhatsApp outage
+# Outages: customer WhatsApp, a staff device, the whole system
 
 **Owner:** business — _to be named_; on-call technical — _to be named_.
 
-## Signs
-- Live view header shows WhatsApp other than "running/connected", or the opening check lists WhatsApp.
-- Attention items "Offer not sent yet" or "Repeated unaccepted offers"; guests report no ticket message.
-- Operations fills with "Not delivered" or "Delivery unknown" rows.
+Since ADR-0011 staff work in the web app and only customers use WhatsApp. Three different failures, three procedures.
 
-## Report, then declare
-1. The live view shows WhatsApp as **failing** when messages keep failing. The supervisor uses **Outages → Report a
-   WhatsApp problem** (managers get a critical alert) and tells the team by radio. Every car and key stays with a
-   named person.
-2. A **manager** checks (provider status page, Operations) and uses **Outages → Declare WhatsApp outage** with the
-   reason. Everyone sees a red banner; every open event gets a critical alert. Only a manager ends it.
-3. While declared, the ticket panel offers **relayed** actions. Each asks how you confirmed it (in person / radio):
-   - **Record valet's acceptance (relayed):** the system still chooses the valet ("Offered to: …"); radio that
-     valet, and record their answer. You cannot pick someone else — that would be manual dispatch.
-   - **Record car ready (relayed):** the accepted valet reports the car at the stand. Then use
-     **Supervisor-assisted handover** and record how you verified the guest.
-   - **Record custody received (relayed):** for a custody transfer the receiving valet confirmed in person.
-   - **Record valet's acceptance** also applies to a move (relocation) offer.
-4. New arrivals: **Outages → Record an intake for a valet** (valet, guest phone, plate, zone, spot, hook, how
-   confirmed, reason). The car is recorded as parked by that valet; photos are excepted with your reason; the
-   guest's WhatsApp ticket is queued and goes out when WhatsApp returns; their handover uses supervisor
-   verification.
-5. Guests who cannot request: **Supervisor-assisted request** (unchanged).
-6. When messages flow again: a manager uses **Outages → End outage**. Queued messages go out by themselves; anything no
-   longer true (an expired offer, a code for a car already handed over) is never sent (ADR-0010). Then, in **Operations**, replay
-   messages that still matter; for "Delivery unknown", check with the recipient first.
+## 1. Customer WhatsApp down (the staff app works)
+**Signs:** Operations shows "customer messages are not getting through"; valets' screens say customer messages are
+delayed; customers say they have no ticket or code; Settings → Advanced → Message delivery fills with "not delivered"
+or "delivery unknown".
 
-## Whole system down (console unreachable) — continuity procedure
+1. Staff **keep working in the app** as usual: registering, parking, accepting offers, car ready all work.
+2. The supervisor uses Operations → **Outages → Report** (admins get a critical alert) and tells the team by radio.
+3. An **admin** checks the provider status page and Message delivery, then **Declare** with the reason. Everyone sees
+   the banner. Only an admin ends it.
+4. A customer at the stand without their ticket: open the car (search by plate) → **Assisted request**.
+5. A ready car whose customer has no code: **Assisted handover**, recording how you verified the customer.
+6. **Contact customer** opens the number for a call from your phone if needed (audited; the call is outside Sallimha).
+7. When messages flow again an admin **Ends** the outage. Queued messages go out by themselves; anything no longer true
+   (an expired offer, a code for a car already handed over, a ticket for a delivered car) is never sent (ADR-0010).
+   In Message delivery replay what still matters; for "delivery unknown", check with the customer first.
+
+## 2. One valet's device not working
+**Signs:** the valet tells you; "offer not yet shown on the valet's device" in Problems for that valet.
+
+1. **Team** → the valet → **Device not working**, with the reason (battery, lost phone…). The team row shows
+   "supervisor records for them".
+2. On that valet's ticket the primary action becomes the record you need, each asking how you confirmed it
+   (in person / radio): **Record the valet's acceptance** (the system still chose the valet — never pick someone
+   else), **Record car ready**, **Record custody received**, **Add intake photo**, **Record parked for the valet**.
+3. A new arrival for that valet: Team → **Register a car for a valet whose device is down**. The car is registered in
+   their custody, not parked; add the photos on the ticket (or an intake exception with the reason), then record
+   parked with zone, spot and hook.
+4. Customer handover without the valet's phone: **Assisted handover**.
+5. When the device works again: **Device working again**. The valet carries on in the app from the server's state.
+
+## 3. Whole system down (app unreachable) — continuity procedure
 _The business owner must approve this procedure before launch._ Proposed, paperless:
 1. The supervisor announces "system down" by radio with the time.
 2. Each valet keeps an **offline log on their own phone** (notes app), one line per action:
    `time · ticket number (or plate if new) · action (received / parked / handed over / moved) · zone spot · hook ·
-   who verified the guest and how`.
-3. Nothing is handed over without a supervisor verifying the guest in person (photos/plate/description they can
-   still recall or see on the car, the WhatsApp ticket on the guest's phone).
+   who verified the customer and how`.
+3. Nothing is handed over without a supervisor verifying the customer in person (plate, description, photos they can
+   still see, the WhatsApp ticket on the customer's phone).
 4. Keys stay on the board; a key off the board is always with a named person.
 
-## After the system recovers (manager)
-1. **Outages → Record outage window**: start and end in venue time (Asia/Riyadh for Saudi venues), in the past,
-   at most 24 hours long and within 30 days.
-2. For each car *received* during the window: **Reconcile an intake made during the outage** with the actual
-   received and parked times, the valet, the evidence (the log line) and a reason.
-3. For each car *handed over* during the window: open the ticket (**Find a ticket**) → **Reconcile a handover made
-   during the outage**: actual time, the valet who handed over, the supervisor who verified the guest (someone
-   other than you), method, evidence and reason. The ticket becomes Delivered at the actual time; the request and
-   tasks close and the key hook is released at that time. A safety hold must be cleared first, with its reason.
+### After the system recovers (admin)
+1. Operations → **Outages → Record outage window**: start and end in venue time (Asia/Riyadh for Saudi venues), in the
+   past, at most 24 hours long and within 30 days.
+2. For each car *received* during the window: **Reconcile an intake made during the outage** with the actual received
+   and parked times, the valet, the evidence (the log line) and a reason.
+3. For each car *handed over* during the window: open the ticket → **Reconcile a handover made during the outage**:
+   actual time, the valet who handed over, the supervisor who verified the customer (someone other than you), method,
+   evidence and reason. A safety hold must be cleared first, with its reason.
 4. The system refuses conflicts: times outside the window or before parking, a second reconciliation, or a ticket
-   already delivered. Raise an incident only for genuine problems (damage, disputes) — never to stand in for the
-   delivery record.
-5. Check the opening check and **Operations** before resuming normal work.
+   already delivered. Raise an incident only for genuine problems — never to stand in for the delivery record.
+5. Check the readiness check and Message delivery before resuming normal work.

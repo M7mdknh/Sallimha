@@ -1,120 +1,99 @@
 # Sallimha | سلّمها
 
-WhatsApp-first valet operations: valets work entirely in WhatsApp; supervisors and management use a bilingual
-(Arabic RTL / English LTR) web console for live monitoring, shift operations and exception handling.
+Valet operations for a small team. Customers use WhatsApp only (ticket, request button, status, collection code,
+rating, help). Valets and supervisors use a bilingual (Arabic RTL / English LTR) web app on phones and tablets;
+admins also use it for the dashboard, team and settings (ADR-0011).
 
-**Status (branch `build/phase-0-2`):** Phases 0–2 built and tested locally. Nothing is deployed. All WhatsApp
-behaviour runs through a **simulated** transport and simulator page; no real WhatsApp account has been
-connected. Evidence: [docs/evidence/gate-2.md](docs/evidence/gate-2.md), [docs/evidence/gate-3.md](docs/evidence/gate-3.md).
-Staging inputs: [docs/staging-inputs.md](docs/staging-inputs.md).
+**Status (branch `build/phase-0-2`):** built and tested locally. Nothing is deployed. All WhatsApp behaviour runs
+through a **simulated** transport and a development simulator; no real WhatsApp account has been connected.
+Evidence: [docs/evidence/](docs/evidence/). Staging inputs: [docs/staging-inputs.md](docs/staging-inputs.md).
 Pages, roles and flows at a glance: [docs/SYSTEM_OVERVIEW.md](docs/SYSTEM_OVERVIEW.md).
 
 ## Local demo
 
 ### Prerequisites
 Docker (for PostgreSQL), [uv](https://docs.astral.sh/uv/) (installs Python 3.14 and the backend), Node.js 24,
-`curl` and `make`. Free local ports: 55432 (PostgreSQL), 8100 (API), 5180 (console).
+`curl` and `make`. Free local ports: 55432 (PostgreSQL), 8100 (API), 5180 (app).
 
 ### Start
 ```bash
-make demo
-```
-This starts PostgreSQL in Docker, installs dependencies, migrates, seeds **synthetic** data, runs the API and
-the worker, builds the console and serves it at **http://127.0.0.1:5180**. `make demo` opens mid-event (tickets
-being received, parked and retrieved, with alerts). For the walkthrough below, start from an empty event:
-```bash
 make demo-clean
 ```
-Stop with Ctrl+C, then `make stop` to stop PostgreSQL. Each start reseeds the demo database.
+This starts PostgreSQL in Docker, installs dependencies, migrates, seeds **synthetic** data (one open operation,
+three valets on shift), runs the API and the worker, builds the app and serves it at **http://127.0.0.1:5180**.
+`make demo` instead opens mid-event (cars parked, a retrieval offered, alerts). Stop with Ctrl+C, then `make stop`
+to stop PostgreSQL. Each start reseeds the demo database.
 
 ### Accounts (synthetic, local-only)
-| Username | Role | Second factor |
+| Sign in with | Role | Second factor |
 |---|---|---|
+| `admin` | Admin | `make demo-code` prints the current code |
 | `supervisor` | Supervisor | — |
-| `manager` | Manager | `make demo-code WHO=manager` |
-| `admin` | Admin | `make demo-code WHO=admin` |
-| `owner` | Super admin | `make demo-code WHO=owner` |
+| `0550000101` (ماجد), `0550000102` (سارة), `0550000103` (فهد) | Valet | — |
 
 Passwords are in `DEMO_PASSWORDS` in [services/api/ops/management/commands/seed_demo.py](services/api/ops/management/commands/seed_demo.py).
-They exist only in local/test databases; the settings refuse the simulator outside local/test. Valets have no
-console account: in the demo they are the simulated phones +966550000101 (ماجد), +966550000102 (سارة) and
-+966550000103 (فهد).
+They exist only in local/test databases. Real people never receive a password: an admin adds them and gives them a
+one-time setup code (Team → person → **رمز الإعداد**), and they choose their own password at **أول دخول أو نسيت كلمة
+المرور؟** (First time, or forgot your password?) on the sign-in page.
+
+Use a phone-sized window (or your phone on the same network) for valets, and a second browser or private window for
+the supervisor; each person needs their own session.
 
 ### Walkthrough: registration to verified delivery
-The console opens in Arabic; **English** in the top bar switches to English. Labels below are Arabic (English).
-1. Sign in as `supervisor`. The live view shows *يحتاج انتباهك* (Needs your attention), the open requests and the
-   team with three valets on shift. The header shows *واتساب: محاكاة* (WhatsApp: simulated).
-2. Open **المحاكي** (Simulator). The banner states that no message reaches a real phone. Choose ماجد's phone
-   (+966550000101) and send `مركبة جديدة`.
-3. Send the guest number `0501234567`, tap **تأكيد الرقم**, then **نعم، استلمها** once the guest confirms in
-   person that the ticket arrived (provider delivery status alone is never enough).
-4. Send the plate and description, e.g. `ABC 1234 كامري بيضاء`, then press **صورة** (Photo) four times.
-5. Tap **بدء الركن** (Start parking), send the location `A 12`, then the key hook `15`. The car is parked.
-6. Open the guest phone (+966501234567) and tap **اطلب سيارتي** (Request my car).
-7. Back in **التشغيل المباشر** (Live operations) the request appears with its wait time and the valet it was
-   offered to. In that valet's simulator thread tap **قبول** (Accept), then **السيارة جاهزة** (Car ready).
-8. The guest thread now shows a six-digit collection code. In the valet thread, type that code (the guest shows
-   it at the stand), then tap **تم التسليم** (Delivered). The live counter *سلّمت* (Delivered) increases.
+The app opens in Arabic; **English** switches language (valets: menu at the top). Labels are Arabic (English).
+1. **Valet** — sign in as ماجد (`0550000101`). **مهامي** (My work) shows no task and the status *متاح* (Available).
+2. Tap **تسجيل سيارة** (Register car). Enter the customer's number `0501234567` and `ABC 1234 كامري بيضاء`, then
+   **التالي** (Next). Check the number with the customer and tap **إرسال التذكرة** (Send ticket): the customer's
+   WhatsApp ticket is queued at once.
+3. **التقاط صورة** (Take photo) four times (front, back, both sides). Answer **هل وصلت التذكرة؟** (Did the ticket
+   arrive?), tap **بدء الركن** (Start parking), then choose zone **A**, spot `12`, key hook `15` and **تم الركن**
+   (Parked).
+4. **Customer** — in another window sign in as `supervisor` and open http://127.0.0.1:5180/dev/simulator (a
+   development tool that stands in for the customer's phone). Open +966501234567 and tap **اطلب سيارتي** (Request my car).
+5. **Valet** — My work shows **طلب إحضار** (Retrieval request) with a countdown. **قبول** (Accept), bring the car,
+   **السيارة جاهزة** (Car ready).
+6. **Customer** — the simulator thread shows a six-digit collection code. **Valet** — enter it and **تحقق**
+   (Verify), hand over the car, **تم التسليم** (Delivered). The customer receives the rating buttons.
+7. **Supervisor** — **التشغيل** (Operations) shows problems first, then cars waiting / on the way / ready with their
+   waiting time, and a search. **الفريق** (Team) shows who is on shift, busy or on a break.
 
-### Walkthrough: exception handling
-1. As `supervisor`, register a second car with فهد (+966550000103) as above (plate `PLT 7788`, location `B 7`,
-   hook `77`), without requesting it.
-2. In the live view use **البحث عن تذكرة** (Find a ticket) with `PLT` and open the ticket.
-3. **إيقاف سلامة** (Safety hold) with a reason: retrieval and handover are blocked and the hold shows on the
-   ticket. **رفع الإيقاف** (Clear hold) with a reason releases it.
-4. **فتح بلاغ** (Open incident), category *ضرر* (Damage). Follow the link to **البلاغات** (Incidents) and add a
-   note. Supervisors cannot resolve.
-5. **اقتراح غير مُستلمة** (Propose unclaimed) with a custodian and plan.
-6. Sign out, sign in as `manager` (enter the code from `make demo-code WHO=manager`). In **البلاغات** (Incidents)
-   resolve the incident with an outcome. In **المركبات المتبقية** (Carryover) open the proposed car and choose
-   **اعتماد غير مُستلمة** (Approve unclaimed): the key stays on its hook. **تحرير المفتاح والمركبة** (Release key
-   and car) later records how it left and frees the hook.
-7. Also as manager: **المناسبات** (Events) to create or close an event and open its report and CSV export
-   (no phone numbers); **الموظفون** (Staff) for the directory and role grants.
-8. As `admin`: **الإعدادات** (Settings) for timings, retention (zero = never delete) and message wording;
-   **التشغيل الفني** (Operations) for messages needing attention. As `owner`: **التكاملات** (Integrations) shows
-   readiness flags only — credentials are never shown or entered in the console.
+### Walkthrough: exceptions (supervisor)
+Open a car from Operations. The detail shows one primary action and the rest under **إجراءات أخرى** (More actions):
+safety hold and clear, incident, assisted request and assisted handover, withdraw, custody transfer, intake
+transfer, phone correction, relocation (**نقل المركبة**: the valet accepts and records the new place in their app),
+cancel before parking, propose unclaimed. **تواصل مع العميل** (Contact customer) opens the customer's number for a call
+or WhatsApp from your own phone; that conversation happens outside Sallimha and opening the number is audited. If a
+customer writes on WhatsApp, the message is kept on the ticket and **عميل يطلب المساعدة** appears in Problems.
 
-### Walkthrough: moving a car (relocation)
-New valets added in **الموظفون** (Staff) are put on tonight's team from the live view: **إضافة فاليه إلى فريق الليلة**
-(Add a valet to tonight's team) starts their shift.
+**A valet's phone stops working:** Team → that valet → **جهازه لا يعمل** (Device not working) with a reason. You can then
+record their acceptance, car ready and custody receipt on the ticket, or register and park a car for them; each
+record names the valet, how you confirmed it and you. **عاد جهازه للعمل** ends it.
 
-1. As `supervisor`, find a parked car and choose **نقل المركبة** (Relocate car), pick an available valet and a
-   reason. The ticket shows *نقل بانتظار القبول* (Move awaiting acceptance); its location does not change.
-2. In the simulator, open that valet's phone, tap **قبول** (Accept), then **تم النقل** (Moved), send the new
-   location (e.g. `C 3`) and the key hook. The console now shows the new location and hook; the valet is recorded
-   as the mover.
+**Customer WhatsApp down:** in the simulator press **محاكاة انقطاع واتساب**. Staff keep working in the app; Operations
+and the valets' screens say customer messages are not arriving. Use **طلب إحضار بمساعدة المشرف** for a customer at
+the stand and **تسليم بمساعدة المشرف** to hand over without a code. When it ends, queued messages that are still true
+are delivered; nothing stale (an expired offer, a code for a car already handed over) is sent. Admins declare and end
+the outage in Operations → **الأعطال** (Outages); supervisors report it.
 
-### Walkthrough: WhatsApp outage and recovery
-This uses a real (simulated) provider failure: while it lasts, nothing is sent or received.
-1. As `supervisor`, in **المحاكي** (Simulator) press **محاكاة انقطاع واتساب** (Simulate WhatsApp outage). Messages from
-   the simulated phones are now refused, and within a minute the live view shows *واتساب: متعطل* (WhatsApp: failing).
-2. Request a parked car with **طلب إحضار بمساعدة المشرف**: the dispatcher still chooses a valet, but the offer cannot
-   reach them; the ticket shows *العرض لدى* (Offered to).
-3. **الأعطال** (Outages) → **الإبلاغ عن مشكلة واتساب** (Report a WhatsApp problem). Then, as `manager` (a second
-   browser or private window), **الأعطال** → **إعلان عطل واتساب** (Declare WhatsApp outage). Supervisors cannot declare.
-4. As `supervisor`, on the ticket: **تسجيل قبول الموظف (مُرحَّل)** for the offered valet, **تسجيل جاهزية السيارة
-   (مُرحَّل)**, then **تسليم بمساعدة المشرف**.
-5. A new arrival: **الأعطال** → **استلام مركبة نيابة عن موظف** (valet, guest phone, plate). The car is registered in the
-   valet's custody, *not parked*. On its ticket add a photo with **إضافة صورة استلام (مُرحَّل)** (or record a photo
-   exception), then **تأكيد الركن (مُرحَّل)** with the responsible valet, zone, spot and key hook.
-6. As `manager`, **إنهاء العطل** (End outage); in the simulator press **إنهاء الانقطاع المحاكى**. Queued messages arrive
-   (the new guest receives their ticket); messages no longer true are never sent (no offer that expired, no collection
-   code for the car already handed over).
-7. Optional: as `manager`, record a past whole-system outage in **الأعطال** (venue time), reconcile an intake made
-   during it, then **تسوية تسليم تم أثناء التوقف** on that ticket with the actual time, the delivering valet, a
-   different person as verifier, the evidence and a reason.
+### Walkthrough: admin
+Sign in as `admin` with the code from `make demo-code`.
+- **لوحة المتابعة** (Dashboard): parked cars, waiting and delayed requests, deliveries, request-to-ready time (defined
+  on the screen), unresolved problems and the team. **التقرير الكامل والتصدير** opens the full report and CSV exports.
+- **الفريق** (Team): add a valet or supervisor (name, mobile, role), give them their one-time setup code, put them on
+  the operation's team, change role, deactivate or reactivate; admins also get second-factor setup.
+- **الإعدادات** (Settings): the operation and venue, timings and wording, retention; under **متقدم** (Advanced):
+  message delivery (dead letters and replay), WhatsApp status and the simulator (development builds only).
+- Operations → **الأعطال**: declare or end a customer WhatsApp outage; after a whole-system outage record its window
+  and reconcile intakes and handovers made during it. Carryover approvals and incident resolution are admin-only.
 
-Other exceptions available on a ticket when its state allows: cancel before parking, withdraw a request (with or
-without custody resolution), custody transfer, intake transfer, phone correction, supervisor-assisted request and
-handover, and relocation. Runbooks: [docs/runbooks/](docs/runbooks/README.md).
+Runbooks: [docs/runbooks/](docs/runbooks/README.md).
 
 ## Development
 | Command | What it does |
 |---|---|
 | `make test` | Backend suite (pytest against real PostgreSQL) |
 | `make lint` | Ruff and TypeScript type check |
-| `make e2e` | Playwright suite (desktop and 360 px mobile); set `PW_CHANNEL=chrome` to use an installed Chrome |
+| `make e2e` | Playwright suite (valet phone, supervisor and admin; phone and tablet screenshots in two languages); set `PW_CHANNEL=chrome` to use an installed Chrome |
 | `make contract` | Regenerate `contracts/openapi.yaml` (fails on any schema warning) and the console's TypeScript types |
 | `docker build -t sallimha:local . && scripts/smoke-image.sh` | Build the deployable image and run it with staging settings and placeholder secrets (needs `make db` running) |
 | `scripts/rehearse-restore.sh` | Backup and restore rehearsal on the local database, synthetic data (needs `make db` running) |

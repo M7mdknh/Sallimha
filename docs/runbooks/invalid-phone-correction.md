@@ -17,4 +17,4 @@
 ## Notes
 - A request arriving from an unbound number raises "Request from an unbound number". Treat it as a possible
   identity issue ([identity-dispute.md](identity-dispute.md)), not as a phone correction.
-- The phone is stored encrypted and shown masked; exports to managers never include it.
+- The phone is stored encrypted and shown masked; only the admin export includes it, and it is audited.

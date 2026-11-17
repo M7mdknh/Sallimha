@@ -1,5 +1,7 @@
 # 03 — Dispatch and reliability contract
 
+> **After [ADR-0011](adr/0011-staff-app-and-three-roles.md):** an offer's response window starts when the valet's app first shows it (previously: when WhatsApp accepted the message); the hard limit from reservation is unchanged. Relayed actions require the valet's device to be marked as not working, not a WhatsApp outage.
+
 These are proposed engineering rules implementing the approved automatic-assignment process. They must be tested against a real transactional database.
 
 ## Queue and candidate selection

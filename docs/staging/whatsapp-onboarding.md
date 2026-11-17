@@ -15,8 +15,8 @@ chat, tickets or this repository.
 | A5 | App secret (App settings → Basic) → `WHATSAPP_APP_SECRET`. A random verify token chosen by the owner → `WHATSAPP_VERIFY_TOKEN` | Owner | Both in the secret store |
 | A6 | **Webhook:** callback URL `https://<staging-host>/webhooks/whatsapp`, the verify token, subscribe the app to the WABA and to the **`messages`** field (delivers messages and statuses). Meta's GET verification must succeed; our server checks `X-Hub-Signature-256` on every POST | Me, once staging runs | `deploy_check` shows WhatsApp PASS; signed test webhook accepted, unsigned refused |
 | A7 | **Templates** (list in section C): submit Arabic and English versions, category **Utility**, with quick-reply buttons where listed. The code message (`guest_ready`) may be categorised as authentication by Meta — verify | Me drafts, owner submits | All approved |
-| A8 | **Test phones:** 3 valets and 3 guests — synthetic people, real handsets. Valet numbers are added as staff in the console; with Meta's test number every recipient must be on the allow-list in API Setup | Owner provides handsets | Numbers registered |
-| A9 | **Real journey on staging** (Gate 4): intake → ticket → guest confirms → parking → request → offer → accept → ready → code → verified handover → rating; plus a withdrawal, a phone correction, an outage drill and recovery. Record each result as PASS only when observed on real phones | Me with owner's testers | Evidence in docs/evidence |
+| A8 | **Test phones:** 3 customer handsets (synthetic people, real phones) and 3 staff phones or tablets for the web app. With Meta's test number every customer number must be on the allow-list in API Setup | Owner provides handsets | Numbers registered |
+| A9 | **Real journey on staging** (Gate 4): valet app intake → customer's WhatsApp ticket → parking → request → offer in the valet app → accept → ready → code → verified handover → rating; plus customer help, a withdrawal, a phone correction, a customer-WhatsApp outage drill and recovery. Record each result as PASS only when observed on real phones | Me with owner's testers | Evidence in docs/evidence |
 
 Limits that apply while testing: a new, unverified portfolio may start **250** business-initiated messages per
 24 hours (shared by all its numbers) and register 2 numbers.
@@ -31,9 +31,11 @@ Limits that apply while testing: a new, unverified portfolio may start **250** b
 | B5 | Quality rating and messaging-limit monitoring (Meta Business Manager) | Add to the on-call checklist |
 | B6 | Privacy policy URL and business profile (Arabic/English), opt-in recorded at intake (already implemented) | Messaging policy |
 
-## C. Template inventory (sent when the recipient has not written in the last 24 hours)
+## C. Template inventory (customers only; sent when the customer has not written in the last 24 hours)
 The app sends a free-form message when the 24-hour window is open and otherwise the approved template of the same
-name (dots become underscores: `guest.ticket` → `guest_ticket`). Each needs Arabic **and** English versions.
+name (dots become underscores: `guest.ticket` → `guest_ticket`). Each needs Arabic **and** English versions. Staff
+work in the web app (ADR-0011), so no staff templates are needed. A customer's free-text message is answered with
+`guest.help_received` inside the 24-hour window that their message opened (no template needed).
 
 | Template | Recipient | Variables | Buttons |
 |---|---|---|---|
@@ -44,14 +46,6 @@ name (dots become underscores: `guest.ticket` → `guest_ticket`). Each needs Ar
 | `guest_delivered` | Guest | — | Excellent / Okay / Poor |
 | `guest_withdrawn` | Guest | ticket | — |
 | `guest_cancelled` | Guest | ticket | — |
-| `valet_offer` | Valet | ticket, vehicle, location, hook, expires | Accept / Decline |
-| `valet_relocation_offer` | Valet | ticket, vehicle, location, hook, reason, expires | Accept / Decline |
-| `valet_relocation_cancelled` | Valet | ticket | — |
-| `valet_custody_assigned` | Valet | ticket, vehicle_location, key_location | Custody received |
-| `valet_custody_released` | Valet | ticket | — |
-| `valet_shift_started` | Valet | event | — |
-| `valet_praise` | Valet | ticket | — |
-| `valet_cancelled` | Valet | ticket | — |
 
 Staging checks for templates: variable order or names must match what the app sends (the request builder sends
 body parameters in the order listed); a button tap on a template must open the 24-hour window (docs/11 item 5).

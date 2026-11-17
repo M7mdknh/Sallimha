@@ -1,5 +1,7 @@
 # ADR-0008 — Outage relay and reconciliation
 
+> **Amended by [ADR-0011](0011-staff-app-and-three-roles.md):** relayed actions are now allowed for a valet whose device a supervisor marked as not working (staff connectivity loss), not because customer WhatsApp is down. Declaring and ending a customer WhatsApp outage, recording a system outage and reconciling are ADMIN actions (previously manager and above). Reconciliation rules are unchanged.
+
 - Status: **Accepted 2026-11-16** (user mandate 2026-11-16 item 2; resolves the open item in the outage runbook).
 - Requirement basis: docs/03 ("WhatsApp unavailable: keep state, show outage, queue allowed messages;
   supervisor-assisted operations with explicit identity verification"; "During a total service outage, staff use

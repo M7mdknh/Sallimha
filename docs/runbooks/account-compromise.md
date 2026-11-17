@@ -1,22 +1,23 @@
 # Account compromise
 
-**Owner:** on-call technical — _to be named_; super admin.
+**Owner:** on-call technical — _to be named_; admin.
 
-## Console staff account
-1. **Staff** page: **Deactivate** the account with the reason. All its sessions end immediately (the session
+## Any staff account (valet, supervisor, admin)
+1. **Team** page: **Deactivate** the account with the reason. All its sessions end immediately (the session
    epoch changes), and it can no longer sign in.
 2. If the person still holds custody of a car or key, the system raises a custody alert: resolve it with
    [stuck-accepted-task.md](stuck-accepted-task.md) steps.
-3. Engineer: reset the password on the server — `uv run python manage.py changepassword <username>` — and give
-   the new password to the person out of band.
-4. Manager and above: an admin uses **Issue two-factor setup** for that person. The old authenticator stops
-   working; the new setup link is shown once and must be delivered out of band.
-5. Reactivate only after the person has a new password and a new second factor.
+3. When it is safe: **Reactivate**, then **Setup code** and give the code to the person directly (never by message).
+   They choose a new password with it; every other session of theirs ends. Nobody else ever knows the password.
+4. Admins: another admin uses **Issue two-factor setup** for that person. The old authenticator stops working; the
+   new setup link is shown once and must be delivered out of band.
+5. An admin account is usable again only after both a new password and a new second factor.
 6. Review the audit log for that account's actions in the affected window *(provider log access)*.
 
-## Valet (WhatsApp)
-- A valet works from their registered number. If the phone is lost or taken: deactivate the staff record, end
-  their shift once custody is resolved, and create a new record when they have a new number.
+## Lost or stolen valet phone
+- The app on that phone is signed in. Deactivate the person at once (all sessions end), mark their device as not
+  working on the Team page so a supervisor can record their actions, and resolve any custody they hold. Reactivate
+  and issue a setup code when they have a phone again.
 
 ## Login abuse
 - Repeated failures are throttled per account and network without locking the real user out; second-factor

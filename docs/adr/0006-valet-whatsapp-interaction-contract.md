@@ -1,5 +1,7 @@
 # ADR-0006 — Valet WhatsApp interaction contract
 
+> **Superseded for the pilot by [ADR-0011](0011-staff-app-and-three-roles.md) (17 Nov 2026):** valets work in the staff app. This contract remains in code behind `STAFF_CHANNEL=whatsapp` and in its tests, as the record of the retired channel.
+
 - Status: **Accepted 2026-11-15** insofar as it implements the agreed workflow (user decision 3)
 - Builds on: docs/01 §1–§6; docs/02; docs/03; docs/04 intake table; ADR-0005; `11_WhatsApp_Platform_Verification.md`
 

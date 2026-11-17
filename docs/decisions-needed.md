@@ -1,4 +1,4 @@
-# Decisions needed from the owner (2026-11-16)
+# Decisions needed from the owner (2026-11-16, updated 2026-11-17 for ADR-0011)
 
 Each item blocks staging (S), production (P) or only fine-tunes behaviour (T). Nothing here needs a secret value in
 chat; secrets go straight into the hosting provider's secret store.
@@ -19,16 +19,26 @@ chat; secrets go straight into the hosting provider's secret store.
 | W1 | Meta Business portfolio and app with WhatsApp; WhatsApp Business Account (verification needed for production, not for testing) | S | docs/staging/whatsapp-onboarding.md A1–A2, B1 |
 | W2 | Staging sender: Meta's test number (allow-listed recipients only) or a dedicated staging number; later the production number | S | Recommended: dedicated staging number for the real journey |
 | W3 | Display name and business profile (Arabic/English) | S | Shown to guests |
-| W4 | Approval of utility templates (AR + EN) for messages sent outside the 24-hour window, incl. the new move messages (relocation offer/accepted/done/cancelled) | S | List in docs/04 and ADR-0007 |
-| W5 | Test handsets: at least 3 valets and 3 guests (synthetic people, real phones) | S | For the Gate 4 rehearsal |
+| W4 | Approval of utility templates (AR + EN) for **customer** messages sent outside the 24-hour window (7 templates; staff templates are no longer needed after ADR-0011) | S | docs/staging/whatsapp-onboarding.md section C |
+| W5 | Test devices: 3 customer handsets (real WhatsApp) and 3 staff phones or tablets for the web app | S | For the Gate 4 rehearsal |
 
 ## Operations
 | # | Decision | Blocks | Notes |
 |---|---|---|---|
 | O1 | Named business owner and on-call technical owner for each of the 13 runbooks | P | docs/runbooks/README.md |
 | O2 | Approve the paperless continuity procedure for a whole-system outage (offline log on staff phones, supervisor verification before any handover) | P | docs/runbooks/whatsapp-outage.md; ADR-0008 |
-| O3 | ~~Who may declare a WhatsApp outage~~ — **decided 2026-11-16: managers and above declare and end; supervisors report** | — | ADR-0008 amendment |
+| O3 | ~~Who may declare a WhatsApp outage~~ — **decided: admins declare and end; supervisors report** (managers became admins, ADR-0011) | — | ADR-0008 amendment |
 | O4 | Whether reconciliation after a system outage must include a photo (currently text evidence + offline log reference, verified by a second person) | T | ADR-0008 |
 | O5 | Retention periods for guest phones, intake photos and resolved-incident evidence (currently 0 = never delete) | P | Settings → Data retention |
 | O6 | Time zone per venue (all current venues Asia/Riyadh) | T | Venue setting; the console enters and shows times in it |
 | O7 | Maximum length of a recordable system outage (24 h) and how far back reconciliation is allowed (30 days) | T | ADR-0008 |
+
+## Staff app pilot (ADR-0011)
+| # | Decision | Blocks | Notes |
+|---|---|---|---|
+| A1 | Confirm that every former manager should become an admin (the migration grants them settings, retention, message replay, the customer-number export and WhatsApp status) | P | Review the admin list after the migration; demote anyone who should be a supervisor |
+| A2 | Valet password minimum (proposed 8 characters; supervisors and admins keep 12) | T | Typed on a phone at the start of a shift; sign-in is throttled |
+| A3 | How setup codes reach people (in person by the admin is the default; never sent by message) | P | Codes last 72 hours, five attempts |
+| A4 | Supervisors who also park cars need a separate valet account in the pilot | T | One account per role keeps valet and console permissions apart |
+| A5 | Staff devices: personal phones or venue phones/tablets; whether the app stays open on screen during a shift | P | Offers are shown in the app; a closed or locked phone lets the offer lapse to the next valet after 60 s |
+| A6 | Optional alert sound is off by default; push notifications are not in the pilot | T | The task card is always the way an assignment is discovered |

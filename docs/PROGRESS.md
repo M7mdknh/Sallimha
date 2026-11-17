@@ -2,6 +2,22 @@
 
 Newest first. Status vocabulary: PASS / PASS (SIMULATED) / FAIL / BLOCKED / NOT RUN. Results obtained with the local fake WhatsApp transport are **SIMULATED** and are not real integration evidence.
 
+## 2026-11-17 — Staff app pilot redesign (ADR-0011)
+Branch `build/phase-0-2`. Evidence: [evidence/staff-app-2026-11-17.md](evidence/staff-app-2026-11-17.md). Nothing
+deployed; WhatsApp still SIMULATED.
+
+- Customers use WhatsApp only; valets and supervisors use a phone/tablet web app. No staff message is queued and no
+  staff token issued (`STAFF_CHANNEL=app`); the retired valet conversation stays behind the flag with its tests.
+- Valet app on the existing services: My work (offer with countdown, ready, code, delivered, moves, custody) and a
+  six-step Register car flow. Offers start their window when the app shows them; the hard limit still releases them.
+- Roles consolidated to VALET, SUPERVISOR, ADMIN by a reversible data migration with an audit record per person.
+  Admin onboarding with one-time setup codes; sign-in by mobile number.
+- Operations (problems first; waiting / on the way / ready; ticket detail with one primary action), Team (device not
+  working, register for that valet; people for admins), Dashboard, Settings with an Advanced section.
+- Customer help messages stored and raised to the team; Contact customer reveals the number, audited.
+- Tests: backend 503 passed (82 cover the retired channel), Playwright 38 passed / 8 skipped (desktop-only), with 48
+  phone/tablet screenshots in Arabic and English.
+
 ## 2026-11-16 — Review and staging preparation
 Branch `build/phase-0-2`. Findings and fixes: [evidence/review-2026-11-16.md](evidence/review-2026-11-16.md).
 Decisions needed: [decisions-needed.md](decisions-needed.md). Nothing deployed; WhatsApp still SIMULATED.
