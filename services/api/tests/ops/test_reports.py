@@ -84,7 +84,7 @@ def test_guest_phone_export_admin_only_and_audited(ops):
     """AT-20 / AT-48."""
     _delivered(ops, "+966501000016", 300, 200, 100, 50)
     with pytest.raises(DomainError):
-        reports.guest_phone_rows(ops.manager, ops.event)
+        reports.guest_phone_rows(ops.supervisor, ops.event)
     rows = reports.guest_phone_rows(ops.admin, ops.event)
     assert rows[0]["phone"] == "+966501000016"
     entry = AuditEvent.objects.get(action="export.guest_phones")

@@ -1,5 +1,7 @@
 """Whole journey through simulated WhatsApp webhooks and the real worker pass (SIMULATED)."""
 
+import pytest
+
 from core import worker
 from messaging.models import SimulatedMessage
 from ops.models import Rating, Ticket
@@ -19,6 +21,7 @@ def _code_from_simulated(ticket):
     raise AssertionError("no code delivered")
 
 
+@pytest.mark.whatsapp_staff
 def test_registration_to_rating_end_to_end(world):
     valet = world.valets[0]
     open_shift(world.event, valet, world.supervisor)

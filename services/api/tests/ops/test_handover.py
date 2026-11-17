@@ -47,6 +47,7 @@ def _code(ticket):
     return next(tok for tok in body.replace(".", " ").split() if tok.isdigit() and len(tok) == 6)
 
 
+@pytest.mark.whatsapp_staff
 def test_ready_code_handover_closes_once_releases_all(ops):
     """AT-15."""
     ticket, req, task = ready(ops)
@@ -70,6 +71,7 @@ def test_ready_code_handover_closes_once_releases_all(ops):
     assert is_available(task.assignee, ops.event)
 
 
+@pytest.mark.whatsapp_staff
 def test_wrong_code_five_attempts_then_review(ops):
     """AT-16."""
     ticket, req, task = ready(ops)
@@ -82,6 +84,7 @@ def test_wrong_code_five_attempts_then_review(ops):
     assert Alert.objects.filter(kind="code_locked", ticket=ticket).exists()
 
 
+@pytest.mark.whatsapp_staff
 def test_handover_requires_verified_code(ops):
     ticket, req, task = ready(ops)
     from ops.services import tokens
@@ -89,6 +92,7 @@ def test_handover_requires_verified_code(ops):
     assert handover.complete_handover(task.assignee, forged) == "stale"
 
 
+@pytest.mark.whatsapp_staff
 def test_late_ready_from_superseded_assignee_rejected(ops):
     """AT-14."""
     ticket, req, task = accepted(ops)
@@ -104,6 +108,7 @@ def test_late_ready_from_superseded_assignee_rejected(ops):
     assert new_task.status == "ACCEPTED"
 
 
+@pytest.mark.whatsapp_staff
 def test_transfer_custody_revokes_old_tokens_requires_ack(ops):
     ticket, req, task = accepted(ops)
     receiver = next(v for v in ops.valets if v != task.assignee)
@@ -116,6 +121,7 @@ def test_transfer_custody_revokes_old_tokens_requires_ack(ops):
         custody.transfer_custody(ops.valets[2], new_task, ops.valets[2], "x", "y", "valets cannot")
 
 
+@pytest.mark.whatsapp_staff
 def test_withdraw_accepted_requires_custody_resolution(ops):
     """AT-57."""
     ticket, req, task = accepted(ops)
@@ -134,6 +140,7 @@ def test_withdraw_accepted_requires_custody_resolution(ops):
     assert is_available(task.assignee, ops.event)
 
 
+@pytest.mark.whatsapp_staff
 def test_ready_code_revoked_on_phone_correction(ops):
     ticket, req, task = ready(ops)
     old_code = _code(ticket)
@@ -143,6 +150,7 @@ def test_ready_code_revoked_on_phone_correction(ops):
     assert RetrievalRequest.objects.get(pk=req.pk).state == "ACCEPTED"
 
 
+@pytest.mark.whatsapp_staff
 def test_unacknowledged_custody_transfer_can_still_be_resolved(ops):
     """Review 2026-11-16: if the receiver never confirms, the supervisor records where the car and key are."""
     ticket, req, task = accepted(ops)

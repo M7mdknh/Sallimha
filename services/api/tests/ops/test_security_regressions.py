@@ -20,6 +20,7 @@ def _dead_row(staff, key):
     return row
 
 
+@pytest.mark.whatsapp_staff
 def test_replay_of_other_org_dead_letter_forbidden(world):
     other_org = make_org("Other org")
     foreign = _dead_row(make_staff(other_org), "foreign-dead")
@@ -31,6 +32,7 @@ def test_replay_of_other_org_dead_letter_forbidden(world):
     assert foreign.status == MessageOutbox.Status.DEAD
 
 
+@pytest.mark.whatsapp_staff
 def test_opening_dead_letter_count_is_org_scoped(world):
     _dead_row(make_staff(make_org("Other org")), "foreign-dead-2")
     assert opening.opening_check(world.event)["dead_letters"] == 0

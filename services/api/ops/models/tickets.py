@@ -125,6 +125,17 @@ class ActionToken(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class GuestMessage(models.Model):
+    """A customer's free-text WhatsApp message on an active ticket (ADR-0011): kept so the event team can see what
+    the customer asked. Not a chat: Sallimha does not send typed replies."""
+
+    ticket = models.ForeignKey(Ticket, on_delete=models.PROTECT, related_name="guest_messages")
+    binding = models.ForeignKey(GuestBinding, on_delete=models.PROTECT, related_name="+")
+    text = models.CharField(max_length=500)
+    received_at = models.DateTimeField()
+    provider_message_id = models.CharField(max_length=128, unique=True)
+
+
 class CollectionCode(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.PROTECT, related_name="codes")
     binding = models.ForeignKey(GuestBinding, on_delete=models.PROTECT, related_name="+")

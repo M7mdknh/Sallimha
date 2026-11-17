@@ -13,6 +13,7 @@ def sim(world):
     return login_as(world.supervisor)
 
 
+@pytest.mark.whatsapp_staff
 def test_simulator_send_text_runs_real_webhook_path(world, sim):
     phone = world.valets[0].phone_e164
     resp = sim.post("/api/dev/sim/send", {"phone": phone, "text": "مركبة جديدة"}, format="json")
@@ -43,9 +44,10 @@ def test_seed_demo_creates_synthetic_world(db):
     assert Event.objects.filter(name__contains="تجريبي").exists()
     assert Staff.objects.filter(role="VALET").count() >= 3
     assert Staff.objects.filter(user__username="supervisor").exists()
-    # One synthetic account per console role, so the role matrix (AT-59) can be demonstrated end to end.
+    # One synthetic account per role — valets included, since they sign in to the app (ADR-0011).
     assert set(Staff.objects.filter(user__isnull=False).values_list("role", flat=True)) == {
-        "SUPERVISOR", "MANAGER", "ADMIN", "SUPER_ADMIN"}
+        "VALET", "SUPERVISOR", "ADMIN"}
+    assert not Staff.objects.filter(user__isnull=True).exists()
 
 
 def test_seed_demo_with_activity_builds_mid_event_state(db):

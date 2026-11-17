@@ -5,6 +5,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from core.audit import audit
+from core.context import staff_channel
 from core.errors import DomainError
 from messaging import outbox
 from ops.models import CustodyTransfer, KeyOccupancy, ParkingZone, RetrievalRequest, Role, Task, Ticket
@@ -97,8 +98,8 @@ def acknowledge_custody(staff, transfer, now=None, *, relayed_by=None, confirmed
         if relayed_by is not None:
             summary.update(relayed_by=relayed_by.id, confirmed_via=confirmed_via)
         audit("custody.acknowledged", actor_id=staff.id, actor_label=actor_label(staff),
-              channel="console" if relayed_by is not None else "whatsapp", entity_type="ticket", entity_id=ticket.id,
-              event_id=ticket.event_id, summary=summary)
+              channel="console" if relayed_by is not None else staff_channel(), entity_type="ticket",
+              entity_id=ticket.id, event_id=ticket.event_id, summary=summary)
     return task
 
 

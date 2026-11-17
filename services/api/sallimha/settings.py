@@ -204,6 +204,10 @@ WHATSAPP_APP_SECRET_PREVIOUS = os.environ.get("WHATSAPP_APP_SECRET_PREVIOUS", ""
 WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
 WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
 WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
+# Staff work in the web app; customers use WhatsApp (ADR-0011). "whatsapp" keeps the retired valet conversation.
+STAFF_CHANNEL = os.environ.get("STAFF_CHANNEL", "app")
+if STAFF_CHANNEL not in {"app", "whatsapp"}:
+    raise ImproperlyConfigured("STAFF_CHANNEL must be app or whatsapp")
 SIMULATOR_ENABLED = os.environ.get("SIMULATOR_ENABLED", "1" if IS_DEV else "0") == "1"
 if SIMULATOR_ENABLED and not IS_DEV:
     raise ImproperlyConfigured("SIMULATOR_ENABLED is only allowed in local/test environments")

@@ -122,6 +122,8 @@ class TeamMember(serializers.Serializer):
     break_pending = serializers.BooleanField()
     task = TeamTask(allow_null=True)
     idle_since = serializers.DateTimeField(allow_null=True)
+    assisted = serializers.BooleanField(help_text="Device not working: a supervisor records their actions")
+    done = serializers.IntegerField(help_text="Tasks completed in this shift")
 
 
 class StaffBrief(serializers.Serializer):
@@ -139,7 +141,7 @@ class OutageBrief(serializers.Serializer):
 
 class LiveSnapshot(serializers.Serializer):
     event = EventBrief()
-    outage = OutageBrief(allow_null=True, help_text="Declared WhatsApp outage: relayed actions are enabled")
+    outage = OutageBrief(allow_null=True, help_text="Declared customer WhatsApp outage")
     generated_at = serializers.DateTimeField()
     health = Health()
     attention = AttentionItem(many=True)
@@ -190,6 +192,11 @@ class MoveBrief(serializers.Serializer):
     valet = serializers.CharField()
 
 
+class GuestMessageOut(serializers.Serializer):
+    text = serializers.CharField()
+    received_at = serializers.DateTimeField()
+
+
 class TicketDetail(serializers.Serializer):
     id = serializers.IntegerField()
     ticket = serializers.CharField()
@@ -214,6 +221,9 @@ class TicketDetail(serializers.Serializer):
     timeline = TimelineEntry(many=True)
     allowed_actions = serializers.ListField(child=serializers.CharField(),
                                             help_text="Exception actions the server will accept now")
+    primary_action = serializers.CharField(allow_null=True, help_text="The one action to offer first, if any")
+    guest_messages = GuestMessageOut(many=True, help_text="What the customer wrote on WhatsApp (stored here)")
+    can_contact = serializers.BooleanField(help_text="A number exists and may be opened (audited)")
 
 
 class StartShiftRequest(serializers.Serializer):
@@ -419,14 +429,20 @@ class StaffRow(serializers.Serializer):
     username = serializers.CharField(allow_null=True)
     mfa_enrolled = serializers.BooleanField()
     mfa_locked = serializers.BooleanField()
+    can_sign_in = serializers.BooleanField(help_text="The person has set their own password")
+    setup_pending = serializers.BooleanField(help_text="A one-time setup code is waiting to be used")
+    event_ids = serializers.ListField(child=serializers.IntegerField(), help_text="Operations they are on")
 
 
 class CreateStaffRequest(serializers.Serializer):
+    """No password: the person sets their own with a one-time setup code (ADR-0011)."""
+
     full_name = serializers.CharField(max_length=120)
     phone = serializers.CharField(max_length=40)
     role = serializers.ChoiceField(choices=ROLES)
-    username = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    password = serializers.CharField(max_length=256, required=False, allow_blank=True, trim_whitespace=False)
+    username = serializers.CharField(max_length=150, required=False, allow_blank=True,
+                                     help_text="Sign-in name; the mobile number when left empty")
+    event_id = serializers.IntegerField(required=False, allow_null=True, help_text="Also put them on this team")
 
 
 class RoleRequest(serializers.Serializer):
@@ -672,3 +688,223 @@ class SimOutageRequest(serializers.Serializer):
 
 class SimOutage(serializers.Serializer):
     down = serializers.BooleanField(help_text="SIMULATED provider outage in progress")
+
+
+# --- staff app (ADR-0011) -------------------------------------------------------------------------------
+
+AVAILABILITY = ["available", "unavailable", "break_pending"]
+TASK_TYPES = ["INTAKE", "RETRIEVAL", "RELOCATION"]
+VALET_STEPS = ["photos", "receipt", "start_parking", "park", "offer", "custody_ack", "bring", "code", "deliver", "move"]
+
+
+class SetupRequest(serializers.Serializer):
+    username = serializers.CharField(max_length=150, help_text="Mobile number or username")
+    code = serializers.CharField(max_length=20, help_text="One-time setup code issued by an admin")
+    password = serializers.CharField(max_length=512, trim_whitespace=False)
+
+
+class SetupCodeResponse(serializers.Serializer):
+    setup_code = serializers.CharField(help_text="Shown once; only its hash is stored")
+    sign_in_name = serializers.CharField()
+    expires_at = serializers.DateTimeField()
+
+
+class TeamMembershipRequest(serializers.Serializer):
+    event_id = serializers.IntegerField()
+    member = serializers.BooleanField(help_text="On this operation's team or not")
+
+
+class AssistRequest(serializers.Serializer):
+    on = serializers.BooleanField()
+    reason = serializers.CharField(max_length=200, required=False, allow_blank=True)
+
+
+class ContactResponse(serializers.Serializer):
+    phone = serializers.CharField(help_text="E.164; opened on request and audited. Contact happens outside Sallimha")
+
+
+class ValetEventBrief(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    venue = serializers.CharField()
+
+
+class ValetShift(serializers.Serializer):
+    id = serializers.IntegerField()
+    availability = serializers.ChoiceField(choices=AVAILABILITY)
+    assisted = serializers.BooleanField(help_text="A supervisor records this valet's actions (device not working)")
+    event = ValetEventBrief()
+
+
+class ValetAssigned(serializers.Serializer):
+    event = serializers.CharField()
+    venue = serializers.CharField()
+
+
+class ZoneOut(serializers.Serializer):
+    code = serializers.CharField()
+    label_ar = serializers.CharField(allow_blank=True)
+    label_en = serializers.CharField(allow_blank=True)
+
+
+class ValetVenue(serializers.Serializer):
+    zones = ZoneOut(many=True)
+    hook_count = serializers.IntegerField()
+
+
+class ValetTicket(serializers.Serializer):
+    id = serializers.IntegerField()
+    number = serializers.CharField()
+    vehicle = serializers.CharField()
+    location = serializers.CharField(allow_blank=True)
+    hook = serializers.IntegerField(allow_null=True)
+    phone_masked = serializers.CharField(allow_null=True, help_text="Never the full number")
+    photos = serializers.IntegerField()
+    photos_required = serializers.IntegerField()
+    contact_state = serializers.ChoiceField(choices=CONTACT_STATES)
+    state = serializers.ChoiceField(choices=TICKET_STATES)
+    early_request = serializers.BooleanField(help_text="The customer already asked for the car")
+    handover_blocked = serializers.BooleanField()
+
+
+class ValetCode(serializers.Serializer):
+    verified = serializers.BooleanField()
+    locked = serializers.BooleanField()
+    remaining = serializers.IntegerField()
+
+
+class ValetCustody(serializers.Serializer):
+    transfer_id = serializers.IntegerField()
+    vehicle_location = serializers.CharField()
+    key_location = serializers.CharField()
+    from_name = serializers.CharField(allow_blank=True)
+
+
+class ValetTask(serializers.Serializer):
+    id = serializers.IntegerField()
+    type = serializers.ChoiceField(choices=TASK_TYPES)
+    status = serializers.ChoiceField(choices=["RESERVED", "OFFERED", "ACCEPTED"])
+    step = serializers.ChoiceField(choices=VALET_STEPS, help_text="The valet's next action")
+    deadline = serializers.DateTimeField(allow_null=True, help_text="When an offer lapses")
+    reason = serializers.CharField(allow_blank=True)
+    ticket = ValetTicket()
+    code = ValetCode(allow_null=True)
+    custody = ValetCustody(allow_null=True)
+
+
+class ValetRecent(serializers.Serializer):
+    ticket = serializers.CharField()
+    type = serializers.ChoiceField(choices=TASK_TYPES)
+    at = serializers.DateTimeField()
+
+
+class ValetMe(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class ValetWork(serializers.Serializer):
+    server_time = serializers.DateTimeField()
+    me = ValetMe()
+    shift = ValetShift(allow_null=True)
+    assigned = ValetAssigned(allow_null=True)
+    venue = ValetVenue(allow_null=True)
+    customer_messages = serializers.ChoiceField(choices=["ok", "delayed"])
+    task = ValetTask(allow_null=True)
+    recent = ValetRecent(many=True)
+
+
+class AvailabilityRequest(serializers.Serializer):
+    available = serializers.BooleanField()
+
+
+class AvailabilityResponse(serializers.Serializer):
+    availability = serializers.ChoiceField(choices=AVAILABILITY)
+
+
+class ValetIntakeRequest(serializers.Serializer):
+    guest_phone = serializers.CharField(max_length=30)
+    vehicle = serializers.CharField(max_length=200, help_text="Plate and/or a short description")
+    language = serializers.ChoiceField(choices=["ar", "en"], required=False, default="ar")
+
+
+class ValetIntakeResponse(serializers.Serializer):
+    id = serializers.IntegerField()
+    ticket = serializers.CharField()
+
+
+class ValetPhotoRequest(serializers.Serializer):
+    photo = serializers.FileField()
+
+
+class PhotoCountResponse(serializers.Serializer):
+    count = serializers.IntegerField()
+    required = serializers.IntegerField()
+
+
+class ReceiptRequest(serializers.Serializer):
+    received = serializers.BooleanField()
+
+
+class ParkRequest(serializers.Serializer):
+    zone_code = serializers.CharField(max_length=20)
+    detail = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    hook_number = serializers.IntegerField(min_value=1)
+
+
+class OutcomeResponse(serializers.Serializer):
+    outcome = serializers.CharField()
+
+
+class CodeRequest(serializers.Serializer):
+    code = serializers.CharField(max_length=12)
+
+
+class CodeResponse(serializers.Serializer):
+    outcome = serializers.ChoiceField(choices=["ok", "wrong", "locked"])
+    remaining = serializers.IntegerField()
+
+
+class DashboardCars(serializers.Serializer):
+    receiving = serializers.IntegerField()
+    parked = serializers.IntegerField()
+    retrieving = serializers.IntegerField()
+    ready = serializers.IntegerField()
+    delivered = serializers.IntegerField()
+
+
+class DashboardProblems(serializers.Serializer):
+    alerts = serializers.IntegerField(help_text="Items needing attention that nobody has acknowledged")
+    critical = serializers.IntegerField()
+    incidents = serializers.IntegerField(help_text="Incidents not yet resolved")
+    holds = serializers.IntegerField(help_text="Active safety holds")
+
+
+class DashboardMember(serializers.Serializer):
+    staff_id = serializers.IntegerField()
+    name = serializers.CharField()
+    status = serializers.ChoiceField(choices=TEAM_STATUSES)
+    task = serializers.CharField(allow_null=True)
+    parked = serializers.IntegerField()
+    delivered = serializers.IntegerField()
+
+
+class DashboardTeam(serializers.Serializer):
+    available = serializers.IntegerField()
+    busy = serializers.IntegerField()
+    unavailable = serializers.IntegerField()
+    not_started = serializers.IntegerField()
+    members = DashboardMember(many=True)
+
+
+class Dashboard(serializers.Serializer):
+    event = EventBrief()
+    generated_at = serializers.DateTimeField()
+    cars = DashboardCars()
+    waiting_requests = serializers.IntegerField(help_text="Requested and not yet accepted by a valet")
+    delayed_requests = serializers.IntegerField(help_text="Waiting longer than delay_threshold_s")
+    delay_threshold_s = serializers.IntegerField()
+    oldest_wait_s = serializers.IntegerField(allow_null=True)
+    request_to_ready = StageStat(help_text="From the customer's request to the car ready at the pickup point")
+    problems = DashboardProblems()
+    team = DashboardTeam()

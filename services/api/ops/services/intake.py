@@ -7,6 +7,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from core.audit import audit
+from core.context import staff_channel
 from core.crypto import encrypt_text, keyed_hash
 from core.errors import DomainError
 from core.phone import ParsedPhone, PhoneInvalid, parse_phone
@@ -34,8 +35,9 @@ REQUIRED_PHOTOS = 4
 _PLATE = re.compile(r"^\s*((?:[A-Za-zء-ي]{1,3}\s*\d{1,4})|(?:\d{1,4}\s*[A-Za-zء-ي]{1,3}))(?=\s|$)(.*)$")
 
 
-def _audit(action, actor, ticket, channel="whatsapp", **summary):
-    audit(action, actor_id=actor.id if actor else None, actor_label=actor_label(actor), channel=channel,
+def _audit(action, actor, ticket, channel=None, **summary):
+    audit(action, actor_id=actor.id if actor else None, actor_label=actor_label(actor),
+          channel=channel or staff_channel(),
           entity_type="ticket", entity_id=ticket.id, event_id=ticket.event_id, summary=summary)
 
 
@@ -129,6 +131,34 @@ def confirm_guest_phone(valet, ticket, e164: str, language: str = "ar", now=None
         send_ticket(ticket, binding, now)
         _audit("guest.phone_confirmed", valet, ticket, masked=binding.phone_masked)
     return binding
+
+
+def register_with_guest(valet, guest_phone: str, vehicle: str, language: str = "ar", now=None) -> Ticket:
+    """Staff app, steps 1–2 (ADR-0011): the valet entered the customer's number and the vehicle and confirmed the
+    number on screen. One transaction registers the car in the valet's custody, records the vehicle, binds the
+    customer and queues their WhatsApp ticket; a refused number or vehicle leaves nothing behind."""
+    now = now or timezone.now()
+    if language not in ("ar", "en"):
+        raise DomainError("invalid_input")
+    try:
+        parsed = parse_phone(guest_phone)
+    except PhoneInvalid as exc:
+        raise DomainError("phone_invalid") from exc
+    if len((vehicle or "").strip()) < 2:
+        raise DomainError("vehicle_unidentified")
+    with transaction.atomic():
+        ticket = register_vehicle(valet, now=now)
+        record_vehicle(valet, ticket, vehicle, now=now)
+        confirm_guest_phone(valet, ticket, parsed.e164, language=language, now=now)
+    return Ticket.objects.get(pk=ticket.pk)
+
+
+def park(valet, ticket, zone_code: str, detail: str, hook_number: int, now=None) -> Ticket:
+    """Staff app, step 6: zone, spot and key hook recorded together on arrival. A refused hook changes nothing."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        record_location(valet, ticket, zone_code, detail, now=now)
+        return complete_parking(valet, ticket, hook_number, now=now)
 
 
 def confirm_guest_receipt(actor, ticket, received: bool, now=None) -> Ticket:
@@ -380,7 +410,7 @@ def cancel_ticket(actor, ticket, reason: str, *, guest_has_vehicle_and_keys: boo
             outbox.enqueue("valet.cancelled", staff=task.assignee, ticket=ticket, template="valet.cancelled",
                            params={"ticket": f"#{ticket.display_number:03d}"},
                            dedupe_key=f"valet.cancelled:{ticket.id}", now=now)
-        _audit("ticket.cancel", actor, ticket, channel="console" if is_supervisor else "whatsapp",
+        _audit("ticket.cancel", actor, ticket, channel="console" if is_supervisor else staff_channel(),
                reason=ticket.cancel_reason, guest_has_vehicle_and_keys=True)
     return ticket
 

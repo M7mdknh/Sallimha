@@ -28,6 +28,7 @@ def _offer_button(task, key):
     return next(b[0] for b in row.buttons if b[1] == key)
 
 
+@pytest.mark.whatsapp_staff
 def test_assigning_a_move_is_an_offer_and_changes_nothing_physical(ops):
     ticket = park(ops.valets[0], ops.event, hook=21)
     task = relocation.start_relocation(ops.supervisor, ticket, ops.valets[1], "Blocking emergency lane")
@@ -50,6 +51,7 @@ def test_supervisor_cannot_record_completion_of_an_unaccepted_move(ops):
     assert ticket.location_zone.code == "A"
 
 
+@pytest.mark.whatsapp_staff
 def test_mover_accepts_moves_and_reports_the_new_location_in_whatsapp(ops):
     mover = ops.valets[1]
     ticket = park(ops.valets[0], ops.event, hook=21)
@@ -74,6 +76,7 @@ def test_mover_accepts_moves_and_reports_the_new_location_in_whatsapp(ops):
     assert len(dispatch.dispatch_event(ops.event.id)) == 1
 
 
+@pytest.mark.whatsapp_staff
 def test_supervisor_records_completion_only_after_acceptance_and_names_the_mover(ops):
     mover = ops.valets[1]
     ticket = park(ops.valets[0], ops.event, hook=21)
@@ -87,6 +90,7 @@ def test_supervisor_records_completion_only_after_acceptance_and_names_the_mover
     assert done.summary["confirmed_via"] == "in_person"
 
 
+@pytest.mark.whatsapp_staff
 def test_decline_returns_the_move_to_the_supervisor_without_reassignment(ops):
     ticket = park(ops.valets[0], ops.event)
     task = relocation.start_relocation(ops.supervisor, ticket, ops.valets[1], "Lane")
@@ -114,6 +118,7 @@ def test_movement_hold_blocks_a_new_move(ops):
     assert err.value.code == "hold_active"
 
 
+@pytest.mark.whatsapp_staff
 def test_cancel_offered_move_freely_but_accepted_move_needs_custody_confirmation(ops):
     ticket = park(ops.valets[0], ops.event, hook=21)
     offered = relocation.start_relocation(ops.supervisor, ticket, ops.valets[1], "Lane")

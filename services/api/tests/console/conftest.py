@@ -8,9 +8,13 @@ _n = itertools.count(1)
 
 
 def login_as(staff, client=None):
-    user = get_user_model().objects.create_user(username=f"user{next(_n)}", password="correct horse battery 9")
-    staff.user = user
-    staff.save(update_fields=["user"])
+    """A signed-in session for this person. Called again for the same person it is another tab of the same
+    account, never a second account."""
+    user = staff.user if staff.user_id else None
+    if user is None:
+        user = get_user_model().objects.create_user(username=f"user{next(_n)}", password="correct horse battery 9")
+        staff.user = user
+        staff.save(update_fields=["user"])
     client = client or APIClient()
     client.force_login(user)
     session = client.session

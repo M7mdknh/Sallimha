@@ -11,7 +11,7 @@ def has_role(staff, minimum: str) -> bool:
 def can_access_event(staff, event) -> bool:
     if not staff or not staff.enabled or staff.org_id != event.org_id:
         return False
-    if ROLE_RANK[staff.role] >= ROLE_RANK[Role.MANAGER]:
+    if ROLE_RANK[staff.role] >= ROLE_RANK[Role.ADMIN]:
         return True
     if staff.role == Role.SUPERVISOR:
         return EventAssignment.objects.filter(event=event, staff=staff).exists()

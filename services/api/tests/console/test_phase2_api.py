@@ -23,8 +23,7 @@ def post(client, url, data=None):
 def ops(world):
     for v in world.valets:
         open_shift(world.event, v, world.supervisor)
-    world.admin = make_staff(world.org, Role.ADMIN)
-    world.root = make_staff(world.org, Role.SUPER_ADMIN)
+    world.second_admin = make_staff(world.org, Role.ADMIN, name="Second admin")
     return world
 
 
@@ -44,6 +43,7 @@ def test_incident_lifecycle_role_matrix(ops):
     assert Incident.objects.get(pk=incident_id).resolved_by == ops.manager
 
 
+@pytest.mark.whatsapp_staff
 def test_hold_relocation_and_unclaimed_actions(ops):
     ticket = park(ops.valets[0], ops.event, hook=33)
     sup, mgr = login_as(ops.supervisor), login_as(ops.manager)
@@ -80,23 +80,25 @@ def test_hold_relocation_and_unclaimed_actions(ops):
 
 
 def test_directory_config_and_integrations_role_matrix(ops):
-    sup, mgr, adm, root = (login_as(ops.supervisor), login_as(ops.manager), login_as(ops.admin),
-                           login_as(ops.root))
-    assert sup.get("/api/staff").status_code == 403
-    assert mgr.get("/api/staff").status_code == 200
-    created = post(mgr, "/api/staff", {"full_name": "New Valet", "phone": "+966551239999", "role": "VALET"})
+    """Everything that needed a manager, an admin or a super admin now needs ADMIN; a supervisor gets none of it."""
+    sup, adm = login_as(ops.supervisor), login_as(ops.admin)
+    for url in ("/api/staff", "/api/config", "/api/integrations/whatsapp"):
+        assert sup.get(url).status_code == 403
+        assert adm.get(url).status_code == 200
+    created = post(adm, "/api/staff", {"full_name": "New Valet", "phone": "+966551239999", "role": "VALET"})
     assert created.status_code == 200
     staff_id = created.json()["id"]
-    assert post(mgr, f"/api/staff/{staff_id}/role", {"role": "MANAGER"}).status_code == 403
-    assert post(mgr, f"/api/staff/{staff_id}/deactivate", {"reason": "Left"}).status_code == 200
-    assert mgr.get("/api/config").status_code == 403
-    assert adm.get("/api/config").status_code == 200
+    assert post(adm, f"/api/staff/{staff_id}/role", {"role": "MANAGER"}).status_code == 400  # no such role
+    assert post(adm, f"/api/staff/{staff_id}/role", {"role": "SUPERVISOR"}).status_code == 200
+    assert post(adm, f"/api/staff/{staff_id}/deactivate", {"reason": "Left"}).status_code == 200
     timings = {"version": _version(adm), "timings": {"offer_window_s": 40}}
+    assert post(sup, "/api/config/timings", timings).status_code == 403
     assert post(adm, "/api/config/timings", timings).status_code == 200
-    assert adm.get("/api/integrations/whatsapp").status_code == 403
-    integration = root.get("/api/integrations/whatsapp").json()
+    integration = adm.get("/api/integrations/whatsapp").json()
     assert integration["status"] == "simulated" and "token" not in str(integration).lower().replace("_configured", "")
-    mfa = post(adm, f"/api/staff/{ops.manager.id}/mfa")
+    assert post(sup, f"/api/staff/{ops.second_admin.id}/mfa").status_code == 403
+    assert post(adm, f"/api/staff/{ops.admin.id}/mfa").status_code == 403  # nobody issues their own
+    mfa = post(adm, f"/api/staff/{ops.second_admin.id}/mfa")
     assert mfa.status_code == 200 and mfa.json()["otpauth_uri"].startswith("otpauth://")
 
 
@@ -108,7 +110,8 @@ def test_exports_and_reports(ops):
     tickets_csv = mgr.get(f"/api/events/{ops.event.id}/export/tickets.csv")
     body = b"".join(tickets_csv.streaming_content).decode() if tickets_csv.streaming else tickets_csv.content.decode()
     assert tickets_csv["Content-Type"].startswith("text/csv") and "966501000099" not in body
-    assert mgr.get(f"/api/events/{ops.event.id}/export/guest-phones.csv").status_code == 403
+    assert sup.get(f"/api/events/{ops.event.id}/export/guest-phones.csv").status_code == 403
+    assert sup.get(f"/api/events/{ops.event.id}/export/tickets.csv").status_code == 403
     phones = adm.get(f"/api/events/{ops.event.id}/export/guest-phones.csv")
     assert phones.status_code == 200 and "+966501000099" in phones.content.decode()
 
@@ -148,6 +151,7 @@ def test_event_create_rejects_another_orgs_venue_as_not_found(ops):
     assert resp.status_code == 404
 
 
+@pytest.mark.whatsapp_staff
 def test_admin_operations_round_trip(ops, settings):
     from django.utils import timezone
 
@@ -218,6 +222,7 @@ def test_ticket_finder_by_number_or_plate_is_event_scoped(ops):
     assert sup.get(f"/api/events/{foreign.id}/tickets", {"q": "1"}).status_code == 404
 
 
+@pytest.mark.whatsapp_staff
 def test_unknown_outcome_sends_are_visible_and_resent_only_on_explicit_replay(ops):
     """docs/03: ambiguous sends are never resent automatically; the operator decides, once, audited."""
     from django.utils import timezone

@@ -18,12 +18,14 @@ def _enqueue(valet, key="k1"):
     return outbox.enqueue("valet.available_ok", staff=valet, template="valet.available_ok", params={}, dedupe_key=key)
 
 
+@pytest.mark.whatsapp_staff
 def test_enqueue_is_deduplicated(valet):
     a = _enqueue(valet)
     b = _enqueue(valet)
     assert a.pk == b.pk
 
 
+@pytest.mark.whatsapp_staff
 def test_outbox_sent_after_restart(valet):
     """AT-25: a row committed by business code is sent by a fresh worker pass."""
     row = _enqueue(valet)
@@ -34,6 +36,7 @@ def test_outbox_sent_after_restart(valet):
     assert SimulatedMessage.objects.filter(direction="out", provider_message_id=row.provider_message_id).exists()
 
 
+@pytest.mark.whatsapp_staff
 def test_lost_response_marks_delivery_unknown(valet):
     """AT-26: provider may have accepted; never claim delivery, never blindly resend."""
     SimulatorControl.set_next("unknown")
@@ -44,6 +47,7 @@ def test_lost_response_marks_delivery_unknown(valet):
     assert outbox.send_due(timezone.now() + timedelta(minutes=5)) == 0
 
 
+@pytest.mark.whatsapp_staff
 def test_crashed_send_lease_becomes_delivery_unknown(valet):
     row = _enqueue(valet)
     MessageOutbox.objects.filter(pk=row.pk).update(status="SENDING", lease_until=timezone.now() - timedelta(seconds=1))
@@ -52,6 +56,7 @@ def test_crashed_send_lease_becomes_delivery_unknown(valet):
     assert row.status == MessageOutbox.Status.DELIVERY_UNKNOWN
 
 
+@pytest.mark.whatsapp_staff
 def test_transient_failure_retries_with_backoff(valet):
     SimulatorControl.set_next("transient")
     row = _enqueue(valet)
@@ -62,6 +67,7 @@ def test_transient_failure_retries_with_backoff(valet):
     assert outbox.send_due(row.next_attempt_at) == 1
 
 
+@pytest.mark.whatsapp_staff
 def test_permanent_failure_goes_dead_and_replay_is_once(valet):
     """AT-51."""
     SimulatorControl.set_next("permanent")
@@ -75,6 +81,7 @@ def test_permanent_failure_goes_dead_and_replay_is_once(valet):
     assert SimulatedMessage.objects.filter(direction="out", outbox_id=row.pk).count() == 1
 
 
+@pytest.mark.whatsapp_staff
 def test_status_out_of_order_no_regression(valet):
     """AT-27."""
     row = _enqueue(valet)
@@ -89,6 +96,7 @@ def test_status_out_of_order_no_regression(valet):
     assert row.status_events.count() == 3
 
 
+@pytest.mark.whatsapp_staff
 def test_failed_status_after_read_is_recorded_not_applied(valet):
     row = _enqueue(valet)
     outbox.send_due(timezone.now())
@@ -100,6 +108,7 @@ def test_failed_status_after_read_is_recorded_not_applied(valet):
     assert row.status_events.filter(status="failed").exists()
 
 
+@pytest.mark.whatsapp_staff
 def test_window_selects_template_when_closed(world):
     """AT-28: no inbound within 24 h → approved template path."""
     fresh = make_staff(world.org)
@@ -110,6 +119,7 @@ def test_window_selects_template_when_closed(world):
     assert outbox.choose_mode(row, timezone.now() + timedelta(hours=24)) == "template"
 
 
+@pytest.mark.whatsapp_staff
 def test_transient_failures_keep_a_message_queued_through_a_long_outage(valet, settings):
     """ADR-0010: an outage longer than a few retries must not drop messages; they wait (capped backoff) for the
     retry window, then become dead letters."""

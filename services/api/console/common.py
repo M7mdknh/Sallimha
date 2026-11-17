@@ -29,22 +29,45 @@ def actor_of(request):
     return staff
 
 
-class IsConsoleStaff(BasePermission):
-    """Supervisor and above only; valets operate through WhatsApp (docs/02)."""
+def session_staff(request):
+    """The signed-in, enabled person behind a session that is still valid for their current role, else None."""
+    user = request.user
+    staff = getattr(user, "staff", None) if user and user.is_authenticated else None
+    if not (staff and staff.enabled):
+        return None
+    if request.session.get("epoch") != staff.session_epoch:
+        return None  # role changed, deactivated, password or second factor reset since this session signed in
+    if staff.role == Role.ADMIN and request.session.get("mfa_ok") is not True:
+        return None
+    return staff
+
+
+class IsSignedInStaff(BasePermission):
+    """Any role: only for what every signed-in person needs (who am I)."""
 
     def has_permission(self, request, view):
-        user = request.user
-        staff = getattr(user, "staff", None) if user and user.is_authenticated else None
-        if not (staff and staff.enabled and ROLE_RANK[staff.role] >= ROLE_RANK[Role.SUPERVISOR]):
-            return False
-        if request.session.get("epoch") != staff.session_epoch:
-            return False  # role changed, deactivated or MFA reset since this session signed in
-        return ROLE_RANK[staff.role] < ROLE_RANK[Role.MANAGER] or request.session.get("mfa_ok") is True
+        return session_staff(request) is not None
+
+
+class IsConsoleStaff(BasePermission):
+    """Supervisors and admins. A valet account never passes: valets use the valet endpoints only (ADR-0011)."""
+
+    def has_permission(self, request, view):
+        staff = session_staff(request)
+        return staff is not None and ROLE_RANK[staff.role] >= ROLE_RANK[Role.SUPERVISOR]
+
+
+class IsValet(BasePermission):
+    """The valet app: valets only, so a console account cannot quietly take a valet's task."""
+
+    def has_permission(self, request, view):
+        staff = session_staff(request)
+        return staff is not None and staff.role == Role.VALET
 
 
 def events_for(actor):
     qs = Event.objects.filter(org_id=actor.org_id)
-    if ROLE_RANK[actor.role] >= ROLE_RANK[Role.MANAGER]:
+    if ROLE_RANK[actor.role] >= ROLE_RANK[Role.ADMIN]:
         return qs
     return qs.filter(id__in=EventAssignment.objects.filter(staff=actor).values("event_id"))
 

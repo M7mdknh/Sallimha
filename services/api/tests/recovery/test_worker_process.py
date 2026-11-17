@@ -38,6 +38,7 @@ def _wait_for(predicate, timeout=15.0):
     return False
 
 
+@pytest.mark.whatsapp_staff
 def test_killed_worker_recovers_work_from_stored_state():
     from ops.models import Role
     event = make_event()

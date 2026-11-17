@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.urls import path
 
-from console import views, views_admin, views_outage
+from console import views, views_admin, views_outage, views_valet
 from messaging import simulator_api
 
 urlpatterns = [
@@ -9,6 +9,27 @@ urlpatterns = [
     path("auth/login", views.login_view),
     path("auth/logout", views.logout_view),
     path("auth/me", views.me),
+    path("auth/setup", views.setup_view),
+    # The valet app (ADR-0011): valets only; each call reaches the valet's own shift, task and ticket.
+    path("valet/work", views_valet.work),
+    path("valet/availability", views_valet.Availability.as_view()),
+    path("valet/intake", views_valet.Intake.as_view()),
+    path("valet/tickets/<int:ticket_id>/photo", views_valet.Photo.as_view()),
+    path("valet/tickets/<int:ticket_id>/receipt", views_valet.Receipt.as_view()),
+    path("valet/tickets/<int:ticket_id>/start-parking", views_valet.StartParking.as_view()),
+    path("valet/tickets/<int:ticket_id>/park", views_valet.Park.as_view()),
+    path("valet/tasks/<int:task_id>/accept", views_valet.Accept.as_view()),
+    path("valet/tasks/<int:task_id>/decline", views_valet.Decline.as_view()),
+    path("valet/tasks/<int:task_id>/ready", views_valet.Ready.as_view()),
+    path("valet/tasks/<int:task_id>/code", views_valet.Code.as_view()),
+    path("valet/tasks/<int:task_id>/deliver", views_valet.Deliver.as_view()),
+    path("valet/tasks/<int:task_id>/custody-ack", views_valet.CustodyAck.as_view()),
+    path("valet/tasks/<int:task_id>/moved", views_valet.Moved.as_view()),
+    path("dashboard", views_admin.dashboard),
+    path("shifts/<int:shift_id>/assist", views.AssistShift.as_view()),
+    path("tickets/<int:ticket_id>/contact", views.ContactCustomer.as_view()),
+    path("staff/<int:staff_id>/setup-code", views_admin.StaffSetupCode.as_view()),
+    path("staff/<int:staff_id>/team", views_admin.StaffTeam.as_view()),
     path("events/", views.events),
     path("events/<int:event_id>/live", views.event_live),
     path("events/<int:event_id>/shifts", views.StartShift.as_view()),

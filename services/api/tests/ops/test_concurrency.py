@@ -75,6 +75,7 @@ def test_intake_vs_retrieval_capacity():
         assert isinstance(errors[0], DomainError) and errors[0].code in {"busy", "not_available"}
 
 
+@pytest.mark.whatsapp_staff
 def test_accept_races_expiry_single_winner():
     """AT-11."""
     event, sup, valets = _world()

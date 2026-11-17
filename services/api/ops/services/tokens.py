@@ -10,6 +10,10 @@ PREFIX = "v1:"
 
 def issue(purpose: str, *, ticket=None, binding=None, staff=None, task=None, generation=None, data=None,
           expires_at=None) -> str:
+    from core.context import staff_app
+
+    if staff is not None and staff_app():
+        return ""  # staff act in the app as themselves (ADR-0011); there is no button reference to issue
     raw = new_token()
     ActionToken.objects.create(
         token_hash=keyed_hash(raw, "action"), purpose=purpose, ticket=ticket, binding=binding, staff=staff,

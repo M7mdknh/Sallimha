@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.audit import audit
+from core.context import staff_channel
 from core.crypto import constant_time_equals, encrypt_text, keyed_hash, keyed_hash_candidates, new_code
 from core.phone import normalize_digits
 from messaging import hooks, outbox
@@ -24,7 +25,7 @@ def _verifier(ticket_id: int, code: str) -> str:
 
 
 def _audit(action, actor, ticket, **summary):
-    audit(action, actor_id=actor.id if actor else None, actor_label=actor_label(actor), channel="whatsapp",
+    audit(action, actor_id=actor.id if actor else None, actor_label=actor_label(actor), channel=staff_channel(),
           entity_type="ticket", entity_id=ticket.id, event_id=ticket.event_id, summary=summary)
 
 
@@ -88,6 +89,57 @@ def mark_ready(staff, payload: str, now=None) -> str:
         tokens.mark_used(token, now)
         _apply_ready(ticket, task, staff, now)
     return "ready"
+
+
+def _lock_task(staff, task_id: int):
+    """Staff app: the valet's own retrieval task, locked in the canonical order (ticket → request → task)."""
+    ids = (Task.objects.filter(pk=task_id, assignee=staff, type=Task.Type.RETRIEVAL)
+           .values_list("ticket_id", "request_id").first())
+    if ids is None:
+        return None, None, None
+    ticket = Ticket.objects.select_for_update(no_key=True).get(pk=ids[0])
+    req = RetrievalRequest.objects.select_for_update(no_key=True).filter(pk=ids[1]).first()
+    task = Task.objects.select_for_update(no_key=True).get(pk=task_id)
+    return ticket, req, task
+
+
+def mark_ready_by(staff, task_id: int, now=None) -> str:
+    """Staff app: the accepted valet reports the car at the pickup point. Returns ready | duplicate | stale."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        ticket, _req, task = _lock_task(staff, task_id)
+        if task is None or task.status != Task.Status.ACCEPTED or task.assignee_id != staff.id:
+            return "stale"
+        if ticket.state == Ticket.State.READY:
+            return "duplicate"
+        if ticket.state != Ticket.State.RETRIEVING:
+            return "stale"
+        tokens.revoke(task=task, purposes=["valet_car_ready"], now=now)
+        _apply_ready(ticket, task, staff, now)
+    return "ready"
+
+
+def deliver(staff, task_id: int, now=None) -> str:
+    """Staff app: physical handover after the code was verified. Returns delivered | duplicate | blocked |
+    unverified | stale."""
+    from ops.services import holds
+
+    now = now or timezone.now()
+    with transaction.atomic():
+        ticket, req, task = _lock_task(staff, task_id)
+        if task is None:
+            return "stale"
+        if ticket.state == Ticket.State.DELIVERED and ticket.delivered_by_id == staff.id:
+            return "duplicate"
+        if task.status != Task.Status.ACCEPTED or task.assignee_id != staff.id or ticket.state != Ticket.State.READY:
+            return "stale"
+        if holds.handover_blocked(ticket):
+            return "blocked"
+        code = _handover_verified(ticket)
+        if code is None:
+            return "unverified"
+        finalize_delivery(staff, ticket, req, task, now, code=code)
+    return "delivered"
 
 
 def _apply_ready(ticket, task, staff, now, *, relayed_by=None, confirmed_via: str = "") -> None:
@@ -168,7 +220,7 @@ def _handover_verified(ticket) -> CollectionCode | None:
                                locked_at__isnull=True).first()
 
 
-def finalize_delivery(staff, ticket, req, task, now, *, code=None, channel="whatsapp") -> None:
+def finalize_delivery(staff, ticket, req, task, now, *, code=None, channel=None) -> None:
     """Close only after actual handover: release valet, key hook and credentials; ask for a rating."""
     from ops.services import holds
 
@@ -201,7 +253,7 @@ def finalize_delivery(staff, ticket, req, task, now, *, code=None, channel="what
                        buttons=buttons, dedupe_key=f"guest.delivered:{ticket.id}", now=now)
     outbox.enqueue("valet.delivered_done", staff=task.assignee, ticket=ticket, template="valet.delivered_done",
                    params={"ticket": _t(ticket)}, dedupe_key=f"valet.delivered_done:{ticket.id}", now=now)
-    audit("ticket.delivered", actor_id=staff.id, actor_label=actor_label(staff), channel=channel,
+    audit("ticket.delivered", actor_id=staff.id, actor_label=actor_label(staff), channel=channel or staff_channel(),
           entity_type="ticket", entity_id=ticket.id, event_id=ticket.event_id,
           summary={"task_id": task.id, "verification": "code" if code else "assisted"})
 

@@ -80,3 +80,13 @@ def make_ticket(event, registered_by, **fields):
         created_at=timezone.now(),
         **fields,
     )
+
+
+def onboard(admin, name, phone, role, password, username=None):
+    """A person added by an admin who then set their own password with the one-time setup code (ADR-0011)."""
+    from ops.services import staffdir
+
+    staff = staffdir.create_staff(admin, name, phone, role, username=username)
+    staffdir.complete_setup(staff.user.username, staffdir.issue_setup_code(admin, staff), password)
+    staff.refresh_from_db()
+    return staff

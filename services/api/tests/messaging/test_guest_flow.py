@@ -151,6 +151,7 @@ def _delivered(ops):
 
 @pytest.mark.parametrize(("value", "praise", "alert"), [("EXCELLENT", True, False), ("OKAY", False, False),
                                                        ("POOR", False, True)])
+@pytest.mark.whatsapp_staff
 def test_ratings_routing(ops, value, praise, alert):
     """AT-23."""
     ticket = _delivered(ops)

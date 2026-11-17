@@ -68,6 +68,7 @@ def test_fairness_beats_affinity(ops):
     assert newer.state == "QUEUED"
 
 
+@pytest.mark.whatsapp_staff
 def test_offer_has_no_code_or_phone(ops):
     """AT-39."""
     ticket, req = parked_with_request(ops.valets[0], ops.event)
@@ -84,6 +85,7 @@ def _accept_payload(task):
     return next(b[0] for b in offer.buttons if b[1] == "accept")
 
 
+@pytest.mark.whatsapp_staff
 def test_accept_moves_ticket_to_retrieving(ops):
     ticket, req = parked_with_request(ops.valets[0], ops.event)
     (task,) = dispatch.dispatch_event(ops.event.id)
@@ -94,6 +96,7 @@ def test_accept_moves_ticket_to_retrieving(ops):
     assert MessageOutbox.objects.filter(kind="guest.accepted", ticket=ticket).exists()
 
 
+@pytest.mark.whatsapp_staff
 def test_duplicate_accept_no_second_effect(ops):
     """AT-60."""
     ticket, req = parked_with_request(ops.valets[0], ops.event)
@@ -104,6 +107,7 @@ def test_duplicate_accept_no_second_effect(ops):
     assert MessageOutbox.objects.filter(kind="guest.accepted", ticket=ticket).count() == 1
 
 
+@pytest.mark.whatsapp_staff
 def test_timeout_requeues_preserves_age_cooldown_alert(ops):
     """AT-12."""
     a, b, c = ops.valets
@@ -124,6 +128,7 @@ def test_timeout_requeues_preserves_age_cooldown_alert(ops):
     assert AssignmentAttempt.objects.filter(request=req, outcome="EXPIRED").count() == 2
 
 
+@pytest.mark.whatsapp_staff
 def test_decline_requeues_and_releases(ops):
     a = ops.valets[0]
     ticket, req = parked_with_request(a, ops.event)
@@ -137,6 +142,7 @@ def test_decline_requeues_and_releases(ops):
     assert tokens.state(tokens.resolve(_accept_payload(task), lock=False)) == "revoked"
 
 
+@pytest.mark.whatsapp_staff
 def test_offer_deadline_starts_when_provider_accepts_send(ops):
     from messaging.outbox import send_due
     ticket, req = parked_with_request(ops.valets[0], ops.event)
@@ -148,6 +154,7 @@ def test_offer_deadline_starts_when_provider_accepts_send(ops):
     assert task.offer_deadline == min(task.offer_sent_at + timedelta(seconds=30), task.hard_deadline)
 
 
+@pytest.mark.whatsapp_staff
 def test_send_failure_releases_reservation(ops):
     from messaging.models import SimulatorControl
     from messaging.outbox import send_due
@@ -162,6 +169,7 @@ def test_send_failure_releases_reservation(ops):
     assert task.status == "RELEASED" and task.release_reason == "send_failed" and req.state == "QUEUED"
 
 
+@pytest.mark.whatsapp_staff
 def test_accepted_not_reassigned_alert_only(ops):
     """AT-13."""
     a = ops.valets[0]
@@ -178,6 +186,7 @@ def test_accepted_not_reassigned_alert_only(ops):
     assert Alert.objects.filter(kind="accepted_overdue", ticket=ticket).exists()
 
 
+@pytest.mark.whatsapp_staff
 def test_break_pending_until_handover(ops):
     from ops.services import shifts
     a = ops.valets[0]

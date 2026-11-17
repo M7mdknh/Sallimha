@@ -13,6 +13,7 @@ from django.db.models import F, Max, Q
 from django.utils import timezone
 
 from core.audit import audit
+from core.context import staff_channel
 from core.errors import DomainError
 from core.locks import lock_event
 from messaging import hooks, outbox
@@ -212,10 +213,61 @@ def expire_offers(now=None) -> int:
 
 
 def _offer_still_valid(task, token, staff, now) -> bool:
+    """`token` is None for the staff app, where the signed-in valet and the task id identify the offer."""
     deadline = min(d for d in (task.offer_deadline, task.hard_deadline) if d)
     shift = shifts.open_shift_for(staff, task.event)
     return (task.status == Task.Status.OFFERED and task.assignee_id == staff.id
-            and task.generation == token.generation and now <= deadline and staff.enabled and shift is not None)
+            and (token is None or task.generation == token.generation) and now <= deadline and staff.enabled
+            and shift is not None)
+
+
+def offer_seen(staff, task_id: int, now=None) -> None:
+    """Staff app (ADR-0011): the valet's device has shown the offer, which starts its response window — what
+    "WhatsApp accepted the message" did in the retired channel. The hard limit from reservation still applies."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        task = (Task.objects.select_for_update(no_key=True)
+                .filter(pk=task_id, assignee=staff, type=Task.Type.RETRIEVAL, status=Task.Status.OFFERED,
+                        offer_sent_at__isnull=True).first())
+        if task is None:
+            return
+        task.offer_sent_at = now
+        task.offer_deadline = min(now + timedelta(seconds=timings(task.event)["offer_window_s"]), task.hard_deadline)
+        task.save(update_fields=["offer_sent_at", "offer_deadline"])
+
+
+def accept_offer(staff, task_id: int, now=None) -> str:
+    """Staff app: the signed-in valet accepts the offer made to them. Returns accepted | duplicate | stale; every
+    rule of accept_task is rechecked under the same locks."""
+    from ops.services.holds import dispatch_blocked_ticket_ids
+
+    now = now or timezone.now()
+    with transaction.atomic():
+        ticket, req, task = _lock_chain(task_id)
+        if task is None or task.assignee_id != staff.id or task.type != Task.Type.RETRIEVAL:
+            return "stale"
+        if task.status == Task.Status.ACCEPTED:
+            return "duplicate"
+        if not _offer_still_valid(task, None, staff, now):
+            return "stale"
+        if req.state != RetrievalRequest.State.OFFERED or req.current_task_id != task.id or \
+                ticket.state != Ticket.State.PARKED or ticket.id in dispatch_blocked_ticket_ids(task.event):
+            return "stale"
+        tokens.revoke(task=task, purposes=["valet_accept", "valet_decline"], now=now)
+        _apply_acceptance(ticket, req, task, staff, now)
+    return "accepted"
+
+
+def decline_offer(staff, task_id: int, now=None) -> str:
+    """Staff app. Returns declined | stale."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        _ticket, _req, task = _lock_chain(task_id)
+        if task is None or task.assignee_id != staff.id or task.type != Task.Type.RETRIEVAL or \
+                task.status != Task.Status.OFFERED:
+            return "stale"
+        _release_offer(task, now, AssignmentAttempt.Outcome.DECLINED, "declined")
+    return "declined"
 
 
 def accept_task(staff, payload: str, now=None) -> str:
@@ -267,7 +319,7 @@ def _apply_acceptance(ticket, req, task, staff, now, *, relayed_by=None, confirm
     if relayed_by is not None:
         summary.update(relayed_by=relayed_by.id, confirmed_via=confirmed_via)
     audit("dispatch.accepted", actor_id=staff.id, actor_label=actor_label(staff),
-          channel="console" if relayed_by is not None else "whatsapp", entity_type="ticket", entity_id=ticket.id,
+          channel="console" if relayed_by is not None else staff_channel(), entity_type="ticket", entity_id=ticket.id,
           event_id=ticket.event_id, summary=summary)
 
 

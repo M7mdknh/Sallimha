@@ -18,6 +18,7 @@ from console import live
 from console import serializers as s
 from console.common import (
     IsConsoleStaff,
+    IsSignedInStaff,
     actor_of,
     domain_response,
     events_for,
@@ -71,6 +72,19 @@ def login_view(request):
     return auth_flow.login_step(request, data, authenticate, login)
 
 
+@extend_schema(request=s.SetupRequest, responses={200: s.LoginResponse, 400: s.ErrorResponse,
+                                                   403: s.ErrorResponse, 429: s.ErrorResponse}, auth=[])
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@domain_response
+def setup_view(request):
+    """First sign-in or password reset with an admin-issued one-time code. Does not sign the person in."""
+    from console import auth_flow
+
+    _enforce_csrf(request)
+    return auth_flow.setup_step(request, validated(s.SetupRequest, request.data))
+
+
 @extend_schema(request=None, responses={200: s.OkResponse, 403: s.ErrorResponse})
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -82,7 +96,7 @@ def logout_view(request):
 
 @extend_schema(responses={200: s.MeResponse})
 @api_view(["GET"])
-@permission_classes([IsConsoleStaff])
+@permission_classes([IsSignedInStaff])
 def me(request):
     staff = actor_of(request)
     return out(s.MeResponse, {"id": staff.id, "name": staff.full_name, "role": staff.role, "language": staff.language,
@@ -138,6 +152,36 @@ class EndShift(ConsoleCommand):
         scoped_event(actor, shift.event_id)
         shifts.end_shift(actor, shift)
         return out(s.ShiftResponse, {"id": shift.id, "ended": True})
+
+
+class AssistShift(ConsoleCommand):
+    """Staff connectivity loss: mark (or clear) that a supervisor records this valet's actions for them."""
+
+    @command_schema(s.AssistRequest, s.ShiftResponse)
+    @idempotent_post
+    @domain_response
+    def post(self, request, shift_id):
+        actor = actor_of(request)
+        shift = Shift.objects.filter(pk=shift_id).select_related("event").first()
+        if shift is None:
+            raise Http404
+        scoped_event(actor, shift.event_id)
+        data = validated(s.AssistRequest, request.data)
+        shifts.set_assisted(actor, shift, data["on"], data.get("reason", ""))
+        return out(s.ShiftResponse, {"id": shift.id, "staff_id": shift.staff_id})
+
+
+class ContactCustomer(ConsoleCommand):
+    """Opens the customer's number for a call or a WhatsApp chat from the supervisor's own device. Audited; never
+    replay-stored (the number must not be kept in the idempotency table)."""
+
+    @extend_schema(request=None, responses={200: s.ContactResponse, **REFUSALS})
+    @domain_response
+    def post(self, request, ticket_id):
+        from ops.services import contact
+
+        actor = actor_of(request)
+        return out(s.ContactResponse, {"phone": contact.open_customer_contact(actor, scoped_ticket(actor, ticket_id))})
 
 
 class AckAlert(ConsoleCommand):

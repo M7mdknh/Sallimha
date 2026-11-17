@@ -40,7 +40,7 @@ def annotate(actor, incident, text: str) -> IncidentNote:
 
 
 def resolve(actor, incident, outcome: str) -> Incident:
-    require(actor, Role.MANAGER, incident.event)
+    require(actor, Role.ADMIN, incident.event)
     if not outcome.strip():
         raise DomainError("outcome_required")
     with transaction.atomic():

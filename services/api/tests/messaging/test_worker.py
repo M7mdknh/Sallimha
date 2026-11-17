@@ -9,6 +9,7 @@ from messaging.models import MessageOutbox, WebhookInbox
 from messaging.simulator import build_message_payload, build_status_payload, post_inbound
 
 
+@pytest.mark.whatsapp_staff
 def test_run_once_applies_status_inbox_and_beats(world):
     row = outbox.enqueue("valet.available_ok", staff=world.valets[0], template="valet.available_ok", params={},
                          dedupe_key="w-1")

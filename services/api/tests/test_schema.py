@@ -19,7 +19,8 @@ def test_schema_is_complete_and_committed(tmp_path):
 
 # Commands whose only input is the path; anything else must document its request body.
 BODYLESS_COMMANDS = ("/end", "/ack", "logout", "/close", "/reactivate", "/mfa", "/approve-unclaimed", "/replay",
-                     "/retention/apply")
+                     "/retention/apply", "/setup-code", "/contact", "/start-parking", "/accept", "/decline", "/ready",
+                     "/deliver", "/custody-ack")
 
 
 def test_every_console_route_documents_request_and_response():

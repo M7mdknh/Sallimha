@@ -35,7 +35,7 @@ def propose_unclaimed(actor, ticket, *, custodian: str, plan: str) -> CarryoverC
 
 def approve_unclaimed(actor, case, now=None) -> CarryoverCase:
     now = now or timezone.now()
-    require(actor, Role.MANAGER, case.ticket.event)
+    require(actor, Role.ADMIN, case.ticket.event)
     with transaction.atomic():
         ticket = Ticket.objects.select_for_update(no_key=True).get(pk=case.ticket_id)
         case = CarryoverCase.objects.select_for_update(no_key=True).get(pk=case.pk)
@@ -56,7 +56,7 @@ def approve_unclaimed(actor, case, now=None) -> CarryoverCase:
 
 def release_carryover(actor, case, method: str, note: str, now=None) -> CarryoverCase:
     now = now or timezone.now()
-    require(actor, Role.MANAGER, case.ticket.event)
+    require(actor, Role.ADMIN, case.ticket.event)
     if method not in CarryoverCase.ReleaseMethod.values or not note.strip():
         raise DomainError("reason_required")
     with transaction.atomic():

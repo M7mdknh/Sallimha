@@ -46,6 +46,7 @@ def _button(row, key):
     return next(b[0] for b in row.buttons if b[1] == key)
 
 
+@pytest.mark.whatsapp_staff
 def test_outage_then_recovery_without_duplicate_assignments_or_misleading_messages(ops):
     ticket, req = parked_with_request(ops.valets[0], ops.event)
     now = timezone.now()

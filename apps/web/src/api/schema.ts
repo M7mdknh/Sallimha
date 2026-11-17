@@ -84,6 +84,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description First sign-in or password reset with an admin-issued one-time code. Does not sign the person in. */
+        post: operations["auth_setup_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/carryover": {
         parameters: {
             query?: never;
@@ -158,6 +175,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["config_timings_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["dashboard_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -665,6 +698,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/shifts/{shift_id}/assist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Staff connectivity loss: mark (or clear) that a supervisor records this valet's actions for them. */
+        post: operations["shifts_assist_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shifts/{shift_id}/end": {
         parameters: {
             query?: never;
@@ -756,6 +806,43 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["staff_role_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/{staff_id}/setup-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Issues the one-time code with which the person sets their own password (first sign-in or reset).
+         *     Deliberately not replay-stored: the code is a secret and is shown only once.
+         */
+        post: operations["staff_setup_code_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/{staff_id}/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Team membership of an operation (not dispatch: the system still chooses who retrieves a car). */
+        post: operations["staff_team_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -868,6 +955,26 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["tickets_confirm_receipt_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Opens the customer's number for a call or a WhatsApp chat from the supervisor's own device. Audited; never
+         *     replay-stored (the number must not be kept in the idempotency table).
+         */
+        post: operations["tickets_contact_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1182,6 +1289,236 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/valet/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_availability_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_intake_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tasks/{task_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_tasks_accept_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tasks/{task_id}/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description A wrong code is a recorded answer, not a refusal: it is stored under its key, so a repeated tap never uses
+         *     up a second attempt.
+         */
+        post: operations["valet_tasks_code_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tasks/{task_id}/custody-ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_tasks_custody_ack_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tasks/{task_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_tasks_decline_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tasks/{task_id}/deliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_tasks_deliver_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tasks/{task_id}/moved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_tasks_moved_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tasks/{task_id}/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_tasks_ready_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tickets/{ticket_id}/park": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_tickets_park_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tickets/{ticket_id}/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Multipart upload straight from the phone's camera; nothing passes through WhatsApp. */
+        post: operations["valet_tickets_photo_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tickets/{ticket_id}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_tickets_receipt_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/tickets/{ticket_id}/start-parking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["valet_tickets_start_parking_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/valet/work": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Polled by the app. Showing an offer here starts its response window (the device has it). */
+        get: operations["valet_work_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/venues": {
         parameters: {
             query?: never;
@@ -1206,6 +1543,10 @@ export interface components {
             id: number;
             acknowledged: boolean;
         };
+        AssistRequestRequest: {
+            on: boolean;
+            reason?: string;
+        };
         AttentionItem: {
             id: number;
             kind: string;
@@ -1214,6 +1555,19 @@ export interface components {
             created_at: string;
             ticket: string | null;
             ticket_id: number | null;
+        };
+        /**
+         * @description * `available` - available
+         *     * `unavailable` - unavailable
+         *     * `break_pending` - break_pending
+         * @enum {string}
+         */
+        AvailabilityEnum: "available" | "unavailable" | "break_pending";
+        AvailabilityRequestRequest: {
+            available: boolean;
+        };
+        AvailabilityResponse: {
+            availability: components["schemas"]["AvailabilityEnum"];
         };
         CarryoverRow: {
             id: number;
@@ -1247,6 +1601,13 @@ export interface components {
          * @enum {string}
          */
         CategoryEnum: "missing_vehicle" | "key_issue" | "damage" | "identity_dispute" | "notification_failure" | "operational_delay" | "complaint";
+        CodeRequestRequest: {
+            code: string;
+        };
+        CodeResponse: {
+            outcome: components["schemas"]["OutcomeEnum"];
+            remaining: number;
+        };
         ConfigResponse: {
             version: number;
             timings: {
@@ -1269,6 +1630,10 @@ export interface components {
          * @enum {string}
          */
         ConfirmedViaEnum: "in_person" | "radio";
+        ContactResponse: {
+            /** @description E.164; opened on request and audited. Contact happens outside Sallimha */
+            phone: string;
+        };
         /**
          * @description * `UNCONFIRMED` - UNCONFIRMED
          *     * `CONFIRMED_IN_PERSON` - CONFIRMED_IN_PERSON
@@ -1277,21 +1642,81 @@ export interface components {
          * @enum {string}
          */
         ContactStateEnum: "UNCONFIRMED" | "CONFIRMED_IN_PERSON" | "CORRECTION_REQUIRED" | "ASSISTED_FALLBACK";
+        ContactStateResponse: {
+            id: number;
+            contact_state: components["schemas"]["ContactStateEnum"];
+        };
         CreateEventRequestRequest: {
             venue_id: number;
             name: string;
             /** @description Venue wall-clock time without an offset, e.g. 2026-12-01T19:00 */
             starts_at_local: string;
         };
+        /** @description No password: the person sets their own with a one-time setup code (ADR-0011). */
         CreateStaffRequestRequest: {
             full_name: string;
             phone: string;
             role: components["schemas"]["RoleEnum"];
+            /** @description Sign-in name; the mobile number when left empty */
             username?: string;
-            password?: string;
+            /** @description Also put them on this team */
+            event_id?: number | null;
         };
         CsrfResponse: {
             csrfToken: string;
+        };
+        /**
+         * @description * `ok` - ok
+         *     * `delayed` - delayed
+         * @enum {string}
+         */
+        CustomerMessagesEnum: "ok" | "delayed";
+        Dashboard: {
+            event: components["schemas"]["EventBrief"];
+            /** Format: date-time */
+            generated_at: string;
+            cars: components["schemas"]["DashboardCars"];
+            /** @description Requested and not yet accepted by a valet */
+            waiting_requests: number;
+            /** @description Waiting longer than delay_threshold_s */
+            delayed_requests: number;
+            delay_threshold_s: number;
+            oldest_wait_s: number | null;
+            /** @description From the customer's request to the car ready at the pickup point */
+            request_to_ready: components["schemas"]["StageStat"];
+            problems: components["schemas"]["DashboardProblems"];
+            team: components["schemas"]["DashboardTeam"];
+        };
+        DashboardCars: {
+            receiving: number;
+            parked: number;
+            retrieving: number;
+            ready: number;
+            delivered: number;
+        };
+        DashboardMember: {
+            staff_id: number;
+            name: string;
+            status: components["schemas"]["TeamStatusEnum"];
+            task: string | null;
+            parked: number;
+            delivered: number;
+        };
+        DashboardProblems: {
+            /** @description Items needing attention that nobody has acknowledged */
+            alerts: number;
+            critical: number;
+            /** @description Incidents not yet resolved */
+            incidents: number;
+            /** @description Active safety holds */
+            holds: number;
+        };
+        DashboardTeam: {
+            available: number;
+            busy: number;
+            unavailable: number;
+            not_started: number;
+            members: components["schemas"]["DashboardMember"][];
         };
         DeadLetter: {
             id: number;
@@ -1359,6 +1784,11 @@ export interface components {
             starts_at: string;
             /** @description The venue's IANA time zone; console times are shown in it */
             time_zone: string;
+        };
+        GuestMessageOut: {
+            text: string;
+            /** Format: date-time */
+            received_at: string;
         };
         Health: {
             worker: components["schemas"]["WorkerEnum"];
@@ -1439,6 +1869,12 @@ export interface components {
             description?: string;
             confirmed_via: components["schemas"]["ConfirmedViaEnum"];
         };
+        /**
+         * @description * `ar` - ar
+         *     * `en` - en
+         * @enum {string}
+         */
+        LanguageEnum: "ar" | "en";
         LiveRequest: {
             request_id: number;
             ticket_id: number;
@@ -1456,7 +1892,7 @@ export interface components {
         };
         LiveSnapshot: {
             event: components["schemas"]["EventBrief"];
-            /** @description Declared WhatsApp outage: relayed actions are enabled */
+            /** @description Declared customer WhatsApp outage */
             outage: components["schemas"]["OutageBrief"] | null;
             /** Format: date-time */
             generated_at: string;
@@ -1575,13 +2011,35 @@ export interface components {
          * @enum {string}
          */
         OutboxAttentionStatusEnum: "DEAD" | "DELIVERY_UNKNOWN";
+        /**
+         * @description * `ok` - ok
+         *     * `wrong` - wrong
+         *     * `locked` - locked
+         * @enum {string}
+         */
+        OutcomeEnum: "ok" | "wrong" | "locked";
+        OutcomeResponse: {
+            outcome: string;
+        };
+        ParkRequestRequest: {
+            zone_code: string;
+            detail?: string;
+            hook_number: number;
+        };
         PersonRow: {
             id: number;
             name: string;
             role: components["schemas"]["RoleEnum"];
         };
+        PhotoCountResponse: {
+            count: number;
+            required: number;
+        };
         ReasonRequestRequest: {
             reason: string;
+        };
+        ReceiptRequestRequest: {
+            received: boolean;
         };
         ReconcileHandoverRequestRequest: {
             reason: string;
@@ -1650,14 +2108,26 @@ export interface components {
         /**
          * @description * `VALET` - VALET
          *     * `SUPERVISOR` - SUPERVISOR
-         *     * `MANAGER` - MANAGER
          *     * `ADMIN` - ADMIN
-         *     * `SUPER_ADMIN` - SUPER_ADMIN
          * @enum {string}
          */
-        RoleEnum: "VALET" | "SUPERVISOR" | "MANAGER" | "ADMIN" | "SUPER_ADMIN";
+        RoleEnum: "VALET" | "SUPERVISOR" | "ADMIN";
         RoleRequestRequest: {
             role: components["schemas"]["RoleEnum"];
+        };
+        SetupCodeResponse: {
+            /** @description Shown once; only its hash is stored */
+            setup_code: string;
+            sign_in_name: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        SetupRequestRequest: {
+            /** @description Mobile number or username */
+            username: string;
+            /** @description One-time setup code issued by an admin */
+            code: string;
+            password: string;
         };
         /**
          * @description * `warning` - warning
@@ -1718,6 +2188,12 @@ export interface components {
             username: string | null;
             mfa_enrolled: boolean;
             mfa_locked: boolean;
+            /** @description The person has set their own password */
+            can_sign_in: boolean;
+            /** @description A one-time setup code is waiting to be used */
+            setup_pending: boolean;
+            /** @description Operations they are on */
+            event_ids: number[];
         };
         StageStat: {
             count: number;
@@ -1733,6 +2209,20 @@ export interface components {
         StartShiftRequestRequest: {
             staff_id: number;
         };
+        /**
+         * @description * `photos` - photos
+         *     * `receipt` - receipt
+         *     * `start_parking` - start_parking
+         *     * `park` - park
+         *     * `offer` - offer
+         *     * `custody_ack` - custody_ack
+         *     * `bring` - bring
+         *     * `code` - code
+         *     * `deliver` - deliver
+         *     * `move` - move
+         * @enum {string}
+         */
+        StepEnum: "photos" | "receipt" | "start_parking" | "park" | "offer" | "custody_ack" | "bring" | "code" | "deliver" | "move";
         SystemOutageRequestRequest: {
             reason: string;
             /** @description Venue wall-clock time, e.g. 2026-11-16T20:30 */
@@ -1749,6 +2239,15 @@ export interface components {
             task: components["schemas"]["TeamTask"] | null;
             /** Format: date-time */
             idle_since: string | null;
+            /** @description Device not working: a supervisor records their actions */
+            assisted: boolean;
+            /** @description Tasks completed in this shift */
+            done: number;
+        };
+        TeamMembershipRequestRequest: {
+            event_id: number;
+            /** @description On this operation's team or not */
+            member: boolean;
         };
         /**
          * @description * `available` - available
@@ -1805,6 +2304,12 @@ export interface components {
             timeline: components["schemas"]["TimelineEntry"][];
             /** @description Exception actions the server will accept now */
             allowed_actions: string[];
+            /** @description The one action to offer first, if any */
+            primary_action: string | null;
+            /** @description What the customer wrote on WhatsApp (stored here) */
+            guest_messages: components["schemas"]["GuestMessageOut"][];
+            /** @description A number exists and may be opened (audited) */
+            can_contact: boolean;
         };
         TicketRequestBrief: {
             id: number;
@@ -1831,6 +2336,10 @@ export interface components {
          * @enum {string}
          */
         TicketStateEnum: "RECEIVED" | "PARKED" | "RETRIEVING" | "READY" | "DELIVERED" | "CANCELLED" | "UNCLAIMED";
+        TicketStateResponse: {
+            id: number;
+            state: components["schemas"]["TicketStateEnum"];
+        };
         TimelineEntry: {
             /** Format: date-time */
             at: string;
@@ -1851,6 +2360,125 @@ export interface components {
          * @enum {string}
          */
         TypeEnum: "INTAKE" | "RETRIEVAL" | "RELOCATION";
+        ValetAssigned: {
+            event: string;
+            venue: string;
+        };
+        ValetCode: {
+            verified: boolean;
+            locked: boolean;
+            remaining: number;
+        };
+        ValetCustody: {
+            transfer_id: number;
+            vehicle_location: string;
+            key_location: string;
+            from_name: string;
+        };
+        ValetEventBrief: {
+            id: number;
+            name: string;
+            venue: string;
+        };
+        ValetIntakeRequestRequest: {
+            guest_phone: string;
+            /** @description Plate and/or a short description */
+            vehicle: string;
+            /** @default ar */
+            language: components["schemas"]["LanguageEnum"];
+        };
+        ValetIntakeResponse: {
+            id: number;
+            ticket: string;
+        };
+        ValetMe: {
+            id: number;
+            name: string;
+        };
+        ValetPhotoRequestRequest: {
+            /** Format: binary */
+            photo: string;
+        };
+        ValetRecent: {
+            ticket: string;
+            type: components["schemas"]["TypeEnum"];
+            /** Format: date-time */
+            at: string;
+        };
+        ValetShift: {
+            id: number;
+            availability: components["schemas"]["AvailabilityEnum"];
+            /** @description A supervisor records this valet's actions (device not working) */
+            assisted: boolean;
+            event: components["schemas"]["ValetEventBrief"];
+        };
+        ValetTask: {
+            id: number;
+            type: components["schemas"]["TypeEnum"];
+            status: components["schemas"]["ValetTaskStatusEnum"];
+            /**
+             * @description The valet's next action
+             *
+             *     * `photos` - photos
+             *     * `receipt` - receipt
+             *     * `start_parking` - start_parking
+             *     * `park` - park
+             *     * `offer` - offer
+             *     * `custody_ack` - custody_ack
+             *     * `bring` - bring
+             *     * `code` - code
+             *     * `deliver` - deliver
+             *     * `move` - move
+             */
+            step: components["schemas"]["StepEnum"];
+            /**
+             * Format: date-time
+             * @description When an offer lapses
+             */
+            deadline: string | null;
+            reason: string;
+            ticket: components["schemas"]["ValetTicket"];
+            code: components["schemas"]["ValetCode"] | null;
+            custody: components["schemas"]["ValetCustody"] | null;
+        };
+        /**
+         * @description * `RESERVED` - RESERVED
+         *     * `OFFERED` - OFFERED
+         *     * `ACCEPTED` - ACCEPTED
+         * @enum {string}
+         */
+        ValetTaskStatusEnum: "RESERVED" | "OFFERED" | "ACCEPTED";
+        ValetTicket: {
+            id: number;
+            number: string;
+            vehicle: string;
+            location: string;
+            hook: number | null;
+            /** @description Never the full number */
+            phone_masked: string | null;
+            photos: number;
+            photos_required: number;
+            contact_state: components["schemas"]["ContactStateEnum"];
+            state: components["schemas"]["TicketStateEnum"];
+            /** @description The customer already asked for the car */
+            early_request: boolean;
+            handover_blocked: boolean;
+        };
+        ValetVenue: {
+            zones: components["schemas"]["ZoneOut"][];
+            hook_count: number;
+        };
+        ValetWork: {
+            /** Format: date-time */
+            server_time: string;
+            me: components["schemas"]["ValetMe"];
+            shift: components["schemas"]["ValetShift"] | null;
+            assigned: components["schemas"]["ValetAssigned"] | null;
+            venue: components["schemas"]["ValetVenue"] | null;
+            customer_messages: components["schemas"]["CustomerMessagesEnum"];
+            task: components["schemas"]["ValetTask"] | null;
+            recent: components["schemas"]["ValetRecent"][];
+        };
         VenueRow: {
             id: number;
             name: string;
@@ -1881,6 +2509,11 @@ export interface components {
          * @enum {string}
          */
         WorkerEnum: "ok" | "stale" | "missing" | "unknown";
+        ZoneOut: {
+            code: string;
+            label_ar: string;
+            label_en: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2063,6 +2696,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+        };
+    };
+    auth_setup_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SetupRequestRequest"];
+                "multipart/form-data": components["schemas"]["SetupRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2333,6 +3015,43 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
+            };
+        };
+    };
+    dashboard_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Operation to show; the open one by default */
+                event?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3763,6 +4482,75 @@ export interface operations {
             };
         };
     };
+    shifts_assist_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                shift_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssistRequestRequest"];
+                "multipart/form-data": components["schemas"]["AssistRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     shifts_end_create: {
         parameters: {
             query?: never;
@@ -4136,6 +4924,135 @@ export interface operations {
                 "application/json": components["schemas"]["RoleRequestRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["RoleRequestRequest"];
                 "multipart/form-data": components["schemas"]["RoleRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    staff_setup_code_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staff_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupCodeResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    staff_team_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                staff_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamMembershipRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TeamMembershipRequestRequest"];
+                "multipart/form-data": components["schemas"]["TeamMembershipRequestRequest"];
             };
         };
         responses: {
@@ -4587,6 +5504,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tickets_contact_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactResponse"];
                 };
             };
             400: {
@@ -5935,6 +6912,880 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_availability_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AvailabilityRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AvailabilityRequestRequest"];
+                "multipart/form-data": components["schemas"]["AvailabilityRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilityResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_intake_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValetIntakeRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ValetIntakeRequestRequest"];
+                "multipart/form-data": components["schemas"]["ValetIntakeRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValetIntakeResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tasks_accept_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutcomeResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tasks_code_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CodeRequestRequest"];
+                "multipart/form-data": components["schemas"]["CodeRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodeResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tasks_custody_ack_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tasks_decline_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutcomeResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tasks_deliver_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutcomeResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tasks_moved_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParkRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ParkRequestRequest"];
+                "multipart/form-data": components["schemas"]["ParkRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketStateResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tasks_ready_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutcomeResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tickets_park_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParkRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ParkRequestRequest"];
+                "multipart/form-data": components["schemas"]["ParkRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketStateResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tickets_photo_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ValetPhotoRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhotoCountResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tickets_receipt_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiptRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReceiptRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReceiptRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactStateResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tickets_start_parking_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_work_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValetWork"];
                 };
             };
         };

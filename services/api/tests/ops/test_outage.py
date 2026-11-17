@@ -40,6 +40,7 @@ def _offered(ops):
 
 # --- WhatsApp outage: declaration and relayed actions ------------------------------------------------------
 
+@pytest.mark.whatsapp_staff
 def test_relayed_actions_require_a_declared_whatsapp_outage(ops):
     _ticket, _req, task = _offered(ops)
     with pytest.raises(DomainError) as err:
@@ -60,6 +61,7 @@ def test_one_open_outage_per_organisation_declared_and_ended_with_audit(ops):
         outage.declare_whatsapp_outage(ops.valets[0], ops.org, "valets cannot declare")
 
 
+@pytest.mark.whatsapp_staff
 def test_relayed_acceptance_is_the_dispatchers_choice_and_records_who_relayed(ops):
     ticket, req, task = _offered(ops)
     _declared(ops)
@@ -74,6 +76,7 @@ def test_relayed_acceptance_is_the_dispatchers_choice_and_records_who_relayed(op
     assert accepted.actor_id == task.assignee_id  # the valet accepted; the supervisor only relayed it
 
 
+@pytest.mark.whatsapp_staff
 def test_relay_cannot_accept_an_offer_that_is_no_longer_current(ops):
     _ticket, _req, task = _offered(ops)
     _declared(ops)
@@ -83,6 +86,7 @@ def test_relay_cannot_accept_an_offer_that_is_no_longer_current(ops):
     assert err.value.code == "stale"
 
 
+@pytest.mark.whatsapp_staff
 def test_relayed_ready_then_assisted_handover_delivers(ops):
     ticket, _req, task = _offered(ops)
     _declared(ops)
@@ -95,6 +99,7 @@ def test_relayed_ready_then_assisted_handover_delivers(ops):
     assert ticket.state == Ticket.State.DELIVERED and ticket.delivered_by == task.assignee
 
 
+@pytest.mark.whatsapp_staff
 def test_relayed_custody_receipt(ops):
     _ticket, _req, task = _offered(ops)
     _declared(ops)
@@ -109,6 +114,7 @@ def test_relayed_custody_receipt(ops):
     assert ack.summary["relayed_by"] == ops.supervisor.id
 
 
+@pytest.mark.whatsapp_staff
 def test_relayed_move_acceptance(ops):
     ticket = park(ops.valets[0], ops.event)
     move = relocation.start_relocation(ops.supervisor, ticket, ops.valets[1], "Lane")
@@ -125,6 +131,7 @@ def _start_intake(ops, **over):
     return outage.start_intake(ops.supervisor, ops.event, **args)
 
 
+@pytest.mark.whatsapp_staff
 def test_live_intake_on_behalf_registers_the_car_but_does_not_park_it(ops):
     _declared(ops)
     ticket = _start_intake(ops)
@@ -139,6 +146,7 @@ def test_live_intake_on_behalf_registers_the_car_but_does_not_park_it(ops):
     assert record.actor_id == ops.supervisor.id and record.summary["valet"] == ops.valets[1].id
 
 
+@pytest.mark.whatsapp_staff
 def test_relayed_parking_needs_photos_and_the_responsible_valet_with_location_and_hook(ops):
     from tests.ops.intake_helpers import JPEG
 
@@ -160,6 +168,7 @@ def test_relayed_parking_needs_photos_and_the_responsible_valet_with_location_an
     assert AuditEvent.objects.filter(action="intake.relayed", entity_id=ticket.id).count() == 6
 
 
+@pytest.mark.whatsapp_staff
 def test_missing_photos_need_an_explicit_exception(ops):
     from ops.services import intake
 
@@ -171,6 +180,7 @@ def test_missing_photos_need_an_explicit_exception(ops):
     assert Ticket.objects.get(pk=ticket.pk).state == Ticket.State.PARKED
 
 
+@pytest.mark.whatsapp_staff
 def test_relayed_parking_on_an_occupied_hook_changes_nothing(ops):
     from ops.services import intake
 
@@ -186,6 +196,7 @@ def test_relayed_parking_on_an_occupied_hook_changes_nothing(ops):
     assert ticket.state == Ticket.State.RECEIVED and ticket.parking_started_at is None
 
 
+@pytest.mark.whatsapp_staff
 def test_live_intake_on_behalf_is_refused_without_a_declared_outage(ops):
     with pytest.raises(DomainError) as err:
         _start_intake(ops)

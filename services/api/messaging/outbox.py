@@ -33,8 +33,15 @@ def _notify_worker() -> None:
 
 def enqueue(kind: str, *, staff=None, binding=None, to_phone: str | None = None, template: str, params: dict,
             buttons=(), ticket=None, task=None, dedupe_key: str, language: str | None = None,
-            now=None) -> MessageOutbox:
-    """Call inside the business transaction. `buttons` = [(payload, button_key, key_params?)]."""
+            now=None) -> MessageOutbox | None:
+    """Call inside the business transaction. `buttons` = [(payload, button_key, key_params?)].
+
+    Staff work in the app (ADR-0011): nothing is queued to a staff member, so no staff action can wait on WhatsApp.
+    Returns None in that case."""
+    from core.context import staff_app
+
+    if staff is not None and staff_app():
+        return None
     now = now or timezone.now()
     lang = language or (binding.language if binding is not None else getattr(staff, "language", "ar"))
     row, created = MessageOutbox.objects.get_or_create(

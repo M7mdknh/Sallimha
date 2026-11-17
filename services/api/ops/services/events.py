@@ -12,7 +12,7 @@ UNRESOLVED_TICKET_STATES = [Ticket.State.RECEIVED, Ticket.State.PARKED, Ticket.S
 
 
 def create_event(actor, venue, name: str, starts_at, timings: dict | None = None) -> Event:
-    require(actor, Role.MANAGER)
+    require(actor, Role.ADMIN)
     if venue.org_id != actor.org_id or not name.strip():
         raise DomainError("invalid_input")
     event = Event.objects.create(org=venue.org, venue=venue, name=name.strip()[:160], starts_at=starts_at,
@@ -26,7 +26,7 @@ def close_event(actor, event, now=None) -> Event:
     """Managers close the operating session only after reconciliation: no live work, open requests, open shifts or
     vehicles still in custody without an approved carryover case. Never simulate delivery to close."""
     now = now or timezone.now()
-    require(actor, Role.MANAGER, event)
+    require(actor, Role.ADMIN, event)
     with transaction.atomic():
         event = Event.objects.select_for_update(no_key=True).get(pk=event.pk)
         if event.status == Event.Status.CLOSED:

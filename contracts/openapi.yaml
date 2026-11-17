@@ -144,6 +144,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeResponse'
           description: ''
+  /api/auth/setup:
+    post:
+      operationId: auth_setup_create
+      description: First sign-in or password reset with an admin-issued one-time code.
+        Does not sign the person in.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SetupRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SetupRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/carryover:
     get:
       operationId: carryover_list
@@ -367,6 +411,34 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/dashboard:
+    get:
+      operationId: dashboard_retrieve
+      parameters:
+      - in: query
+        name: event
+        schema:
+          type: integer
+        description: Operation to show; the open one by default
+      tags:
+      - dashboard
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
   /api/dev/sim/messages:
     get:
       operationId: dev_sim_messages_list
@@ -1611,6 +1683,72 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/shifts/{shift_id}/assist:
+    post:
+      operationId: shifts_assist_create
+      description: 'Staff connectivity loss: mark (or clear) that a supervisor records
+        this valet''s actions for them.'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: shift_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - shifts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssistRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssistRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShiftResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/shifts/{shift_id}/end:
     post:
       operationId: shifts_end_create
@@ -1937,6 +2075,121 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/RoleRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/staff/{staff_id}/setup-code:
+    post:
+      operationId: staff_setup_code_create
+      description: |-
+        Issues the one-time code with which the person sets their own password (first sign-in or reset).
+        Deliberately not replay-stored: the code is a secret and is shown only once.
+      parameters:
+      - in: path
+        name: staff_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - staff
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupCodeResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/staff/{staff_id}/team:
+    post:
+      operationId: staff_team_create
+      description: 'Team membership of an operation (not dispatch: the system still
+        chooses who retrieves a car).'
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: staff_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamMembershipRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TeamMembershipRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TeamMembershipRequestRequest'
         required: true
       security:
       - sessionCookie: []
@@ -2352,6 +2605,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/tickets/{ticket_id}/contact:
+    post:
+      operationId: tickets_contact_create
+      description: |-
+        Opens the customer's number for a call or a WhatsApp chat from the supervisor's own device. Audited; never
+        replay-stored (the number must not be kept in the idempotency table).
+      parameters:
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactResponse'
           description: ''
         '400':
           content:
@@ -3592,6 +3894,771 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/valet/availability:
+    post:
+      operationId: valet_availability_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - valet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AvailabilityRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AvailabilityRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/intake:
+    post:
+      operationId: valet_intake_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      tags:
+      - valet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValetIntakeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ValetIntakeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ValetIntakeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValetIntakeResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tasks/{task_id}/accept:
+    post:
+      operationId: valet_tasks_accept_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutcomeResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tasks/{task_id}/code:
+    post:
+      operationId: valet_tasks_code_create
+      description: |-
+        A wrong code is a recorded answer, not a refusal: it is stored under its key, so a repeated tap never uses
+        up a second attempt.
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CodeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CodeRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tasks/{task_id}/custody-ack:
+    post:
+      operationId: valet_tasks_custody_ack_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tasks/{task_id}/decline:
+    post:
+      operationId: valet_tasks_decline_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutcomeResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tasks/{task_id}/deliver:
+    post:
+      operationId: valet_tasks_deliver_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutcomeResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tasks/{task_id}/moved:
+    post:
+      operationId: valet_tasks_moved_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParkRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ParkRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ParkRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketStateResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tasks/{task_id}/ready:
+    post:
+      operationId: valet_tasks_ready_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutcomeResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tickets/{ticket_id}/park:
+    post:
+      operationId: valet_tickets_park_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParkRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ParkRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ParkRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketStateResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tickets/{ticket_id}/photo:
+    post:
+      operationId: valet_tickets_photo_create
+      description: Multipart upload straight from the phone's camera; nothing passes
+        through WhatsApp.
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ValetPhotoRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotoCountResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tickets/{ticket_id}/receipt:
+    post:
+      operationId: valet_tickets_receipt_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReceiptRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReceiptRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactStateResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/tickets/{ticket_id}/start-parking:
+    post:
+      operationId: valet_tickets_start_parking_create
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/valet/work:
+    get:
+      operationId: valet_work_retrieve
+      description: Polled by the app. Showing an offer here starts its response window
+        (the device has it).
+      tags:
+      - valet
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValetWork'
+          description: ''
   /api/venues:
     get:
       operationId: venues_list
@@ -3628,6 +4695,16 @@ components:
       required:
       - acknowledged
       - id
+    AssistRequestRequest:
+      type: object
+      properties:
+        'on':
+          type: boolean
+        reason:
+          type: string
+          maxLength: 200
+      required:
+      - 'on'
     AttentionItem:
       type: object
       properties:
@@ -3653,6 +4730,30 @@ components:
       - severity
       - ticket
       - ticket_id
+    AvailabilityEnum:
+      enum:
+      - available
+      - unavailable
+      - break_pending
+      type: string
+      description: |-
+        * `available` - available
+        * `unavailable` - unavailable
+        * `break_pending` - break_pending
+    AvailabilityRequestRequest:
+      type: object
+      properties:
+        available:
+          type: boolean
+      required:
+      - available
+    AvailabilityResponse:
+      type: object
+      properties:
+        availability:
+          $ref: '#/components/schemas/AvailabilityEnum'
+      required:
+      - availability
     CarryoverRow:
       type: object
       properties:
@@ -3720,6 +4821,25 @@ components:
         * `notification_failure` - notification_failure
         * `operational_delay` - operational_delay
         * `complaint` - complaint
+    CodeRequestRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 12
+      required:
+      - code
+    CodeResponse:
+      type: object
+      properties:
+        outcome:
+          $ref: '#/components/schemas/OutcomeEnum'
+        remaining:
+          type: integer
+      required:
+      - outcome
+      - remaining
     ConfigResponse:
       type: object
       properties:
@@ -3758,6 +4878,15 @@ components:
       description: |-
         * `in_person` - in_person
         * `radio` - radio
+    ContactResponse:
+      type: object
+      properties:
+        phone:
+          type: string
+          description: E.164; opened on request and audited. Contact happens outside
+            Sallimha
+      required:
+      - phone
     ContactStateEnum:
       enum:
       - UNCONFIRMED
@@ -3770,6 +4899,16 @@ components:
         * `CONFIRMED_IN_PERSON` - CONFIRMED_IN_PERSON
         * `CORRECTION_REQUIRED` - CORRECTION_REQUIRED
         * `ASSISTED_FALLBACK` - ASSISTED_FALLBACK
+    ContactStateResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        contact_state:
+          $ref: '#/components/schemas/ContactStateEnum'
+      required:
+      - contact_state
+      - id
     CreateEventRequestRequest:
       type: object
       properties:
@@ -3790,6 +4929,8 @@ components:
       - venue_id
     CreateStaffRequestRequest:
       type: object
+      description: 'No password: the person sets their own with a one-time setup code
+        (ADR-0011).'
       properties:
         full_name:
           type: string
@@ -3803,10 +4944,12 @@ components:
           $ref: '#/components/schemas/RoleEnum'
         username:
           type: string
+          description: Sign-in name; the mobile number when left empty
           maxLength: 150
-        password:
-          type: string
-          maxLength: 256
+        event_id:
+          type: integer
+          nullable: true
+          description: Also put them on this team
       required:
       - full_name
       - phone
@@ -3818,6 +4961,137 @@ components:
           type: string
       required:
       - csrfToken
+    CustomerMessagesEnum:
+      enum:
+      - ok
+      - delayed
+      type: string
+      description: |-
+        * `ok` - ok
+        * `delayed` - delayed
+    Dashboard:
+      type: object
+      properties:
+        event:
+          $ref: '#/components/schemas/EventBrief'
+        generated_at:
+          type: string
+          format: date-time
+        cars:
+          $ref: '#/components/schemas/DashboardCars'
+        waiting_requests:
+          type: integer
+          description: Requested and not yet accepted by a valet
+        delayed_requests:
+          type: integer
+          description: Waiting longer than delay_threshold_s
+        delay_threshold_s:
+          type: integer
+        oldest_wait_s:
+          type: integer
+          nullable: true
+        request_to_ready:
+          allOf:
+          - $ref: '#/components/schemas/StageStat'
+          description: From the customer's request to the car ready at the pickup
+            point
+        problems:
+          $ref: '#/components/schemas/DashboardProblems'
+        team:
+          $ref: '#/components/schemas/DashboardTeam'
+      required:
+      - cars
+      - delay_threshold_s
+      - delayed_requests
+      - event
+      - generated_at
+      - oldest_wait_s
+      - problems
+      - request_to_ready
+      - team
+      - waiting_requests
+    DashboardCars:
+      type: object
+      properties:
+        receiving:
+          type: integer
+        parked:
+          type: integer
+        retrieving:
+          type: integer
+        ready:
+          type: integer
+        delivered:
+          type: integer
+      required:
+      - delivered
+      - parked
+      - ready
+      - receiving
+      - retrieving
+    DashboardMember:
+      type: object
+      properties:
+        staff_id:
+          type: integer
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/TeamStatusEnum'
+        task:
+          type: string
+          nullable: true
+        parked:
+          type: integer
+        delivered:
+          type: integer
+      required:
+      - delivered
+      - name
+      - parked
+      - staff_id
+      - status
+      - task
+    DashboardProblems:
+      type: object
+      properties:
+        alerts:
+          type: integer
+          description: Items needing attention that nobody has acknowledged
+        critical:
+          type: integer
+        incidents:
+          type: integer
+          description: Incidents not yet resolved
+        holds:
+          type: integer
+          description: Active safety holds
+      required:
+      - alerts
+      - critical
+      - holds
+      - incidents
+    DashboardTeam:
+      type: object
+      properties:
+        available:
+          type: integer
+        busy:
+          type: integer
+        unavailable:
+          type: integer
+        not_started:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardMember'
+      required:
+      - available
+      - busy
+      - members
+      - not_started
+      - unavailable
     DeadLetter:
       type: object
       properties:
@@ -3960,6 +5234,17 @@ components:
       - status
       - time_zone
       - venue
+    GuestMessageOut:
+      type: object
+      properties:
+        text:
+          type: string
+        received_at:
+          type: string
+          format: date-time
+      required:
+      - received_at
+      - text
     Health:
       type: object
       properties:
@@ -4167,6 +5452,14 @@ components:
       - plate
       - reason
       - valet_id
+    LanguageEnum:
+      enum:
+      - ar
+      - en
+      type: string
+      description: |-
+        * `ar` - ar
+        * `en` - en
     LiveRequest:
       type: object
       properties:
@@ -4219,7 +5512,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/OutageBrief'
           nullable: true
-          description: 'Declared WhatsApp outage: relayed actions are enabled'
+          description: Declared customer WhatsApp outage
         generated_at:
           type: string
           format: date-time
@@ -4495,6 +5788,39 @@ components:
       description: |-
         * `DEAD` - DEAD
         * `DELIVERY_UNKNOWN` - DELIVERY_UNKNOWN
+    OutcomeEnum:
+      enum:
+      - ok
+      - wrong
+      - locked
+      type: string
+      description: |-
+        * `ok` - ok
+        * `wrong` - wrong
+        * `locked` - locked
+    OutcomeResponse:
+      type: object
+      properties:
+        outcome:
+          type: string
+      required:
+      - outcome
+    ParkRequestRequest:
+      type: object
+      properties:
+        zone_code:
+          type: string
+          minLength: 1
+          maxLength: 20
+        detail:
+          type: string
+          maxLength: 80
+        hook_number:
+          type: integer
+          minimum: 1
+      required:
+      - hook_number
+      - zone_code
     PersonRow:
       type: object
       properties:
@@ -4508,6 +5834,16 @@ components:
       - id
       - name
       - role
+    PhotoCountResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        required:
+          type: integer
+      required:
+      - count
+      - required
     ReasonRequestRequest:
       type: object
       properties:
@@ -4517,6 +5853,13 @@ components:
           maxLength: 200
       required:
       - reason
+    ReceiptRequestRequest:
+      type: object
+      properties:
+        received:
+          type: boolean
+      required:
+      - received
     ReconcileHandoverRequestRequest:
       type: object
       properties:
@@ -4690,16 +6033,12 @@ components:
       enum:
       - VALET
       - SUPERVISOR
-      - MANAGER
       - ADMIN
-      - SUPER_ADMIN
       type: string
       description: |-
         * `VALET` - VALET
         * `SUPERVISOR` - SUPERVISOR
-        * `MANAGER` - MANAGER
         * `ADMIN` - ADMIN
-        * `SUPER_ADMIN` - SUPER_ADMIN
     RoleRequestRequest:
       type: object
       properties:
@@ -4707,6 +6046,42 @@ components:
           $ref: '#/components/schemas/RoleEnum'
       required:
       - role
+    SetupCodeResponse:
+      type: object
+      properties:
+        setup_code:
+          type: string
+          description: Shown once; only its hash is stored
+        sign_in_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+      required:
+      - expires_at
+      - setup_code
+      - sign_in_name
+    SetupRequestRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Mobile number or username
+          maxLength: 150
+        code:
+          type: string
+          minLength: 1
+          description: One-time setup code issued by an admin
+          maxLength: 20
+        password:
+          type: string
+          minLength: 1
+          maxLength: 512
+      required:
+      - code
+      - password
+      - username
     SeverityEnum:
       enum:
       - warning
@@ -4853,14 +6228,28 @@ components:
           type: boolean
         mfa_locked:
           type: boolean
+        can_sign_in:
+          type: boolean
+          description: The person has set their own password
+        setup_pending:
+          type: boolean
+          description: A one-time setup code is waiting to be used
+        event_ids:
+          type: array
+          items:
+            type: integer
+          description: Operations they are on
       required:
+      - can_sign_in
       - enabled
+      - event_ids
       - full_name
       - id
       - mfa_enrolled
       - mfa_locked
       - phone_masked
       - role
+      - setup_pending
       - username
     StageStat:
       type: object
@@ -4900,6 +6289,30 @@ components:
           type: integer
       required:
       - staff_id
+    StepEnum:
+      enum:
+      - photos
+      - receipt
+      - start_parking
+      - park
+      - offer
+      - custody_ack
+      - bring
+      - code
+      - deliver
+      - move
+      type: string
+      description: |-
+        * `photos` - photos
+        * `receipt` - receipt
+        * `start_parking` - start_parking
+        * `park` - park
+        * `offer` - offer
+        * `custody_ack` - custody_ack
+        * `bring` - bring
+        * `code` - code
+        * `deliver` - deliver
+        * `move` - move
     SystemOutageRequestRequest:
       type: object
       properties:
@@ -4943,8 +6356,16 @@ components:
           type: string
           format: date-time
           nullable: true
+        assisted:
+          type: boolean
+          description: 'Device not working: a supervisor records their actions'
+        done:
+          type: integer
+          description: Tasks completed in this shift
       required:
+      - assisted
       - break_pending
+      - done
       - idle_since
       - name
       - role
@@ -4952,6 +6373,17 @@ components:
       - staff_id
       - status
       - task
+    TeamMembershipRequestRequest:
+      type: object
+      properties:
+        event_id:
+          type: integer
+        member:
+          type: boolean
+          description: On this operation's team or not
+      required:
+      - event_id
+      - member
     TeamStatusEnum:
       enum:
       - available
@@ -5090,11 +6522,25 @@ components:
           items:
             type: string
           description: Exception actions the server will accept now
+        primary_action:
+          type: string
+          nullable: true
+          description: The one action to offer first, if any
+        guest_messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuestMessageOut'
+          description: What the customer wrote on WhatsApp (stored here)
+        can_contact:
+          type: boolean
+          description: A number exists and may be opened (audited)
       required:
       - allowed_actions
       - assignee
+      - can_contact
       - contact_state
       - event_id
+      - guest_messages
       - holds
       - hook
       - id
@@ -5107,6 +6553,7 @@ components:
       - parking_started
       - phone_masked
       - plate
+      - primary_action
       - registered_by
       - request
       - state
@@ -5168,6 +6615,16 @@ components:
         * `DELIVERED` - DELIVERED
         * `CANCELLED` - CANCELLED
         * `UNCLAIMED` - UNCLAIMED
+    TicketStateResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        state:
+          $ref: '#/components/schemas/TicketStateEnum'
+      required:
+      - id
+      - state
     TimelineEntry:
       type: object
       properties:
@@ -5206,6 +6663,293 @@ components:
         * `INTAKE` - INTAKE
         * `RETRIEVAL` - RETRIEVAL
         * `RELOCATION` - RELOCATION
+    ValetAssigned:
+      type: object
+      properties:
+        event:
+          type: string
+        venue:
+          type: string
+      required:
+      - event
+      - venue
+    ValetCode:
+      type: object
+      properties:
+        verified:
+          type: boolean
+        locked:
+          type: boolean
+        remaining:
+          type: integer
+      required:
+      - locked
+      - remaining
+      - verified
+    ValetCustody:
+      type: object
+      properties:
+        transfer_id:
+          type: integer
+        vehicle_location:
+          type: string
+        key_location:
+          type: string
+        from_name:
+          type: string
+      required:
+      - from_name
+      - key_location
+      - transfer_id
+      - vehicle_location
+    ValetEventBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        venue:
+          type: string
+      required:
+      - id
+      - name
+      - venue
+    ValetIntakeRequestRequest:
+      type: object
+      properties:
+        guest_phone:
+          type: string
+          minLength: 1
+          maxLength: 30
+        vehicle:
+          type: string
+          minLength: 1
+          description: Plate and/or a short description
+          maxLength: 200
+        language:
+          allOf:
+          - $ref: '#/components/schemas/LanguageEnum'
+          default: ar
+      required:
+      - guest_phone
+      - vehicle
+    ValetIntakeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticket:
+          type: string
+      required:
+      - id
+      - ticket
+    ValetMe:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+    ValetPhotoRequestRequest:
+      type: object
+      properties:
+        photo:
+          type: string
+          format: binary
+      required:
+      - photo
+    ValetRecent:
+      type: object
+      properties:
+        ticket:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        at:
+          type: string
+          format: date-time
+      required:
+      - at
+      - ticket
+      - type
+    ValetShift:
+      type: object
+      properties:
+        id:
+          type: integer
+        availability:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        assisted:
+          type: boolean
+          description: A supervisor records this valet's actions (device not working)
+        event:
+          $ref: '#/components/schemas/ValetEventBrief'
+      required:
+      - assisted
+      - availability
+      - event
+      - id
+    ValetTask:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        status:
+          $ref: '#/components/schemas/ValetTaskStatusEnum'
+        step:
+          allOf:
+          - $ref: '#/components/schemas/StepEnum'
+          description: |-
+            The valet's next action
+
+            * `photos` - photos
+            * `receipt` - receipt
+            * `start_parking` - start_parking
+            * `park` - park
+            * `offer` - offer
+            * `custody_ack` - custody_ack
+            * `bring` - bring
+            * `code` - code
+            * `deliver` - deliver
+            * `move` - move
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+          description: When an offer lapses
+        reason:
+          type: string
+        ticket:
+          $ref: '#/components/schemas/ValetTicket'
+        code:
+          allOf:
+          - $ref: '#/components/schemas/ValetCode'
+          nullable: true
+        custody:
+          allOf:
+          - $ref: '#/components/schemas/ValetCustody'
+          nullable: true
+      required:
+      - code
+      - custody
+      - deadline
+      - id
+      - reason
+      - status
+      - step
+      - ticket
+      - type
+    ValetTaskStatusEnum:
+      enum:
+      - RESERVED
+      - OFFERED
+      - ACCEPTED
+      type: string
+      description: |-
+        * `RESERVED` - RESERVED
+        * `OFFERED` - OFFERED
+        * `ACCEPTED` - ACCEPTED
+    ValetTicket:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        vehicle:
+          type: string
+        location:
+          type: string
+        hook:
+          type: integer
+          nullable: true
+        phone_masked:
+          type: string
+          nullable: true
+          description: Never the full number
+        photos:
+          type: integer
+        photos_required:
+          type: integer
+        contact_state:
+          $ref: '#/components/schemas/ContactStateEnum'
+        state:
+          $ref: '#/components/schemas/TicketStateEnum'
+        early_request:
+          type: boolean
+          description: The customer already asked for the car
+        handover_blocked:
+          type: boolean
+      required:
+      - contact_state
+      - early_request
+      - handover_blocked
+      - hook
+      - id
+      - location
+      - number
+      - phone_masked
+      - photos
+      - photos_required
+      - state
+      - vehicle
+    ValetVenue:
+      type: object
+      properties:
+        zones:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneOut'
+        hook_count:
+          type: integer
+      required:
+      - hook_count
+      - zones
+    ValetWork:
+      type: object
+      properties:
+        server_time:
+          type: string
+          format: date-time
+        me:
+          $ref: '#/components/schemas/ValetMe'
+        shift:
+          allOf:
+          - $ref: '#/components/schemas/ValetShift'
+          nullable: true
+        assigned:
+          allOf:
+          - $ref: '#/components/schemas/ValetAssigned'
+          nullable: true
+        venue:
+          allOf:
+          - $ref: '#/components/schemas/ValetVenue'
+          nullable: true
+        customer_messages:
+          $ref: '#/components/schemas/CustomerMessagesEnum'
+        task:
+          allOf:
+          - $ref: '#/components/schemas/ValetTask'
+          nullable: true
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValetRecent'
+      required:
+      - assigned
+      - customer_messages
+      - me
+      - recent
+      - server_time
+      - shift
+      - task
+      - venue
     VenueRow:
       type: object
       properties:
@@ -5270,6 +7014,19 @@ components:
         * `stale` - stale
         * `missing` - missing
         * `unknown` - unknown
+    ZoneOut:
+      type: object
+      properties:
+        code:
+          type: string
+        label_ar:
+          type: string
+        label_en:
+          type: string
+      required:
+      - code
+      - label_ar
+      - label_en
   securitySchemes:
     sessionCookie:
       type: apiKey

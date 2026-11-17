@@ -75,6 +75,25 @@ def _button(inb: Inbound) -> None:
     return None
 
 
+def _help_request(binding, inb: Inbound) -> None:
+    """The customer wrote to us (ADR-0011): keep what they said on the ticket and tell that event's team. One open
+    "customer needs help" item per ticket; a later message raises a new one only after the last was acknowledged."""
+    from ops.models import Alert, GuestMessage
+
+    ticket = binding.ticket
+    _row, created = GuestMessage.objects.get_or_create(
+        provider_message_id=inb.provider_message_id,
+        defaults={"ticket": ticket, "binding": binding, "text": (inb.text or "").strip()[:500],
+                  "received_at": inb.timestamp})
+    if not created:
+        return
+    raised = Alert.objects.filter(event=ticket.event, ticket=ticket, kind="guest_help")
+    if not raised.filter(acknowledged_at__isnull=True).exists():
+        raise_alert(ticket.event, "guest_help", ticket=ticket, dedupe_key=f"guest_help:{ticket.id}:{raised.count()}")
+    audit("guest.help_requested", actor_id=None, actor_label="guest", channel="whatsapp", entity_type="ticket",
+          entity_id=ticket.id, event_id=ticket.event_id)
+
+
 def _text(inb: Inbound) -> None:
     text = " ".join((inb.text or "").strip().lower().split())
     bindings = list(guest_identity.bindings_for_sender(inb))
@@ -82,7 +101,10 @@ def _text(inb: Inbound) -> None:
     if not authorized:
         return _reply_raw(inb, "guest.no_active_ticket")
     if text not in REQUEST_WORDS:
-        return _reply(authorized[0], inb, "guest.help")
+        if not text:
+            return _reply(authorized[0], inb, "guest.help")
+        _help_request(authorized[0], inb)
+        return _reply(authorized[0], inb, "guest.help_received")
     if len(authorized) == 1:
         binding = authorized[0]
         return _request(binding, binding.ticket, inb)

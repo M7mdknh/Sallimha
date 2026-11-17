@@ -4,6 +4,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from core.audit import audit
+from core.context import staff_channel
 from core.errors import DomainError
 from ops.models import LIVE_TASK_STATUSES, EventAssignment, Role, Shift, Task, UnavailablePeriod
 from ops.permissions import actor_label, has_role, require
@@ -32,7 +33,7 @@ def start_shift(actor, event, staff, now=None) -> Shift:
     if event.status != event.Status.OPEN:
         raise DomainError("event_closed")
     assigned = EventAssignment.objects.filter(event=event, staff=staff).exists()
-    if not assigned and staff.role != Role.VALET and not has_role(actor, Role.MANAGER):
+    if not assigned and staff.role != Role.VALET and not has_role(actor, Role.ADMIN):
         # Adding supervisor-level staff to an event grants event scope: manager+ only.
         raise DomainError("forbidden")
     try:
@@ -95,9 +96,34 @@ def set_availability(staff, available: bool, now=None) -> str:
             shift.availability = Shift.Availability.UNAVAILABLE
             shift.save(update_fields=["availability"])
             result = "unavailable"
-        audit(f"availability.{result}", actor_id=staff.id, actor_label=actor_label(staff), channel="whatsapp",
+        audit(f"availability.{result}", actor_id=staff.id, actor_label=actor_label(staff), channel=staff_channel(),
               entity_type="shift", entity_id=shift.id, event_id=shift.event_id)
     return result
+
+
+def set_assisted(actor, shift, on: bool, reason: str = "", now=None) -> Shift:
+    """Staff connectivity loss (ADR-0011): a supervisor marks that this valet's device is not working, so the
+    supervisor may record what the valet reports in person or by radio. Cleared the same way."""
+    now = now or timezone.now()
+    require(actor, Role.SUPERVISOR, shift.event)
+    if on and not reason.strip():
+        raise DomainError("reason_required")
+    with transaction.atomic():
+        shift = Shift.objects.select_for_update(no_key=True).get(pk=shift.pk)
+        if shift.ended_at is not None:
+            raise DomainError("invalid_state")
+        if bool(shift.assisted_since) != bool(on):
+            shift.assisted_since = now if on else None
+            shift.save(update_fields=["assisted_since"])
+            audit("shift.assisted_on" if on else "shift.assisted_off", actor_id=actor.id,
+                  actor_label=actor_label(actor), channel="console", entity_type="shift", entity_id=shift.id,
+                  event_id=shift.event_id, summary={"staff_id": shift.staff_id, "reason": reason.strip()[:200]})
+    return shift
+
+
+def is_assisted(staff, event) -> bool:
+    shift = open_shift_for(staff, event)
+    return bool(shift and shift.assisted_since)
 
 
 def on_task_released(staff, now=None) -> None:

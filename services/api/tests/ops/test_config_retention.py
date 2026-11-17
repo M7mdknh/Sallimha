@@ -23,14 +23,14 @@ def ops(world):
 
 def test_timing_change_audited_and_live_offer_keeps_deadline(ops):
     """AT-40."""
-    from messaging.outbox import send_due
     ticket, req = parked_with_request(ops.valets[0], ops.event)
     (task,) = dispatch.dispatch_event(ops.event.id)
-    send_due(timezone.now())
+    dispatch.offer_seen(task.assignee, task.id, timezone.now())  # the valet's app showed the offer
     task.refresh_from_db()
     original = task.offer_deadline
+    assert original is not None
     with pytest.raises(DomainError):
-        config.update_timings(ops.manager, ops.org, {"offer_window_s": 45})
+        config.update_timings(ops.supervisor, ops.org, {"offer_window_s": 45})
     config.update_timings(ops.admin, ops.org, {"offer_window_s": 45})
     task.refresh_from_db()
     assert task.offer_deadline == original
@@ -109,6 +109,7 @@ def test_hold_protects_evidence_from_retention(ops):
     assert retention.preview(ops.org)["intake_photos"]["eligible"] == 0
 
 
+@pytest.mark.whatsapp_staff
 def test_dead_letter_replay_admin_only_and_audited(ops):
     from messaging import outbox
     from messaging.models import SimulatorControl

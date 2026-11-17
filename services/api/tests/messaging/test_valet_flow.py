@@ -13,6 +13,7 @@ def valet(world):
     return v
 
 
+@pytest.mark.whatsapp_staff
 def test_full_intake_via_whatsapp_reaches_parked(world, valet):
     p = valet.phone_e164
     say(p, "مركبة جديدة")
@@ -38,12 +39,14 @@ def test_full_intake_via_whatsapp_reaches_parked(world, valet):
     assert last(valet).template == "valet.parked_done"
 
 
+@pytest.mark.whatsapp_staff
 def test_numeric_text_outside_prompt_is_not_guessed(world, valet):
     say(valet.phone_e164, "12")
     assert last(valet).template == "valet.unknown_input"
     assert not Ticket.objects.exists()
 
 
+@pytest.mark.whatsapp_staff
 def test_invalid_phone_reprompts_without_binding(world, valet):
     say(valet.phone_e164, "مركبة جديدة")
     say(valet.phone_e164, "12")
@@ -51,6 +54,7 @@ def test_invalid_phone_reprompts_without_binding(world, valet):
     assert not GuestBinding.objects.exists()
 
 
+@pytest.mark.whatsapp_staff
 def test_ready_button_sets_available(world):
     v = world.valets[1]
     shift = shifts.start_shift(world.supervisor, world.event, v)
@@ -61,12 +65,14 @@ def test_ready_button_sets_available(world):
     assert last(v).template == "valet.available_ok"
 
 
+@pytest.mark.whatsapp_staff
 def test_break_request_pending_while_intake(world, valet):
     say(valet.phone_e164, "مركبة جديدة")
     say(valet.phone_e164, "استراحة")
     assert last(valet).template == "valet.break_pending"
 
 
+@pytest.mark.whatsapp_staff
 def test_other_valets_button_is_rejected(world, valet):
     other = world.valets[1]
     open_shift(world.event, other, world.supervisor)
@@ -78,6 +84,7 @@ def test_other_valets_button_is_rejected(world, valet):
     assert not GuestBinding.objects.exists()
 
 
+@pytest.mark.whatsapp_staff
 def test_duplicate_button_tap_has_no_second_effect(world, valet):
     say(valet.phone_e164, "مركبة جديدة")
     say(valet.phone_e164, "0501234567")
@@ -88,6 +95,7 @@ def test_duplicate_button_tap_has_no_second_effect(world, valet):
     assert last(valet).template == "valet.duplicate"
 
 
+@pytest.mark.whatsapp_staff
 def test_new_car_while_busy_reports_current_ticket(world, valet):
     say(valet.phone_e164, "مركبة جديدة")
     say(valet.phone_e164, "مركبة جديدة")
@@ -100,6 +108,7 @@ def test_unknown_sender_is_not_treated_as_staff(world, valet):
     assert not Ticket.objects.exists()
 
 
+@pytest.mark.whatsapp_staff
 def test_offer_accept_via_whatsapp(world, valet):
     from ops.services import dispatch
     from tests.ops.dispatch_helpers import parked_with_request
@@ -114,6 +123,7 @@ def test_offer_accept_via_whatsapp(world, valet):
     assert last(valet).template == "valet.duplicate"
 
 
+@pytest.mark.whatsapp_staff
 def test_offer_decline_via_whatsapp(world, valet):
     from ops.models import RetrievalRequest
     from ops.services import dispatch
@@ -125,6 +135,7 @@ def test_offer_decline_via_whatsapp(world, valet):
     assert last(valet).template == "valet.offer_released"
 
 
+@pytest.mark.whatsapp_staff
 def test_photo_outside_intake_requires_explicit_incident(world, valet):
     """AT-36: never attached to an arbitrary 'latest incident'."""
     from ops.models import Media

@@ -8,7 +8,7 @@ from ops.management.commands.seed_demo import DEMO_TOTP_SECRETS
 
 
 class Command(BaseCommand):
-    help = "Print the current second-factor code for the demo manager/admin (local/test only)."
+    help = "Print the current second-factor code for the demo admin (local/test only)."
 
     def add_arguments(self, parser):
         parser.add_argument("username", choices=sorted(DEMO_TOTP_SECRETS))

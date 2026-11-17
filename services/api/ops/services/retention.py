@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from core.audit import audit
 from core.errors import DomainError
-from ops.models import CarryoverCase, GuestBinding, Incident, Media, Role, SafetyHold, Ticket
+from ops.models import CarryoverCase, GuestBinding, GuestMessage, Incident, Media, Role, SafetyHold, Ticket
 from ops.permissions import actor_label, require
 from ops.services.config import retention_days
 from ops.services.media import delete_private
@@ -67,6 +67,7 @@ def apply(actor, org, now=None) -> dict:
         _days, qs = _querysets(org, now)
         result = {"guest_contact": 0, "intake_photos": 0, "incident_evidence": 0}
         if "guest_contact" in qs:
+            GuestMessage.objects.filter(binding_id__in=list(qs["guest_contact"].values_list("id", flat=True))).delete()
             result["guest_contact"] = qs["guest_contact"].update(
                 phone_enc="", phone_hash="", phone_masked="redacted", wa_user_id="")
         for key in ("intake_photos", "incident_evidence"):

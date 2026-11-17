@@ -32,6 +32,7 @@ def ops(world):
     return world
 
 
+@pytest.mark.whatsapp_staff
 def test_declare_relay_and_end_whatsapp_outage(ops):
     sup = login_as(ops.supervisor)
     ticket, _req = parked_with_request(ops.valets[0], ops.event)
@@ -57,6 +58,7 @@ def test_declare_relay_and_end_whatsapp_outage(ops):
     assert sup.get("/api/outages").json()["whatsapp"] is None
 
 
+@pytest.mark.whatsapp_staff
 def test_intake_on_behalf_over_http(ops):
     from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -116,6 +118,7 @@ def test_system_outage_and_reconciliation_use_venue_local_time(ops):
     assert Reconciliation.objects.count() == 1
 
 
+@pytest.mark.whatsapp_staff
 def test_oversize_relayed_photo_is_refused_before_it_is_read(ops, settings, monkeypatch):
     """Security Guidance on ec2b0ad (MEDIUM): the size cap must apply before the upload is read into memory."""
     from django.core.files.uploadedfile import SimpleUploadedFile

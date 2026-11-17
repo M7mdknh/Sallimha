@@ -8,6 +8,7 @@ from django.conf import settings
 from django.db.models import Prefetch, Sum
 from django.db.models.functions import Coalesce
 from django.http import Http404, HttpResponse
+from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.decorators import api_view, permission_classes
@@ -108,13 +109,18 @@ class StaffDirectory(Command):
     @domain_response
     def get(self, request):
         actor = actor_of(request)
-        require(actor, Role.MANAGER)
-        rows = Staff.objects.filter(org_id=actor.org_id).select_related("user").order_by("-enabled", "full_name")
-        return out(s.StaffRow, [{"id": p.id, "full_name": p.full_name, "phone_masked": _masked(p.phone_e164),
-                                 "role": p.role, "enabled": p.enabled,
-                                 "username": p.user.username if p.user_id else None,
-                                 "mfa_enrolled": p.mfa_enrolled_at is not None,
-                                 "mfa_locked": p.mfa_locked_at is not None} for p in rows])
+        require(actor, Role.ADMIN)
+        rows = (Staff.objects.filter(org_id=actor.org_id).select_related("user")
+                .prefetch_related("assignments", "account_setups").order_by("-enabled", "role", "full_name"))
+        now = timezone.now()
+        return out(s.StaffRow, [{
+            "id": p.id, "full_name": p.full_name, "phone_masked": _masked(p.phone_e164), "role": p.role,
+            "enabled": p.enabled, "username": p.user.username if p.user_id else None,
+            "mfa_enrolled": p.mfa_enrolled_at is not None, "mfa_locked": p.mfa_locked_at is not None,
+            "can_sign_in": bool(p.user_id and p.user.has_usable_password()),
+            "setup_pending": any(a.used_at is None and a.revoked_at is None and a.expires_at > now
+                                 for a in p.account_setups.all()),
+            "event_ids": [a.event_id for a in p.assignments.all()]} for p in rows])
 
     @command_schema(s.CreateStaffRequest, s.IdResponse)
     @idempotent_post
@@ -122,8 +128,9 @@ class StaffDirectory(Command):
     def post(self, request):
         actor = actor_of(request)
         data = validated(s.CreateStaffRequest, request.data)
+        event = scoped_event(actor, data["event_id"]) if data.get("event_id") else None
         staff = staffdir.create_staff(actor, data["full_name"], data["phone"], data["role"],
-                                      username=data.get("username") or None, password=data.get("password") or None)
+                                      username=data.get("username") or None, event=event)
         return out(s.IdResponse, {"id": staff.id})
 
 
@@ -156,6 +163,35 @@ class StaffReactivate(Command):
         return out(s.IdResponse, {"id": staffdir.reactivate(actor, _staff(actor, staff_id)).id})
 
 
+class StaffSetupCode(Command):
+    """Issues the one-time code with which the person sets their own password (first sign-in or reset).
+    Deliberately not replay-stored: the code is a secret and is shown only once."""
+
+    @extend_schema(request=None, responses={200: s.SetupCodeResponse, **REFUSALS})
+    @domain_response
+    def post(self, request, staff_id):
+        actor = actor_of(request)
+        staff = _staff(actor, staff_id)
+        code = staffdir.issue_setup_code(actor, staff)
+        staff.refresh_from_db()
+        return out(s.SetupCodeResponse, {"setup_code": code, "sign_in_name": staff.user.username,
+                                         "expires_at": timezone.now() + staffdir.SETUP_TTL})
+
+
+class StaffTeam(Command):
+    """Team membership of an operation (not dispatch: the system still chooses who retrieves a car)."""
+
+    @command_schema(s.TeamMembershipRequest, s.IdResponse)
+    @idempotent_post
+    @domain_response
+    def post(self, request, staff_id):
+        actor = actor_of(request)
+        data = validated(s.TeamMembershipRequest, request.data)
+        staff = _staff(actor, staff_id)
+        staffdir.set_assignment(actor, staff, scoped_event(actor, data["event_id"]), data["member"])
+        return out(s.IdResponse, {"id": staff.id})
+
+
 class StaffMfa(Command):
     """Issues TOTP enrolment. Deliberately not replay-stored: the URI is a secret and is shown only once."""
 
@@ -166,6 +202,29 @@ class StaffMfa(Command):
         return out(s.MfaIssueResponse, {"otpauth_uri": staffdir.issue_mfa_enrolment(actor, _staff(actor, staff_id))})
 
 
+# --- dashboard ----------------------------------------------------------------------------------
+
+@extend_schema(parameters=[OpenApiParameter("event", OpenApiTypes.INT, OpenApiParameter.QUERY,
+                                            description="Operation to show; the open one by default")],
+               responses={200: s.Dashboard, **READ_REFUSALS})
+@api_view(["GET"])
+@permission_classes([IsConsoleStaff])
+@domain_response
+def dashboard(request):
+    from console.common import events_for
+
+    actor = actor_of(request)
+    require(actor, Role.ADMIN)
+    event_id = request.query_params.get("event")
+    if event_id and event_id.isdigit():
+        event = scoped_event(actor, int(event_id))
+    else:
+        event = events_for(actor).select_related("venue").order_by("status", "-starts_at").first()
+        if event is None:
+            raise Http404
+    return out(s.Dashboard, reports.dashboard(actor, event, timezone.now()))
+
+
 # --- events -------------------------------------------------------------------------------------
 
 class Venues(Command):
@@ -173,7 +232,7 @@ class Venues(Command):
     @domain_response
     def get(self, request):
         actor = actor_of(request)
-        require(actor, Role.MANAGER)
+        require(actor, Role.ADMIN)
         venues = (Venue.objects.filter(org_id=actor.org_id).prefetch_related("zones")
                   .annotate(hooks=Coalesce(Sum("key_stations__hook_count"), 0)).order_by("name"))
         return out(s.VenueRow, [{"id": v.id, "name": v.name, "time_zone": v.timezone, "key_hooks": v.hooks,
@@ -296,7 +355,7 @@ class CarryoverRegister(Command):
     @domain_response
     def get(self, request):
         actor = actor_of(request)
-        require(actor, Role.MANAGER)
+        require(actor, Role.ADMIN)
         rows = []
         held = Prefetch("ticket__key_occupancies", queryset=KeyOccupancy.objects.filter(released_at__isnull=True),
                         to_attr="held_keys")
@@ -382,7 +441,7 @@ class WhatsAppIntegrationView(Command):
     @domain_response
     def get(self, request):
         actor = actor_of(request)
-        require(actor, Role.SUPER_ADMIN)
+        require(actor, Role.ADMIN)
         audit("integration.view", actor_id=actor.id, actor_label=actor_label(actor), channel="console",
               entity_type="integration", summary={"name": "whatsapp"})
         return out(s.WhatsAppIntegration, {

@@ -1,4 +1,4 @@
-"""Console login with brute-force protection (MFA for manager and above is added in Task 2.3).
+"""Sign-in for every role with brute-force protection; admins also pass the second factor (ADR-0011).
 
 Safe across concurrent requests and application workers: every attempt first reserves a slot with an
 atomic upsert in PostgreSQL, so N parallel requests cannot all pass a check-then-insert gap. Only the
@@ -112,8 +112,10 @@ def _release(key: str, *, reset: bool) -> None:
 
 
 def login_step(request, data, authenticate, login):
+    from ops.services.staffdir import normalize_identifier
+
     now = timezone.now()
-    username = data["username"]
+    username = normalize_identifier(data["username"])  # a mobile number, however typed, or a username
     password = data["password"]
     raw_ip = client_ip(request)
     bucket = ip_bucket(raw_ip)  # IPv4 per address (embedded forms unwrapped); native IPv6 per /64
@@ -139,7 +141,7 @@ def login_step(request, data, authenticate, login):
     staff = getattr(user, "staff", None) if user else None
     if user is None or staff is None or not staff.enabled:
         return Response({"code": "invalid_credentials"}, status=400)
-    privileged = staff.rank >= ROLE_RANK[Role.MANAGER]
+    privileged = staff.rank >= ROLE_RANK[Role.ADMIN]
     if privileged:
         outcome = mfa.check(staff, data.get("otp") or "", now)
         if outcome == "required":
@@ -156,4 +158,28 @@ def login_step(request, data, authenticate, login):
     request.session["epoch"] = staff.session_epoch
     request.session["mfa_ok"] = True  # privileged roles only reach here after a verified TOTP code
     audit("auth.login", actor_id=staff.id, actor_label=f"{staff.role}:{staff.id}", channel="console")
+    return Response({"ok": True, "role": staff.role})
+
+
+def setup_step(request, data):
+    """First sign-in or password reset: the person turns an admin-issued one-time code into their own password.
+    Guesses are limited per network and name like sign-in, and per code in the directory service."""
+    from core.errors import DomainError
+    from ops.services import staffdir
+
+    now = timezone.now()
+    name = staffdir.normalize_identifier(data["username"])
+    bucket = ip_bucket(client_ip(request))
+    pair, by_ip = _pair_key(f"setup:{name}", bucket), _ip_key(bucket)
+    if _reserve(pair, now) > MAX_FAILURES or _reserve(by_ip, now) > IP_MAX_FAILURES:
+        return Response({"code": "too_many_attempts"}, status=429)
+    try:
+        staff = staffdir.complete_setup(name, data["code"], data["password"], now=now)
+    except DomainError as err:
+        if err.code == "weak_password":
+            _release(pair, reset=False)  # the code was right; choosing a better password is not a guess
+            _release(by_ip, reset=False)
+        return Response({"code": err.code}, status=400)
+    _release(pair, reset=True)
+    _release(by_ip, reset=False)
     return Response({"ok": True, "role": staff.role})

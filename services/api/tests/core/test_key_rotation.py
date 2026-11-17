@@ -52,6 +52,7 @@ def test_new_primary_key_still_reads_old_ciphertext_and_writes_with_the_new_key(
     assert Fernet(KEY_B.encode()).decrypt(fresh.encode()) == b"+966501112255"  # new data uses the new key
 
 
+@pytest.mark.whatsapp_staff
 def test_lookups_keep_working_during_the_hash_key_transition(old_keys, world):
     ticket, binding, _code = _world_with_secrets(world)
     _new_keys(old_keys)
@@ -62,6 +63,7 @@ def test_lookups_keep_working_during_the_hash_key_transition(old_keys, world):
     assert guest == keyed_hash("+966501112244", "phone", key="hash-key-a")
 
 
+@pytest.mark.whatsapp_staff
 def test_rotate_keys_rewrites_every_secret_and_previous_keys_can_then_be_removed(old_keys, world):
     ticket, binding, code = _world_with_secrets(world)
     out = MessageOutbox.objects.filter(to_phone_enc__gt="").first() or MessageOutbox.objects.create(

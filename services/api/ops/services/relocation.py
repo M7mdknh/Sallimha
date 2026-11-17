@@ -14,6 +14,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from core.audit import audit
+from core.context import staff_channel
 from core.errors import DomainError
 from messaging import outbox
 from ops.models import KeyOccupancy, ParkingZone, Role, Task, Ticket
@@ -139,6 +140,41 @@ def accept_relocation(staff, payload: str, now=None) -> str:
     return "accepted"
 
 
+def accept_move(staff, task_id: int, now=None) -> str:
+    """Staff app: the named valet accepts the move. Returns accepted | duplicate | stale."""
+    from ops.services.holds import dispatch_blocked_ticket_ids
+
+    now = now or timezone.now()
+    if not Task.objects.filter(pk=task_id, assignee=staff, type=Task.Type.RELOCATION).exists():
+        return "stale"
+    with transaction.atomic():
+        ticket, task = _lock(task_id)
+        if task.assignee_id != staff.id:
+            return "stale"
+        if task.status == Task.Status.ACCEPTED:
+            return "duplicate"
+        if (task.status != Task.Status.OFFERED or now > task.offer_deadline or not staff.enabled
+                or shifts.open_shift_for(staff, task.event) is None or ticket.state != Ticket.State.PARKED
+                or ticket.id in dispatch_blocked_ticket_ids(task.event)):
+            return "stale"
+        tokens.revoke(task=task, purposes=["relocation_accept", "relocation_decline"], now=now)
+        _apply_acceptance(ticket, task, staff, now)
+    return "accepted"
+
+
+def decline_move(staff, task_id: int, now=None) -> str:
+    """Staff app. Returns declined | stale."""
+    now = now or timezone.now()
+    if not Task.objects.filter(pk=task_id, assignee=staff, type=Task.Type.RELOCATION).exists():
+        return "stale"
+    with transaction.atomic():
+        ticket, task = _lock(task_id)
+        if task.status != Task.Status.OFFERED or task.assignee_id != staff.id:
+            return "stale"
+        _release(task, ticket, now, "declined", actor=staff, channel=staff_channel())
+    return "declined"
+
+
 def _apply_acceptance(ticket, task, staff, now, *, relayed_by=None, confirmed_via: str = "") -> None:
     task.status = Task.Status.ACCEPTED
     task.accepted_at = now
@@ -148,7 +184,7 @@ def _apply_acceptance(ticket, task, staff, now, *, relayed_by=None, confirmed_vi
                    template="valet.relocation_accepted", params={"ticket": _t(ticket)},
                    buttons=[(moved, "moved")], dedupe_key=f"valet.relocation_accepted:{task.id}", now=now)
     extra = {"relayed_by": relayed_by.id, "confirmed_via": confirmed_via} if relayed_by is not None else {}
-    _audit("relocation.accepted", staff, ticket, "console" if relayed_by is not None else "whatsapp",
+    _audit("relocation.accepted", staff, ticket, "console" if relayed_by is not None else staff_channel(),
            task_id=task.id, **extra)
 
 
@@ -179,7 +215,7 @@ def decline_relocation(staff, payload: str, now=None) -> str:
         token = type(token).objects.select_for_update(no_key=True).get(pk=token.pk)
         if tokens.state(token, now) != "valid" or task.status != Task.Status.OFFERED or task.assignee_id != staff.id:
             return "stale"
-        _release(task, ticket, now, "declined", actor=staff, channel="whatsapp")
+        _release(task, ticket, now, "declined", actor=staff, channel=staff_channel())
     return "declined"
 
 
@@ -256,7 +292,7 @@ def complete_relocation(actor, task, *, zone_code: str, detail: str, hook_number
                            template="valet.relocation_done",
                            params={"ticket": _t(ticket), "location": location, "hook": str(int(hook_number))},
                            dedupe_key=f"valet.relocation_done:{task.id}", now=now)
-            _audit("relocation.complete", actor, ticket, "whatsapp" if by_mover else "console", task_id=task.id,
+            _audit("relocation.complete", actor, ticket, staff_channel() if by_mover else "console", task_id=task.id,
                    mover=task.assignee_id, recorded_by=actor.id, confirmed_via="mover" if by_mover else confirmed_via,
                    hook=int(hook_number), from_hook=previous_hook, accepted_at=task.accepted_at.isoformat(),
                    **{"from": previous, "to": location})

@@ -3,21 +3,19 @@ from django.db import models
 
 
 class Role(models.TextChoices):
+    """Three product roles (ADR-0011). The framework's superuser flag is separate and never used by the product."""
+
     VALET = "VALET"
     SUPERVISOR = "SUPERVISOR"
-    MANAGER = "MANAGER"
     ADMIN = "ADMIN"
-    SUPER_ADMIN = "SUPER_ADMIN"
 
 
-ROLE_RANK = {Role.VALET: 0, Role.SUPERVISOR: 1, Role.MANAGER: 2, Role.ADMIN: 3, Role.SUPER_ADMIN: 4}
+ROLE_RANK = {Role.VALET: 0, Role.SUPERVISOR: 1, Role.ADMIN: 2}
 
 
 class Staff(models.Model):
-    """A person in the unified directory.
-
-    Valets act through WhatsApp; console users also link an auth user.
-    """
+    """A person in the unified directory. Everyone signs in to the staff app with their own linked auth user
+    (ADR-0011); valets reach only the valet endpoints."""
 
     org = models.ForeignKey("ops.Organization", on_delete=models.PROTECT, related_name="staff")
     full_name = models.CharField(max_length=120)
@@ -45,6 +43,26 @@ class Staff(models.Model):
     @property
     def rank(self) -> int:
         return ROLE_RANK[self.role]
+
+
+class AccountSetup(models.Model):
+    """One-time code with which a person sets their own password (ADR-0011): issued by an admin, shown once, stored
+    only as a keyed hash. Issuing a new code revokes the previous one; it also serves as the password reset."""
+
+    staff = models.ForeignKey(Staff, on_delete=models.PROTECT, related_name="account_setups")
+    code_hash = models.CharField(max_length=64)
+    issued_by = models.ForeignKey(Staff, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["staff"], condition=models.Q(used_at__isnull=True, revoked_at__isnull=True),
+                                    name="one_live_account_setup_per_person")
+        ]
 
 
 class EventAssignment(models.Model):
@@ -75,6 +93,9 @@ class Shift(models.Model):
     )
     break_pending = models.BooleanField(default=False)
     idle_since = models.DateTimeField(null=True, blank=True)
+    # Staff connectivity loss (ADR-0011): this valet's device is not working, so a supervisor records what they
+    # report in person or by radio. Set and cleared by a supervisor, with the reason in the audit trail.
+    assisted_since = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [

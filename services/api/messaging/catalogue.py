@@ -64,6 +64,12 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ar": "للمساعدة تواصل مع فريق الخدمة في الموقع، أو اطلب مركبتك من رسالة التذكرة.",
         "en": "For help, speak to the service team on site, or request your car from your ticket message.",
     },
+    "guest.help_received": {
+        "ar": "وصلت رسالتك إلى فريق الخدمة وسيتواصل معك أحد أفراده. لطلب مركبتك استخدم زر «اطلب سيارتي» في رسالة "
+        "التذكرة.",
+        "en": "Your message has reached the service team and someone will contact you. To request your car, use the "
+        "“Request my car” button in your ticket message.",
+    },
     "guest.no_active_ticket": {
         "ar": "لا توجد تذكرة نشطة مرتبطة بهذا الرقم. للمساعدة تواصل مع فريق الخدمة.",
         "en": "There is no active ticket linked to this number. Please ask the service team for help.",

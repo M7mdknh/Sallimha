@@ -120,7 +120,7 @@ def test_manager_role_inherits_supervisor_rights_everywhere(world):
     assert shift.event == other_event
 
 
-@pytest.mark.parametrize("role", [Role.SUPERVISOR, Role.MANAGER])
+@pytest.mark.parametrize("role", [Role.SUPERVISOR, Role.ADMIN])
 def test_shift_start_is_audited(world, role):
     from core.models import AuditEvent
     actor = world.supervisor if role == Role.SUPERVISOR else world.manager

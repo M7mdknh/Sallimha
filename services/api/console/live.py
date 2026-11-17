@@ -80,7 +80,9 @@ def snapshot(event, now) -> dict:
                      "role": shift.staff.role, "status": status, "break_pending": shift.break_pending,
                      "task": {"type": task.type, "ticket": _t(task.ticket), "ticket_id": task.ticket_id,
                               "status": task.status} if task else None,
-                     "idle_since": shift.idle_since})
+                     "idle_since": shift.idle_since, "assisted": shift.assisted_since is not None,
+                     "done": Task.objects.filter(assignee=shift.staff, event=event, status=Task.Status.COMPLETED,
+                                                 completed_at__gte=shift.started_at).count()})
     not_started = [{"staff_id": a.staff_id, "name": a.staff.full_name, "role": a.staff.role}
                    for a in EventAssignment.objects.filter(event=event).select_related("staff")
                    if a.staff_id not in on_shift and a.staff.enabled]
@@ -131,7 +133,7 @@ def allowed_actions(ticket, req, binding, actor=None) -> list[str]:
         actions += (["relocate_complete"] if move.status == "ACCEPTED" else []) + ["relocate_cancel"]
     if ticket.state == Ticket.State.READY:
         actions.append("assisted_handover")
-    if open_case is not None and actor is not None and has_role(actor, Role.MANAGER):
+    if open_case is not None and actor is not None and has_role(actor, Role.ADMIN):
         actions.append("approve_unclaimed" if open_case.status == "PROPOSED" else "release_carryover")
     actions += _outage_actions(ticket, actor)
     from ops.services import holds, incidents
@@ -141,38 +143,49 @@ def allowed_actions(ticket, req, binding, actor=None) -> list[str]:
 
 
 def _outage_actions(ticket, actor) -> list[str]:
-    """Relayed actions only while a WhatsApp outage is declared; reconciliation (manager+) only when a recorded
-    whole-system outage in the last 30 days could contain the handover (ADR-0008)."""
+    """Relayed actions only for a valet a supervisor may act for (their device is marked as not working; in the
+    retired channel, while the WhatsApp outage is declared). Reconciliation (admin) only when a recorded
+    whole-system outage in the last 30 days could contain the handover (ADR-0008, ADR-0011)."""
     from datetime import timedelta
 
     from django.utils import timezone
 
     from ops.models import CustodyTransfer, OutageWindow
     from ops.permissions import has_role
-    from ops.services.outage import active_whatsapp_outage
+    from ops.services.outage import relay_allowed
 
     actions = []
     if actor is None:
         return actions
-    if active_whatsapp_outage(ticket.event.org) is not None:
-        live = ticket.tasks.filter(status__in=LIVE_TASK_STATUSES).first()
-        if live is not None and live.status == "OFFERED" and live.type in ("RETRIEVAL", "RELOCATION"):
+    live = ticket.tasks.filter(status__in=LIVE_TASK_STATUSES).select_related("assignee").first()
+    if live is not None and relay_allowed(ticket.event, live.assignee):
+        if live.status == "OFFERED" and live.type in ("RETRIEVAL", "RELOCATION"):
             actions.append("relay_accept")
-        if live is not None and live.status == "ACCEPTED" and live.type == "RETRIEVAL" and \
-                ticket.state == Ticket.State.RETRIEVING:
+        if live.status == "ACCEPTED" and live.type == "RETRIEVAL" and ticket.state == Ticket.State.RETRIEVING:
             actions.append("relay_ready")
-        if ticket.custody_transfers.filter(kind=CustodyTransfer.Kind.RETRIEVAL_TRANSFER,
-                                           acknowledged_at__isnull=True).exists():
+        if live.status == "RESERVED" and ticket.custody_transfers.filter(
+                kind=CustodyTransfer.Kind.RETRIEVAL_TRANSFER, acknowledged_at__isnull=True).exists():
             actions.append("relay_custody_ack")
         if ticket.state == Ticket.State.RECEIVED and ticket.parking_started_at is None and \
-                ticket.tasks.filter(type="INTAKE", status="ACCEPTED").exists():
+                live.type == "INTAKE" and live.status == "ACCEPTED":
             actions += ["relay_intake_photo", "relay_parked"]
-    if has_role(actor, Role.MANAGER) and ticket.state in (Ticket.State.PARKED, Ticket.State.RETRIEVING,
+    if has_role(actor, Role.ADMIN) and ticket.state in (Ticket.State.PARKED, Ticket.State.RETRIEVING,
                                                          Ticket.State.READY) and \
             OutageWindow.objects.filter(org_id=ticket.event.org_id, kind="SYSTEM",
                                         ended_at__gte=timezone.now() - timedelta(days=30)).exists():
         actions.append("reconcile_handover")
     return actions
+
+
+PRIMARY_ORDER = ("relay_accept", "relay_ready", "relay_custody_ack", "relay_parked", "approve_unclaimed",
+                 "release_carryover", "confirm_receipt", "assisted_handover", "assisted_request")
+
+
+def primary_action(actions: list[str]) -> str | None:
+    """The one action to put first for this ticket's situation; everything else goes under More actions. Recording
+    for a valet whose device is down comes first, then a waiting approval, then what a customer at the stand
+    usually needs. While a valet is simply doing the job there is nothing for a supervisor to press."""
+    return next((a for a in PRIMARY_ORDER if a in actions), None)
 
 
 def ticket_detail(ticket, actor) -> dict:
@@ -184,6 +197,7 @@ def ticket_detail(ticket, actor) -> dict:
     from core.models import AuditEvent
 
     timeline = AuditEvent.objects.filter(entity_type="ticket", entity_id=ticket.id).order_by("occurred_at")
+    actions = allowed_actions(ticket, req if req and req.state in OPEN_REQUEST_STATES else None, binding, actor)
     return {
         "id": ticket.id, "ticket": _t(ticket), "event_id": ticket.event_id, "state": ticket.state,
         "contact_state": ticket.contact_state, "phone_masked": binding.phone_masked if binding else None,
@@ -202,8 +216,11 @@ def ticket_detail(ticket, actor) -> dict:
         "holds": holds.brief(ticket),
         "incidents": incidents.brief(ticket),
         "timeline": [{"at": e.occurred_at, "action": e.action, "actor": e.actor_label} for e in timeline],
-        "allowed_actions": allowed_actions(ticket, req if req and req.state in OPEN_REQUEST_STATES else None, binding,
-                                           actor),
+        "allowed_actions": actions,
+        "primary_action": primary_action(actions),
+        "guest_messages": [{"text": m.text, "received_at": m.received_at}
+                           for m in ticket.guest_messages.order_by("-received_at")[:10]],
+        "can_contact": bool(binding and binding.phone_enc),
     }
 
 

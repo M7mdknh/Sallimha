@@ -79,7 +79,7 @@ def declare_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
     from ops.services.alerts import raise_alert
 
     now = now or timezone.now()
-    require(actor, Role.MANAGER)
+    require(actor, Role.ADMIN)
     if actor.org_id != org.id:
         raise DomainError("forbidden")
     if not reason.strip():
@@ -100,7 +100,7 @@ def declare_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
 
 def end_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
     now = now or timezone.now()
-    require(actor, Role.MANAGER)
+    require(actor, Role.ADMIN)
     if actor.org_id != org.id:
         raise DomainError("forbidden")
     with transaction.atomic():
@@ -114,10 +114,23 @@ def end_whatsapp_outage(actor, org, reason: str, now=None) -> OutageWindow:
     return window
 
 
-def _relay_guard(actor, event, confirmed_via: str) -> None:
+def relay_allowed(event, valet) -> bool:
+    """When a supervisor may record a valet's own actions for them. Staff app (ADR-0011): only for a valet whose
+    device a supervisor marked as not working — a customer WhatsApp outage does not stop the app. Retired
+    WhatsApp channel: while the WhatsApp outage is declared (ADR-0008)."""
+    from core.context import staff_app
+
+    if staff_app():
+        return valet is not None and shifts.is_assisted(valet, event)
+    return active_whatsapp_outage(event.org) is not None
+
+
+def _relay_guard(actor, event, confirmed_via: str, valet) -> None:
+    from core.context import staff_app
+
     require(actor, Role.SUPERVISOR, event)
-    if active_whatsapp_outage(event.org) is None:
-        raise DomainError("no_active_outage")
+    if not relay_allowed(event, valet):
+        raise DomainError("valet_not_assisted" if staff_app() else "no_active_outage")
     if confirmed_via not in CONFIRMED_VIA:
         raise DomainError("confirmation_required")
 
@@ -126,7 +139,7 @@ def relay_accept(actor, task, *, confirmed_via: str, now=None) -> None:
     """The valet the system offered the task to accepted by radio or in person."""
     from ops.services import dispatch, relocation
 
-    _relay_guard(actor, task.event, confirmed_via)
+    _relay_guard(actor, task.event, confirmed_via, task.assignee)
     if task.type == Task.Type.RETRIEVAL:
         dispatch.accept_relayed(actor, task, confirmed_via, now=now)
     elif task.type == Task.Type.RELOCATION:
@@ -138,14 +151,14 @@ def relay_accept(actor, task, *, confirmed_via: str, now=None) -> None:
 def relay_ready(actor, task, *, confirmed_via: str, now=None) -> None:
     from ops.services import handover
 
-    _relay_guard(actor, task.event, confirmed_via)
+    _relay_guard(actor, task.event, confirmed_via, task.assignee)
     handover.mark_ready_relayed(actor, task, confirmed_via, now=now)
 
 
 def relay_custody_ack(actor, transfer, *, confirmed_via: str, now=None) -> None:
     from ops.services import custody
 
-    _relay_guard(actor, transfer.ticket.event, confirmed_via)
+    _relay_guard(actor, transfer.ticket.event, confirmed_via, transfer.to_staff)
     if transfer.kind != CustodyTransfer.Kind.RETRIEVAL_TRANSFER:
         raise DomainError("invalid_state")
     custody.acknowledge_custody(transfer.to_staff, transfer, now=now, relayed_by=actor, confirmed_via=confirmed_via)
@@ -167,7 +180,7 @@ def record_intake(actor, event, *, valet, guest_phone: str, plate: str, descript
     if outage is None:
         raise DomainError("invalid_window")
     else:
-        require(actor, Role.MANAGER, event)
+        require(actor, Role.ADMIN, event)
         _check_window(actor, outage, now)
         if received_at is None or parked_at is None or received_at > parked_at:
             raise DomainError("conflict_time")
@@ -249,7 +262,7 @@ def start_intake(actor, event, *, valet, guest_phone: str, plate: str, descripti
     from ops.services import intake
 
     now = now or timezone.now()
-    _relay_guard(actor, event, confirmed_via)
+    _relay_guard(actor, event, confirmed_via, valet)
     if not reason.strip():
         raise DomainError("reason_required")
     if not _event_valet(valet, event) or shifts.open_shift_for(valet, event) is None:
@@ -283,8 +296,8 @@ def relay_intake_photo(actor, ticket, data: bytes, content_type: str, *, confirm
     """A photo taken on the supervisor's or valet's device during the outage, kept as intake evidence."""
     from ops.services import intake
 
-    _relay_guard(actor, ticket.event, confirmed_via)
     valet = _intake_owner(ticket)
+    _relay_guard(actor, ticket.event, confirmed_via, valet)
     intake.attach_intake_media(valet, ticket, data, content_type)
     _relay_audit(actor, ticket, "photo", valet, confirmed_via)
 
@@ -296,7 +309,7 @@ def relay_parked(actor, ticket, *, valet, zone_code: str, detail: str, hook_numb
     from ops.services import intake
 
     now = now or timezone.now()
-    _relay_guard(actor, ticket.event, confirmed_via)
+    _relay_guard(actor, ticket.event, confirmed_via, valet)
     if valet.id != _intake_owner(ticket).id:
         raise DomainError("not_intake_owner")
     with transaction.atomic():
@@ -313,7 +326,7 @@ def relay_parked(actor, ticket, *, valet, zone_code: str, detail: str, hook_numb
 def record_system_outage(actor, org, *, started_at, ended_at, reason: str, now=None) -> OutageWindow:
     """Recorded after recovery, with both times. Windows of the same organisation never overlap."""
     now = now or timezone.now()
-    require(actor, Role.MANAGER)
+    require(actor, Role.ADMIN)
     if actor.org_id != org.id:
         raise DomainError("forbidden")
     if not reason.strip():
@@ -354,7 +367,7 @@ def reconcile_handover(actor, ticket, *, outage, occurred_at, delivered_by, veri
     from ops.services import holds
 
     now = now or timezone.now()
-    require(actor, Role.MANAGER, ticket.event)
+    require(actor, Role.ADMIN, ticket.event)
     _check_window(actor, outage, now)
     if not (outage.started_at <= occurred_at <= outage.ended_at):
         raise DomainError("outside_outage_window")

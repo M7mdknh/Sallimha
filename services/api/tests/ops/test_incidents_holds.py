@@ -30,6 +30,7 @@ def test_supervisor_creates_and_annotates_but_cannot_resolve_incident(ops):
     assert incident.status == Incident.Status.RESOLVED and incident.resolved_by == ops.manager
 
 
+@pytest.mark.whatsapp_staff
 def test_incident_alone_does_not_block_hold_does(ops):
     """AT-22."""
     from tests.ops.test_handover import _btn, _code
@@ -63,6 +64,7 @@ def test_valet_cannot_place_holds(ops):
         holds.place_hold(ops.valets[0], ticket, "x", blocks_dispatch=True, blocks_handover=True)
 
 
+@pytest.mark.whatsapp_staff
 def test_assisted_handover_supervisor_only_records_reason(ops):
     """AT-41: guest without a phone."""
     from tests.ops.test_handover import _btn
@@ -86,6 +88,7 @@ def test_assisted_request_for_guest_without_phone(ops):
     assert created and req.assisted_by == ops.supervisor and req.state == "QUEUED"
 
 
+@pytest.mark.whatsapp_staff
 def test_relocation_task_moves_hook_records_custody(ops):
     """AT-33 relocation."""
     ticket = park(ops.valets[0], ops.event, hook=21)
