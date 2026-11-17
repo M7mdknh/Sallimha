@@ -10,10 +10,14 @@ export type LoginResult = Schemas["LoginResponse"];
 export type SimPhone = Schemas["SimPhone"];
 export type SimMessage = Schemas["SimMessage"];
 export type Role = Schemas["RoleEnum"];
+export type ValetWork = Schemas["ValetWork"];
+export type ValetTask = Schemas["ValetTask"];
+export type Dashboard = Schemas["Dashboard"];
 
 /** Rank used only to decide which links to show; the server enforces every permission itself. */
-export const ROLE_RANK: Record<Role, number> = { VALET: 0, SUPERVISOR: 1, MANAGER: 2, ADMIN: 3, SUPER_ADMIN: 4 };
+export const ROLE_RANK: Record<Role, number> = { VALET: 0, SUPERVISOR: 1, ADMIN: 2 };
 export const atLeast = (me: Me, role: Role) => ROLE_RANK[me.role] >= ROLE_RANK[role];
+export const isAdmin = (me: Me) => me.role === "ADMIN";
 
 export class ApiError extends Error {
   constructor(
@@ -80,8 +84,49 @@ async function callForm<T>(url: string, form: FormData, idempotencyKey: string):
 
 export const newKey = () => crypto.randomUUID();
 
+const valetTask = (taskId: number, action: string, key: string, body: unknown = {}) =>
+  call<Schemas["OutcomeResponse"]>("POST", `/api/valet/tasks/${taskId}/${action}`, body, key);
+
 export const api = {
   login: (body: Schemas["LoginRequestRequest"]) => call<LoginResult>("POST", "/api/auth/login", body),
+  setup: (body: Schemas["SetupRequestRequest"]) => call<LoginResult>("POST", "/api/auth/setup", body),
+  // --- valet app: every command needs a key, so a double tap or a retry never repeats an action ---
+  valet: {
+    work: () => call<ValetWork>("GET", "/api/valet/work"),
+    availability: (available: boolean, key: string) =>
+      call<Schemas["AvailabilityResponse"]>("POST", "/api/valet/availability", { available }, key),
+    intake: (body: Schemas["ValetIntakeRequestRequest"], key: string) =>
+      call<Schemas["ValetIntakeResponse"]>("POST", "/api/valet/intake", body, key),
+    photo: (ticketId: number, photo: Blob, key: string) => {
+      const form = new FormData();
+      form.append("photo", photo, "car.jpg");
+      return callForm<Schemas["PhotoCountResponse"]>(`/api/valet/tickets/${ticketId}/photo`, form, key);
+    },
+    receipt: (ticketId: number, received: boolean, key: string) =>
+      call<Schemas["ContactStateResponse"]>("POST", `/api/valet/tickets/${ticketId}/receipt`, { received }, key),
+    startParking: (ticketId: number, key: string) =>
+      call<Schemas["OkResponse"]>("POST", `/api/valet/tickets/${ticketId}/start-parking`, {}, key),
+    park: (ticketId: number, body: Schemas["ParkRequestRequest"], key: string) =>
+      call<Schemas["TicketStateResponse"]>("POST", `/api/valet/tickets/${ticketId}/park`, body, key),
+    accept: (taskId: number, key: string) => valetTask(taskId, "accept", key),
+    decline: (taskId: number, key: string) => valetTask(taskId, "decline", key),
+    ready: (taskId: number, key: string) => valetTask(taskId, "ready", key),
+    deliver: (taskId: number, key: string) => valetTask(taskId, "deliver", key),
+    custodyAck: (taskId: number, key: string) =>
+      call<Schemas["OkResponse"]>("POST", `/api/valet/tasks/${taskId}/custody-ack`, {}, key),
+    code: (taskId: number, code: string, key: string) =>
+      call<Schemas["CodeResponse"]>("POST", `/api/valet/tasks/${taskId}/code`, { code }, key),
+    moved: (taskId: number, body: Schemas["ParkRequestRequest"], key: string) =>
+      call<Schemas["TicketStateResponse"]>("POST", `/api/valet/tasks/${taskId}/moved`, body, key),
+  },
+  dashboard: (eventId?: number) => call<Dashboard>("GET", `/api/dashboard${eventId ? `?event=${eventId}` : ""}`),
+  // Not replay-stored on the server: the number and the setup code are shown once and kept nowhere else.
+  contactCustomer: (ticketId: number) => call<Schemas["ContactResponse"]>("POST", `/api/tickets/${ticketId}/contact`),
+  issueSetupCode: (staffId: number) => call<Schemas["SetupCodeResponse"]>("POST", `/api/staff/${staffId}/setup-code`),
+  setTeam: (staffId: number, eventId: number, member: boolean, key: string) =>
+    call<Schemas["IdResponse"]>("POST", `/api/staff/${staffId}/team`, { event_id: eventId, member }, key),
+  assistShift: (shiftId: number, on: boolean, reason: string, key: string) =>
+    call<Schemas["ShiftResponse"]>("POST", `/api/shifts/${shiftId}/assist`, { on, reason }, key),
   logout: () => call<Schemas["OkResponse"]>("POST", "/api/auth/logout"),
   me: () => call<Me>("GET", "/api/auth/me"),
   events: () => call<EventSummary[]>("GET", "/api/events/"),

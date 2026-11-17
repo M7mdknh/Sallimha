@@ -1,12 +1,13 @@
 import { useState } from "react";
 
-import { api, type Schemas } from "../api/client";
+import { api, type Schemas, type Me } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Empty, Id, PageData, StaleBanner, StatusPill } from "../components/States";
 import { useT } from "../strings";
 import { useCommand } from "../useCommand";
 import { usePoll } from "../usePoll";
 import { venueTime } from "../venueTime";
+import { SettingsTabs } from "./SettingsTabs";
 
 function Replay({ row, disabled, onDone }: { row: Schemas["DeadLetter"]; disabled: boolean; onDone: () => void }) {
   const { t } = useT();
@@ -38,12 +39,13 @@ function Replay({ row, disabled, onDone }: { row: Schemas["DeadLetter"]; disable
 
 /** Messages needing an operator: never delivered (DEAD), or possibly delivered with the response lost
  *  (DELIVERY_UNKNOWN, never resent automatically). Replay re-queues the same row once. */
-export function Operations() {
+export function Operations({ me }: { me: Me }) {
   const { t, lang } = useT();
   const poll = usePoll(api.deadLetters, 15_000, []);
   return (
     <main className="page">
       <h1>{t("operationsTitle")}</h1>
+      <SettingsTabs me={me} />
       <StaleBanner show={poll.stale} />
       <section className="card" aria-labelledby="dead-h">
         <h2 id="dead-h"><Icon name="message" /> {t("deadLetters")}</h2>

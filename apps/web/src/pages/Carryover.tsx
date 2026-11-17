@@ -1,17 +1,19 @@
-import { api } from "../api/client";
+import { api, type Me } from "../api/client";
 import { Empty, Id, PageData, StaleBanner, StatusPill } from "../components/States";
 import { navigate } from "../router";
 import { useT, type StringKey } from "../strings";
 import { usePoll } from "../usePoll";
+import { OpsTabs } from "./Ops";
 import { venueTime } from "../venueTime";
 
 /** Cars and keys kept past their event. Each row opens the ticket panel, where approval and release happen. */
-export function Carryover() {
+export function Carryover({ me, eventId }: { me: Me; eventId?: number }) {
   const { t, lang } = useT();
   const poll = usePoll(api.carryover, 30_000, []);
   return (
     <main className="page">
       <h1>{t("carryoverTitle")}</h1>
+      <OpsTabs me={me} eventId={eventId} />
       <StaleBanner show={poll.stale} />
       <section className="card" aria-labelledby="carry-h">
         <h2 id="carry-h" className="visually-hidden">{t("carryoverTitle")}</h2>

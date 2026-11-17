@@ -1,10 +1,11 @@
-import { api } from "../api/client";
+import { api, type Me } from "../api/client";
 import { PageData, StatusPill } from "../components/States";
 import { useT } from "../strings";
 import { usePoll } from "../usePoll";
+import { SettingsTabs } from "./SettingsTabs";
 
 /** Readiness flags only. Credential values are never sent to the browser and are never entered here. */
-export function Integrations() {
+export function Integrations({ me }: { me: Me }) {
   const { t } = useT();
   const poll = usePoll(api.whatsapp, 30_000, []);
   const flag = (on: boolean) => (
@@ -13,6 +14,7 @@ export function Integrations() {
   return (
     <main className="page">
       <h1>{t("integrationsTitle")}</h1>
+      <SettingsTabs me={me} />
       <PageData poll={poll}>
         {(w) => (
           <section className="card" aria-labelledby="wa-h">

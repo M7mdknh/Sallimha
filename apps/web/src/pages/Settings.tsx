@@ -1,11 +1,12 @@
 import { type FormEvent, useState } from "react";
 
-import { ApiError, api, type Schemas } from "../api/client";
+import { ApiError, api, type Schemas, type Me } from "../api/client";
 import { Icon } from "../components/Icon";
 import { PageData, StaleBanner, StatusPill } from "../components/States";
 import { useT, type StringKey } from "../strings";
 import { useCommand } from "../useCommand";
 import { usePoll } from "../usePoll";
+import { SettingsTabs } from "./SettingsTabs";
 
 type Config = Schemas["ConfigResponse"];
 
@@ -127,7 +128,7 @@ function Templates({ config, disabled, guard }: { config: Config; disabled: bool
   );
 }
 
-export function Settings() {
+export function Settings({ me }: { me: Me }) {
   const { t, error } = useT();
   const poll = usePoll(api.config, 60_000, []);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
@@ -140,6 +141,7 @@ export function Settings() {
   return (
     <main className="page">
       <h1>{t("settingsTitle")}</h1>
+      <SettingsTabs me={me} />
       <StaleBanner show={poll.stale} />
       {notice ? <p className={notice.ok ? "muted" : "form-error"} role={notice.ok ? "status" : "alert"}>{notice.text}</p> : null}
       <PageData poll={poll}>

@@ -4,7 +4,7 @@ import { ApiError, api, newKey, type Schemas } from "../api/client";
 import { navigate } from "../router";
 import { useT, type StringKey } from "../strings";
 import { usePoll } from "../usePoll";
-import { currentZone, venueClock } from "../venueTime";
+import { currentZone, venueClock, venueHM } from "../venueTime";
 import { Icon } from "./Icon";
 import { Id, LoadFailed, SkeletonRows, StatusPill } from "./States";
 
@@ -234,12 +234,77 @@ function ActionForm({ action, ticketId, team, holds, people, disabled, onDone }:
   );
 }
 
+/** Opens the customer's number on request (audited on the server) for a call or a WhatsApp chat from this device.
+ *  The conversation happens outside Sallimha; the number stays in this component's memory only. */
+function ContactCustomer({ ticketId }: { ticketId: number }) {
+  const { t, error } = useT();
+  const [phone, setPhone] = useState("");
+  const [problem, setProblem] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (phone) {
+    return (
+      <div className="contact-open" role="status">
+        <p><span className="muted">{t("contactOpened")}</span> <a href={`tel:${phone}`} dir="ltr" className="phone-link"><Id>{phone}</Id></a></p>
+        <div className="row-actions start">
+          <a className="btn btn-secondary" href={`tel:${phone}`}><Icon name="user" /> {t("contactCall")}</a>
+          <a className="btn btn-secondary" href={`https://wa.me/${phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+            <Icon name="message" /> {t("contactWhatsApp")}</a>
+          <button type="button" className="btn btn-quiet" onClick={() => setPhone("")}>{t("close")}</button>
+        </div>
+        <p className="muted small">{t("contactNote")}</p>
+      </div>
+    );
+  }
+  return (
+    <>
+      <button type="button" className="btn btn-secondary btn-block" disabled={busy} onClick={async () => {
+        setBusy(true);
+        setProblem("");
+        try {
+          setPhone((await api.contactCustomer(ticketId)).phone);
+        } catch (err) {
+          setProblem(error(err instanceof ApiError ? err.code : "generic"));
+        } finally {
+          setBusy(false);
+        }
+      }}>
+        <Icon name="message" /> {t("contactCustomer")}
+      </button>
+      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
+    </>
+  );
+}
+
 export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChanged }: { ticketId: number; eventId: number;
   team: Schemas["TeamMember"][]; disabled: boolean; onClose: () => void; onChanged: () => void }) {
-  const { t, state } = useT();
+  const { t, state, lang } = useT();
   const { data, error, refresh } = usePoll(() => api.ticket(ticketId), 5_000, [ticketId]);
   const people = usePoll(() => api.people(eventId), 60_000, [eventId]);
   const [open, setOpen] = useState<string | null>(null);
+  const known = (a: string) => a === "relay_intake_photo" || Boolean(ACTIONS[a]);
+  const primary = data?.primary_action && known(data.primary_action) ? data.primary_action : null;
+  const others = (data?.allowed_actions ?? []).filter((a) => known(a) && a !== primary);
+
+  /** An action is a button that opens its short form in place; the primary one is the large purple button.
+   *  A render function, not a nested component: an open form must survive the panel's 5-second refresh. */
+  function slot(action: string, isPrimary = false) {
+    if (!data) return null;
+    const onDone = () => { setOpen(null); void refresh(); onChanged(); };
+    return (
+      <div className="action" key={action}>
+        <button type="button" className={`btn btn-block ${isPrimary ? "btn-primary btn-big" : "btn-secondary"}`}
+          aria-expanded={open === action} onClick={() => setOpen(open === action ? null : action)}>
+          {t(`action_${action}` as StringKey)}
+        </button>
+        {open === action ? (action === "relay_intake_photo" ? (
+          <RelayPhoto ticketId={ticketId} count={data.media.length} disabled={disabled} onDone={() => { void refresh(); onChanged(); }} />
+        ) : (
+          <ActionForm action={action} ticketId={ticketId} team={team} holds={data.holds} people={people.data ?? []}
+            disabled={disabled} onDone={onDone} />
+        )) : null}
+      </div>
+    );
+  }
 
   return (
     <section className="card ticket-panel" aria-labelledby="ticket-h">
@@ -294,33 +359,25 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
               </li>
             ))}</ul>
           ) : null}
+          {data.guest_messages.length ? (
+            <section className="guest-messages" aria-labelledby="gm-h">
+              <h3 id="gm-h"><Icon name="message" /> {t("customerMessages")}</h3>
+              <ul>{data.guest_messages.map((m, i) => (
+                <li key={i}><span className="muted"><Id>{venueHM(m.received_at, lang)}</Id></span> <bdi>{m.text}</bdi></li>
+              ))}</ul>
+            </section>
+          ) : null}
+          {data.can_contact ? <ContactCustomer ticketId={ticketId} /> : null}
           <div className="actions">
-            {data.allowed_actions.length === 0 ? <p className="muted">{t("noActions")}</p> : null}
-            {data.allowed_actions.includes("relay_intake_photo") ? (
-              <div className="action">
-                <button type="button" className="btn btn-secondary btn-block" aria-expanded={open === "relay_intake_photo"}
-                  onClick={() => setOpen(open === "relay_intake_photo" ? null : "relay_intake_photo")}>
-                  {t("action_relay_intake_photo")}
-                </button>
-                {open === "relay_intake_photo" ? (
-                  <RelayPhoto ticketId={ticketId} count={data.media.length} disabled={disabled}
-                    onDone={() => { void refresh(); onChanged(); }} />
-                ) : null}
-              </div>
+            {primary ? slot(primary, true) : (
+              <p className="muted" data-testid="nothing-to-do">{data.allowed_actions.length ? t("nothingToDo") : t("noActions")}</p>
+            )}
+            {others.length ? (
+              <details className="disclosure more-actions" open={open !== null && open !== primary}>
+                <summary>{t("moreActions")} <span className="count-badge"><Id>{others.length}</Id></span></summary>
+                <div className="actions">{others.map((a) => slot(a))}</div>
+              </details>
             ) : null}
-            {data.allowed_actions.filter((a) => ACTIONS[a]).map((a) => (
-              <div key={a} className="action">
-                <button type="button" className="btn btn-secondary btn-block" aria-expanded={open === a}
-                  onClick={() => setOpen(open === a ? null : a)}>
-                  {t(`action_${a}` as StringKey)}
-                </button>
-                {open === a ? (
-                  <ActionForm action={a} ticketId={ticketId} team={team} holds={data.holds} people={people.data ?? []}
-                    disabled={disabled}
-                    onDone={() => { setOpen(null); void refresh(); onChanged(); }} />
-                ) : null}
-              </div>
-            ))}
           </div>
           <details className="timeline">
             <summary>{t("timeline")} ({data.timeline.length})</summary>

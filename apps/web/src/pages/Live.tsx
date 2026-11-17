@@ -1,12 +1,13 @@
 import { type FormEvent, useRef, useState } from "react";
 
-import { ApiError, api, newKey, type LiveSnapshot, type Schemas } from "../api/client";
+import { ApiError, api, newKey, type LiveSnapshot, type Me, type Schemas } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Empty, Id, LoadFailed, SkeletonRows, StaleBanner, StatusPill } from "../components/States";
 import { TicketPanel } from "../components/TicketPanel";
 import { navigate } from "../router";
 import { useT } from "../strings";
 import { usePoll } from "../usePoll";
+import { OpsTabs } from "./Ops";
 import { rememberZone, venueClock } from "../venueTime";
 
 const CHECK_FIELDS = [["zones", "zones"], ["key_hooks", "keyHooks"], ["assigned_not_started", "assignedNotStarted"],
@@ -55,25 +56,6 @@ function TicketFinder({ eventId, current, onOpen }: { eventId: number; current?:
         </ul>
       ) : null}
     </section>
-  );
-}
-
-/** Puts an organisation valet who is not yet on this event on tonight's team (starts their shift). */
-function AddToTeam({ people, disabled, onStart }: { people: Schemas["StaffBrief"][]; disabled: boolean;
-  onStart: (staffId: number) => void }) {
-  const { t } = useT();
-  const [choice, setChoice] = useState("");
-  return (
-    <form className="inline-form" onSubmit={(e) => { e.preventDefault(); if (choice) { onStart(Number(choice)); setChoice(""); } }}>
-      <label className="field grow">
-        <span>{t("addToTeam")}</span>
-        <select value={choice} onChange={(e) => setChoice(e.target.value)}>
-          <option value="">—</option>
-          {people.map((p) => <option key={p.staff_id} value={p.staff_id}>{p.name}</option>)}
-        </select>
-      </label>
-      <button type="submit" className="btn btn-secondary" data-mutation disabled={disabled || !choice}>{t("startShift")}</button>
-    </form>
   );
 }
 
@@ -134,7 +116,43 @@ function useMutation() {
   return { run, problem };
 }
 
-export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number }) {
+type Row = Schemas["LiveRequest"];
+
+/** One car in a list: what a supervisor scans for — ticket, car, how long the customer has waited, who has it. */
+function CarRow({ r, current, onOpen }: { r: Row; current?: number; onOpen: (id: number) => void }) {
+  const { t, state } = useT();
+  const [tone, icon] = TONE[r.state] ?? ["neutral", "clock"];
+  const late = r.elapsed_s >= 240;
+  return (
+    <li>
+      <button type="button" className="row row-button car-row" onClick={() => onOpen(r.ticket_id)}
+        aria-current={current === r.ticket_id ? "true" : undefined}>
+        <span className="row-title"><Id>{r.ticket}</Id> <span className="muted">{r.vehicle}</span></span>
+        <span className={`elapsed ${late ? "is-late" : ""}`} title={t("waited")}>
+          <Icon name="clock" size={16} /> <Id>{formatElapsed(r.elapsed_s)}</Id>
+        </span>
+        {r.ticket_state === "READY" ? null : <StatusPill tone={tone} icon={icon} label={state(r.state)} />}
+        <span className="row-meta"><Icon name="user" size={16} /> {r.assignee ?? t("unassigned")}</span>
+        <span className="row-meta"><Icon name="pin" size={16} /> <Id>{r.location || "—"}</Id> · <Icon name="key" size={16} /> <Id>{r.hook ?? "—"}</Id></span>
+      </button>
+    </li>
+  );
+}
+
+function CarList({ id, title, icon, empty, rows, current, onOpen }: { id: string; title: string; icon: string;
+  empty: string; rows: Row[]; current?: number; onOpen: (id: number) => void }) {
+  return (
+    <section className="card car-list" aria-labelledby={`${id}-h`} data-testid={`list-${id}`}>
+      <h2 id={`${id}-h`}><Icon name={icon} /> {title} <span className="count-badge"><Id>{rows.length}</Id></span></h2>
+      {rows.length === 0 ? <Empty text={empty} /> : <ul className="rows">{rows.map((r) => (
+        <CarRow key={r.request_id} r={r} current={current} onOpen={onOpen} />))}</ul>}
+    </section>
+  );
+}
+
+/** Operations → Cars (ADR-0011): problems first, then cars waiting, on the way and ready with their waiting time,
+ *  and a search for any car. Ticket actions live in the ticket detail beside the lists (tablet) or over them (phone). */
+export function Live({ me, eventId, ticketId }: { me: Me; eventId: number; ticketId?: number }) {
   const { t, state, alert, lang } = useT();
   const { data, error, stale, lastSuccess, refresh } = usePoll(() => api.live(eventId), 3_000, [eventId]);
   const { run, problem } = useMutation();
@@ -151,22 +169,28 @@ export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number
   const snapshot: LiveSnapshot = data;
   rememberZone(snapshot.event.time_zone);
   const time = (iso: string | number) => venueClock(iso, lang, snapshot.event.time_zone);
+  const waiting = snapshot.requests.filter((r) => ["WAITING_FOR_PARKING", "QUEUED", "OFFERED"].includes(r.state));
+  const onTheWay = snapshot.requests.filter((r) => r.state === "ACCEPTED" && r.ticket_state !== "READY");
+  const ready = snapshot.requests.filter((r) => r.ticket_state === "READY");
+  const tally = (status: string) => snapshot.team.filter((m) => m.status === status).length;
+  const degraded = snapshot.health.whatsapp === "degraded";
 
   return (
     <main className={`page live ${ticketId ? "has-panel" : ""}`}>
       <div className="live-head">
         <h1>{snapshot.event.name}</h1>
         <p className="freshness">
-          <span>{t("lastUpdate")} {lastSuccess ? time(lastSuccess) : "—"}</span>
-          <span>{t("worker")}: {t(`health_${snapshot.health.worker}` as never)}</span>
-          <span>{t("whatsapp")}: {t(`health_${snapshot.health.whatsapp}` as never)}</span>
+          <span>{snapshot.event.venue}</span>
+          <span>{t("lastUpdate")} <Id>{lastSuccess ? time(lastSuccess) : "—"}</Id></span>
+          {snapshot.health.worker !== "ok" ? <span className="is-bad">{t("worker")}: {t(`health_${snapshot.health.worker}` as never)}</span> : null}
         </p>
       </div>
+      <OpsTabs me={me} eventId={eventId} />
       <StaleBanner show={stale} />
-      {snapshot.outage ? (
+      {snapshot.outage || degraded ? (
         <div className="outage-banner" role="status">
-          <Icon name="alert" />
-          <span>{t("outageBanner")} — {snapshot.outage.declared_by}, {time(snapshot.outage.since)}.</span>
+          <Icon name="message" />
+          <span>{snapshot.outage ? t("customerOutage") : t("customerDegraded")}</span>
           <a href="/outages" onClick={(e) => { e.preventDefault(); navigate("/outages"); }}>{t("navOutages")}</a>
         </div>
       ) : null}
@@ -174,17 +198,16 @@ export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number
 
       <div className="live-grid">
         <div className="live-main">
-          <section className="card" aria-labelledby="attention-h">
-            <h2 id="attention-h">
-              <Icon name="alert" /> {t("attention")}
-            </h2>
-            {snapshot.attention.length === 0 ? <Empty text={t("attentionEmpty")} /> : null}
+          <section className="card" aria-labelledby="attention-h" data-testid="problems">
+            <h2 id="attention-h"><Icon name="alert" /> {t("problems")}
+              {snapshot.attention.length ? <span className="count-badge is-alert"><Id>{snapshot.attention.length}</Id></span> : null}</h2>
+            {snapshot.attention.length === 0 ? <Empty text={t("problemsEmpty")} /> : null}
             <ul className="rows">
               {snapshot.attention.map((a) => (
                 <li key={a.id} className={`row attention-${a.severity}`}>
                   <StatusPill tone={a.severity === "critical" ? "danger" : "warning"} icon={a.severity === "critical" ? "alert" : "clock"} label={alert(a.kind)} />
                   {a.ticket ? <span className="row-meta">{t("ticket")} <Id>{a.ticket}</Id></span> : null}
-                  <span className="row-meta">{time(a.created_at)}</span>
+                  <span className="row-meta"><Id>{time(a.created_at)}</Id></span>
                   <span className="row-actions">
                     {a.ticket_id ? (
                       <button type="button" className="btn btn-secondary" onClick={() => openTicket(a.ticket_id!)}>{t("open")}</button>
@@ -199,7 +222,18 @@ export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number
             </ul>
           </section>
 
-          <ul className="counts" aria-label={t("live")}>
+          <TicketFinder eventId={eventId} current={ticketId} onOpen={openTicket} />
+
+          <div className="car-lists">
+            <CarList id="waiting" title={t("waitingCars")} icon="clock" empty={t("noneWaiting")} rows={waiting}
+              current={ticketId} onOpen={openTicket} />
+            <CarList id="retrieving" title={t("retrievingCars")} icon="car" empty={t("noneRetrieving")} rows={onTheWay}
+              current={ticketId} onOpen={openTicket} />
+            <CarList id="ready" title={t("readyCars")} icon="check" empty={t("noneReady")} rows={ready}
+              current={ticketId} onOpen={openTicket} />
+          </div>
+
+          <ul className="counts" aria-label={t("opsCars")}>
             {["RECEIVED", "PARKED", "RETRIEVING", "READY", "DELIVERED"].map((s) => (
               <li key={s} className="count" data-testid={`count-${s}`}>
                 <span className="count-n">{snapshot.counts[s] ?? 0}</span>
@@ -208,77 +242,20 @@ export function Live({ eventId, ticketId }: { eventId: number; ticketId?: number
             ))}
           </ul>
 
-          <TicketFinder eventId={eventId} current={ticketId} onOpen={openTicket} />
-
-          <section className="card" aria-labelledby="requests-h" role="region">
-            <h2 id="requests-h"><Icon name="car" /> {t("requests")}</h2>
-            {snapshot.requests.length === 0 ? <Empty text={t("requestsEmpty")} /> : null}
-            <ul className="rows">
-              {snapshot.requests.map((r) => {
-                const [tone, icon] = TONE[r.state] ?? ["neutral", "clock"];
-                return (
-                  <li key={r.request_id}>
-                    <button type="button" className="row row-button" onClick={() => openTicket(r.ticket_id)}
-                      aria-current={ticketId === r.ticket_id ? "true" : undefined}>
-                      <span className="row-title"><Id>{r.ticket}</Id> <span className="muted">{r.vehicle}</span></span>
-                      <StatusPill tone={tone} icon={icon} label={state(r.state)} />
-                      <span className="row-meta"><Icon name="clock" size={16} /> <Id>{formatElapsed(r.elapsed_s)}</Id></span>
-                      <span className="row-meta"><Icon name="user" size={16} /> {r.assignee ?? t("unassigned")}</span>
-                      <span className="row-meta"><Icon name="pin" size={16} /> <Id>{r.location || "—"}</Id> · <Icon name="key" size={16} /> <Id>{r.hook ?? "—"}</Id></span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+          <a className="row-link team-line" href="/team" onClick={(e) => { e.preventDefault(); navigate("/team"); }}>
+            <Icon name="users" /> <span className="row-title">{t("navTeam")}</span>
+            <StatusPill tone="success" icon="check" label={`${state("available")} ${tally("available")}`} />
+            <StatusPill tone="info" icon="car" label={`${state("busy")} ${tally("busy")}`} />
+            <StatusPill tone="neutral" icon="clock" label={`${state("unavailable")} ${tally("unavailable")}`} />
+          </a>
+          <OpeningCheck eventId={eventId} />
         </div>
 
         <aside className="live-side">
           {ticketId ? (
             <TicketPanel ticketId={ticketId} eventId={eventId} team={snapshot.team} disabled={disabled}
               onClose={() => navigate(`/events/${eventId}`)} onChanged={refresh} />
-          ) : null}
-          <OpeningCheck eventId={eventId} />
-          <section className="card" aria-labelledby="team-h" role="region">
-            <h2 id="team-h"><Icon name="users" /> {t("team")}</h2>
-            {snapshot.addable.length ? (
-              <AddToTeam people={snapshot.addable} disabled={disabled}
-                onStart={(id) => run(`start-${id}`, (k) => api.startShift(eventId, id, k), refresh)} />
-            ) : null}
-            {snapshot.team.length === 0 ? <Empty text={t("teamEmpty")} /> : null}
-            <ul className="rows">
-              {snapshot.team.map((m) => {
-                const [tone, icon] = TONE[m.status];
-                return (
-                  <li key={m.shift_id} className="row">
-                    <span className="row-title">{m.name}</span>
-                    <StatusPill tone={tone} icon={icon} label={state(m.status)} />
-                    {m.task ? <span className="row-meta">{state(m.task.type)} <Id>{m.task.ticket}</Id></span> : null}
-                    {!m.task ? (
-                      <span className="row-actions">
-                        <button type="button" className="btn btn-quiet" data-mutation disabled={disabled}
-                          onClick={() => run(`end-${m.shift_id}`, (k) => api.endShift(m.shift_id, k), refresh)}>
-                          {t("endShift")}
-                        </button>
-                      </span>
-                    ) : null}
-                  </li>
-                );
-              })}
-              {snapshot.not_started.map((p) => (
-                <li key={`ns-${p.staff_id}`} className="row">
-                  <span className="row-title">{p.name}</span>
-                  <StatusPill tone="neutral" icon="clock" label={t("notStarted")} />
-                  <span className="row-actions">
-                    <button type="button" className="btn btn-secondary" data-mutation disabled={disabled}
-                      onClick={() => run(`start-${p.staff_id}`, (k) => api.startShift(eventId, p.staff_id, k), refresh)}>
-                      {t("startShift")}
-                    </button>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
+          ) : <p className="select-hint muted">{t("selectCar")}</p>}
         </aside>
       </div>
     </main>

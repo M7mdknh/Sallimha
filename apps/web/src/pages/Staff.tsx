@@ -1,68 +1,102 @@
 import { type FormEvent, useState } from "react";
 
-import { ROLE_RANK, api, atLeast, type Me, type Role, type Schemas } from "../api/client";
+import { api, type Me, type Role, type Schemas } from "../api/client";
 import { Icon } from "../components/Icon";
-import { Empty, Id, PageData, StaleBanner, StatusPill } from "../components/States";
+import { Empty, Id, StatusPill } from "../components/States";
 import { useT, type StringKey } from "../strings";
 import { useCommand } from "../useCommand";
-import { usePoll } from "../usePoll";
 
-// Highest role each role may grant (mirrors ops.services.staffdir.MAX_GRANT; the server is the authority).
-const MAX_GRANT: Partial<Record<Role, Role>> = { MANAGER: "SUPERVISOR", ADMIN: "MANAGER", SUPER_ADMIN: "SUPER_ADMIN" };
-const ROLES = Object.keys(ROLE_RANK) as Role[];
-const grantable = (me: Me) => ROLES.filter((r) => ROLE_RANK[r] <= ROLE_RANK[MAX_GRANT[me.role] ?? "VALET"]);
+const ROLES: Role[] = ["VALET", "SUPERVISOR", "ADMIN"];
+type Person = Schemas["StaffRow"];
 
-function CreateStaff({ me, disabled, onDone }: { me: Me; disabled: boolean; onDone: () => void }) {
+/** Add a person: name, mobile and role. No password — they choose their own with a one-time setup code. */
+function AddPerson({ eventId, disabled, onDone }: { eventId?: number; disabled: boolean; onDone: (id: number) => void }) {
   const { t } = useT();
-  const empty = { full_name: "", phone: "", role: "VALET" as Role, username: "", password: "" };
+  const empty = { full_name: "", phone: "", role: "VALET" as Role, team: true };
   const [form, setForm] = useState(empty);
-  const { run, busy, problem } = useCommand();
-  const needsLogin = ROLE_RANK[form.role] >= ROLE_RANK.SUPERVISOR;
-  const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));
-
+  const { run, busy, problem, done } = useCommand();
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const body = { ...form, username: needsLogin ? form.username.trim() : "", password: needsLogin ? form.password : "",
-      full_name: form.full_name.trim(), phone: form.phone.trim() };
-    if (await run((key) => api.createStaff(body, key))) {
-      setForm(empty);
-      onDone();
-    }
+    const body = { full_name: form.full_name.trim(), phone: form.phone.trim(), role: form.role,
+      ...(eventId && form.team ? { event_id: eventId } : {}) };
+    await run((key) => api.createStaff(body, key), (r) => { setForm(empty); onDone(r.id); });
   }
   return (
-    <details className="card disclosure">
-      <summary><Icon name="user" /> {t("addStaff")}</summary>
+    <details className="card disclosure" data-testid="add-person">
+      <summary><Icon name="user" /> {t("addPerson")}</summary>
       <form className="form-grid" onSubmit={submit} noValidate>
         <label className="field"><span>{t("fullName")}</span>
-          <input value={form.full_name} onChange={(e) => set("full_name", e.target.value)} autoComplete="off" /></label>
-        <label className="field"><span>{t("phone")}</span>
-          <input dir="ltr" inputMode="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} autoComplete="off" /></label>
-        <label className="field"><span>{t("role")}</span>
-          <select value={form.role} onChange={(e) => set("role", e.target.value)}>
-            {grantable(me).map((r) => <option key={r} value={r}>{t(`role_${r}` as StringKey)}</option>)}
-          </select></label>
-        {needsLogin ? (
-          <>
-            <p className="muted span-all">{t("loginOptional")}</p>
-            <label className="field"><span>{t("username")}</span>
-              <input dir="ltr" value={form.username} onChange={(e) => set("username", e.target.value)} autoComplete="off" /></label>
-            <label className="field"><span>{t("password")}</span>
-              <input dir="ltr" type="password" value={form.password} onChange={(e) => set("password", e.target.value)}
-                autoComplete="new-password" /></label>
-          </>
+          <input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} autoComplete="off" /></label>
+        <label className="field"><span>{t("mobile")}</span>
+          <input dir="ltr" type="tel" inputMode="tel" value={form.phone} autoComplete="off"
+            onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+        <fieldset className="choices choices-inline span-all">
+          <legend>{t("role")}</legend>
+          {ROLES.map((r) => (
+            <label key={r} className={`choice ${form.role === r ? "is-on" : ""}`}>
+              <input type="radio" name="new-role" checked={form.role === r} onChange={() => setForm({ ...form, role: r })} />
+              <span>{t(`role_${r}` as StringKey)}</span>
+            </label>
+          ))}
+        </fieldset>
+        {eventId ? (
+          <label className="check span-all">
+            <input type="checkbox" checked={form.team} onChange={(e) => setForm({ ...form, team: e.target.checked })} />
+            <span>{t("addToThisTeam")}</span>
+          </label>
         ) : null}
         {problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
+        {done && !problem ? <p className="notice notice-success span-all" role="status">{t("personAdded")}</p> : null}
         <div className="span-all">
-          <button type="submit" className="btn btn-primary" data-mutation disabled={disabled || busy}>{t("create")}</button>
+          <button type="submit" className="btn btn-primary" data-mutation disabled={disabled || busy}>{t("add")}</button>
         </div>
       </form>
     </details>
   );
 }
 
+/** The one-time setup code: kept in component memory only and shown once. Issuing a new one cancels the old one. */
+function SetupCode({ person, disabled, autoOpen }: { person: Person; disabled: boolean; autoOpen?: boolean }) {
+  const { t, lang, error } = useT();
+  const [issued, setIssued] = useState<Schemas["SetupCodeResponse"] | null>(null);
+  const [problem, setProblem] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (issued) {
+    return (
+      <div className="secret-once span-all" role="status" data-testid="setup-code">
+        <p><strong>{t("setupCodeFor")}</strong></p>
+        <p className="setup-code"><Id>{issued.setup_code}</Id></p>
+        <p className="muted">{t("signInName")}: <Id>{issued.sign_in_name}</Id> · <Id>{new Date(issued.expires_at)
+          .toLocaleString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-GB", { dateStyle: "short", timeStyle: "short" })}</Id></p>
+        <p className="muted">{t("setupCodeHint")}</p>
+        <button type="button" className="btn btn-quiet" onClick={() => setIssued(null)}>{t("close")}</button>
+      </div>
+    );
+  }
+  return (
+    <>
+      <button type="button" className={`btn ${autoOpen ? "btn-primary" : "btn-secondary"}`} data-mutation
+        disabled={disabled || busy} onClick={async () => {
+          setBusy(true);
+          setProblem("");
+          try {
+            setIssued(await api.issueSetupCode(person.id));
+          } catch (err) {
+            setProblem(error((err as { code?: string }).code ?? "generic"));
+          } finally {
+            setBusy(false);
+          }
+        }}>
+        <Icon name="key" /> {t("issueSetup")}
+      </button>
+      {problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
+    </>
+  );
+}
+
 /** The provisioning URI is a secret: kept in component state only, shown once, never logged or stored.
  *  Issuing replaces the person's current authenticator and signs them out, so it is confirmed first. */
-function MfaIssue({ person, disabled }: { person: Schemas["StaffRow"]; disabled: boolean }) {
+function MfaIssue({ person, disabled }: { person: Person; disabled: boolean }) {
   const { t } = useT();
   const [uri, setUri] = useState("");
   const [copied, setCopied] = useState(false);
@@ -104,8 +138,7 @@ function MfaIssue({ person, disabled }: { person: Schemas["StaffRow"]; disabled:
 }
 
 /** Choosing a role only stages it; the grant (which also signs the person out) needs a confirm. */
-function RoleChange({ me, person, disabled, onDone }: { me: Me; person: Schemas["StaffRow"]; disabled: boolean;
-  onDone: () => void }) {
+function RoleChange({ person, disabled, onDone }: { person: Person; disabled: boolean; onDone: () => void }) {
   const { t } = useT();
   const [role, setRole] = useState<Role>(person.role);
   const { run, busy, problem } = useCommand();
@@ -116,7 +149,7 @@ function RoleChange({ me, person, disabled, onDone }: { me: Me; person: Schemas[
         <span className="visually-hidden">{t("changeRole")}</span>
         <select value={role} disabled={disabled || busy} aria-label={`${t("changeRole")}: ${person.full_name}`}
           onChange={(e) => setRole(e.target.value as Role)}>
-          {grantable(me).map((r) => <option key={r} value={r}>{t(`role_${r}` as StringKey)}</option>)}
+          {ROLES.map((r) => <option key={r} value={r}>{t(`role_${r}` as StringKey)}</option>)}
         </select>
       </label>
       {staged ? (
@@ -133,7 +166,7 @@ function RoleChange({ me, person, disabled, onDone }: { me: Me; person: Schemas[
   );
 }
 
-function Deactivate({ person, disabled, onDone }: { person: Schemas["StaffRow"]; disabled: boolean; onDone: () => void }) {
+function Deactivate({ person, disabled, onDone }: { person: Person; disabled: boolean; onDone: () => void }) {
   const { t } = useT();
   const [reason, setReason] = useState("");
   const [open, setOpen] = useState(false);
@@ -161,73 +194,74 @@ function Deactivate({ person, disabled, onDone }: { person: Schemas["StaffRow"];
   );
 }
 
-function Reactivate({ person, disabled, onDone }: { person: Schemas["StaffRow"]; disabled: boolean; onDone: () => void }) {
-  const { t } = useT();
+function SimpleCommand({ label, disabled, send, onDone, primary }: { label: string; disabled: boolean;
+  send: (key: string) => Promise<unknown>; onDone: () => void; primary?: boolean }) {
   const { run, busy, problem } = useCommand();
   return (
     <>
-      <button type="button" className="btn btn-secondary" data-mutation disabled={disabled || busy}
-        onClick={() => run((key) => api.staffAction(person.id, "reactivate", {}, key), onDone)}>
-        {t("reactivate")}
-      </button>
+      <button type="button" className={`btn ${primary ? "btn-secondary" : "btn-quiet"}`} data-mutation
+        disabled={disabled || busy} onClick={() => run(send, onDone)}>{label}</button>
       {problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
     </>
   );
 }
 
-function StaffRowActions({ me, person, disabled, onDone }: { me: Me; person: Schemas["StaffRow"]; disabled: boolean;
-  onDone: () => void }) {
-  const manageable = ROLE_RANK[person.role] <= ROLE_RANK[MAX_GRANT[me.role] ?? "VALET"] && person.id !== me.id;
-  if (!manageable) return null;
-  return (
-    <div className="row-actions">
-      {person.enabled ? (
-        <>
-          <RoleChange key={person.role} me={me} person={person} disabled={disabled} onDone={onDone} />
-          {atLeast(me, "ADMIN") && ROLE_RANK[person.role] >= ROLE_RANK.MANAGER ? <MfaIssue person={person} disabled={disabled} /> : null}
-          <Deactivate person={person} disabled={disabled} onDone={onDone} />
-        </>
-      ) : (
-        <Reactivate person={person} disabled={disabled} onDone={onDone} />
-      )}
-    </div>
-  );
-}
-
-export function Staff({ me }: { me: Me }) {
+/** Admins: everyone in the organisation, their sign-in status, this operation's team, and what they may do. */
+export function People({ me, rows, eventId, disabled, onChanged }: { me: Me; rows: Person[]; eventId?: number;
+  disabled: boolean; onChanged: () => void }) {
   const { t } = useT();
-  const poll = usePoll(api.staff, 30_000, []);
+  const [justAdded, setJustAdded] = useState<number | null>(null);
   return (
-    <main className="page">
-      <h1>{t("staffTitle")}</h1>
-      <StaleBanner show={poll.stale} />
-      <PageData poll={poll}>
-        {(rows) => (
-          <>
-            <CreateStaff me={me} disabled={poll.stale} onDone={poll.refresh} />
-            <section className="card" aria-labelledby="staff-h">
-              <h2 id="staff-h" className="visually-hidden">{t("staffTitle")}</h2>
-              {rows.length === 0 ? <Empty text={t("staffEmpty")} /> : null}
-              <ul className="rows">
-                {rows.map((p) => (
-                  <li key={p.id} className={`row staff-row ${p.enabled ? "" : "is-disabled"}`} data-testid={`staff-${p.id}`}>
-                    <span className="row-title">{p.full_name}</span>
-                    <StatusPill tone={p.enabled ? "info" : "neutral"} icon={p.enabled ? "user" : "x"}
-                      label={p.enabled ? t(`role_${p.role}` as StringKey) : t("disabled")} />
-                    <span className="row-meta"><Id>{p.phone_masked}</Id></span>
-                    {p.username ? <span className="row-meta"><Id>{p.username}</Id></span> : null}
-                    {ROLE_RANK[p.role] >= ROLE_RANK.MANAGER ? (
-                      <StatusPill tone={p.mfa_locked ? "danger" : p.mfa_enrolled ? "success" : "warning"} icon="shield"
-                        label={p.mfa_locked ? t("mfaLockedLabel") : p.mfa_enrolled ? t("mfaOn") : t("mfaOff")} />
-                    ) : null}
-                    <StaffRowActions me={me} person={p} disabled={poll.stale} onDone={poll.refresh} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </>
-        )}
-      </PageData>
-    </main>
+    <>
+      <AddPerson eventId={eventId} disabled={disabled} onDone={(id) => { setJustAdded(id); onChanged(); }} />
+      <section className="card" aria-labelledby="people-h">
+        <h2 id="people-h"><Icon name="users" /> {t("people")}</h2>
+        {rows.length === 0 ? <Empty text={t("staffEmpty")} /> : null}
+        <ul className="rows">
+          {rows.map((p) => {
+            const onTeam = eventId ? p.event_ids.includes(eventId) : false;
+            const self = p.id === me.id;
+            return (
+              <li key={p.id} className={`row staff-row ${p.enabled ? "" : "is-disabled"}`} data-testid={`staff-${p.id}`}>
+                <span className="row-title">{p.full_name}</span>
+                <StatusPill tone={p.enabled ? "info" : "neutral"} icon={p.enabled ? "user" : "x"}
+                  label={p.enabled ? t(`role_${p.role}` as StringKey) : t("disabled")} />
+                <span className="row-meta"><Id>{p.phone_masked}</Id></span>
+                {p.enabled ? (
+                  <StatusPill tone={p.can_sign_in ? "success" : p.setup_pending ? "warning" : "neutral"}
+                    icon={p.can_sign_in ? "check" : "key"}
+                    label={p.can_sign_in ? t("canSignIn") : p.setup_pending ? t("setupPending") : t("notSetUp")} />
+                ) : null}
+                {eventId && onTeam ? <StatusPill tone="info" icon="users" label={t("onTeam")} /> : null}
+                {p.role === "ADMIN" && p.enabled ? (
+                  <StatusPill tone={p.mfa_locked ? "danger" : p.mfa_enrolled ? "success" : "warning"} icon="shield"
+                    label={p.mfa_locked ? t("mfaLockedLabel") : p.mfa_enrolled ? t("mfaOn") : t("mfaOff")} />
+                ) : null}
+                {!self ? (
+                  <div className="row-actions">
+                    {p.enabled ? (
+                      <>
+                        <SetupCode key={`${p.id}-${justAdded === p.id}`} person={p} disabled={disabled}
+                          autoOpen={justAdded === p.id || !p.can_sign_in} />
+                        {eventId ? (
+                          <SimpleCommand label={onTeam ? t("takeOffTeam") : t("putOnTeam")} disabled={disabled}
+                            send={(key) => api.setTeam(p.id, eventId, !onTeam, key)} onDone={onChanged} />
+                        ) : null}
+                        <RoleChange key={p.role} person={p} disabled={disabled} onDone={onChanged} />
+                        {p.role === "ADMIN" ? <MfaIssue person={p} disabled={disabled} /> : null}
+                        <Deactivate person={p} disabled={disabled} onDone={onChanged} />
+                      </>
+                    ) : (
+                      <SimpleCommand label={t("reactivate")} disabled={disabled} primary onDone={onChanged}
+                        send={(key) => api.staffAction(p.id, "reactivate", {}, key)} />
+                    )}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </>
   );
 }

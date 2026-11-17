@@ -1,10 +1,11 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
-import { ApiError, api } from "../api/client";
+import { ApiError, api, type Me } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Empty, Id, LoadFailed } from "../components/States";
 import { useT } from "../strings";
 import { usePoll } from "../usePoll";
+import { SettingsTabs } from "./SettingsTabs";
 
 // Development-only WhatsApp simulator. Messages go through the real webhook signature check, inbox and
 // worker, but nothing reaches a real phone. Everything on this page is SIMULATED.
@@ -24,7 +25,7 @@ function SimOutageSwitch() {
   );
 }
 
-export function Simulator() {
+export function Simulator({ me }: { me: Me }) {
   const { t, error } = useT();
   const phones = usePoll(api.simPhones, 3_000, []);
   const [phone, setPhone] = useState("");
@@ -68,6 +69,7 @@ export function Simulator() {
   return (
     <main className="page sim">
       <h1>{t("simulator")}</h1>
+      <SettingsTabs me={me} />
       <p className="sim-banner" role="note"><Icon name="shield" /> {t("simLabel")}</p>
       <SimOutageSwitch />
       <div className="sim-grid">

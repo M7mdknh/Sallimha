@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 
-import { api } from "../api/client";
+import { api, type Me } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Empty, PageData, StaleBanner, StatusPill } from "../components/States";
 import { navigate } from "../router";
@@ -8,6 +8,7 @@ import { useT } from "../strings";
 import { useCommand } from "../useCommand";
 import { usePoll } from "../usePoll";
 import { DEFAULT_ZONE, venueTime } from "../venueTime";
+import { SettingsTabs } from "./SettingsTabs";
 
 function NewEvent({ disabled, onDone }: { disabled: boolean; onDone: () => void }) {
   const { t } = useT();
@@ -73,13 +74,14 @@ function CloseEvent({ eventId, disabled, onDone }: { eventId: number; disabled: 
   );
 }
 
-export function Manage() {
+export function Manage({ me }: { me: Me }) {
   const { t, state, lang } = useT();
   const poll = usePoll(api.events, 30_000, []);
   const go = (href: string) => (e: React.MouseEvent) => { e.preventDefault(); navigate(href); };
   return (
     <main className="page">
       <h1>{t("eventsManage")}</h1>
+      <SettingsTabs me={me} />
       <StaleBanner show={poll.stale} />
       <PageData poll={poll}>
         {(rows) => (

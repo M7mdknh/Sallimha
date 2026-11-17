@@ -1,12 +1,13 @@
 import { type FormEvent, useState } from "react";
 
-import { api, atLeast, type Me } from "../api/client";
+import { api, isAdmin, type Me } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Empty, Id, PageData, StaleBanner, StatusPill } from "../components/States";
 import { navigate } from "../router";
 import { useT, type StringKey } from "../strings";
 import { useCommand } from "../useCommand";
 import { usePoll } from "../usePoll";
+import { OpsTabs } from "./Ops";
 import { venueTime } from "../venueTime";
 
 function TextCommand({ label, field, empty, disabled, submit }: { label: StringKey; field: StringKey; empty: string;
@@ -81,7 +82,7 @@ function IncidentDetail({ incidentId, eventId, me, disabled, onChanged }: { inci
               <TextCommand label="addNote" field="note" empty="description_required" disabled={disabled}
                 submit={(text, key) => api.incidentNote(incidentId, text, key).then(changed)} />
             ) : null}
-            {i.status !== "RESOLVED" && atLeast(me, "MANAGER") ? (
+            {i.status !== "RESOLVED" && isAdmin(me) ? (
               <>
                 <p className="muted">{t("resolveHint")}</p>
                 <TextCommand label="resolve" field="outcome" empty="outcome_required" disabled={disabled}
@@ -101,6 +102,7 @@ export function Incidents({ eventId, incidentId, me }: { eventId: number; incide
   return (
     <main className="page">
       <h1>{t("incidentsTitle")}</h1>
+      <OpsTabs me={me} eventId={eventId} />
       <StaleBanner show={poll.stale} />
       <div className="live-grid">
         <div className="live-main">

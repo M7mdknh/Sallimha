@@ -1,19 +1,19 @@
 import { type FormEvent, useState } from "react";
 
-import { api, atLeast, type Me, type Schemas } from "../api/client";
+import { api, isAdmin, type Me, type Schemas } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Empty, Id, PageData, StaleBanner, StatusPill } from "../components/States";
 import { useT, type StringKey } from "../strings";
-import { navigate } from "../router";
 import { useCommand } from "../useCommand";
 import { usePoll } from "../usePoll";
+import { OpsTabs } from "./Ops";
 import { currentZone, venueTime } from "../venueTime";
 
-type Field = { name: string; label: StringKey; kind?: "text" | "number" | "datetime" | "textarea" | "valet" | "via";
+export type Field = { name: string; label: StringKey; kind?: "text" | "number" | "datetime" | "textarea" | "valet" | "via";
   required?: boolean; ltr?: boolean };
 
 /** A small form whose fields map 1:1 to a command body. Local times are the venue's (labelled with the zone). */
-function CommandForm({ fields, submitLabel, valets, zone, disabled, destructive, send, onDone }: {
+export function CommandForm({ fields, submitLabel, valets, zone, disabled, destructive, send, onDone }: {
   fields: Field[]; submitLabel: StringKey; valets: Schemas["PersonRow"][]; zone: string; disabled: boolean;
   destructive?: boolean; send: (body: Record<string, unknown>, key: string) => Promise<unknown>; onDone: () => void }) {
   const { t, error } = useT();
@@ -68,7 +68,7 @@ function CommandForm({ fields, submitLabel, valets, zone, disabled, destructive,
   );
 }
 
-const LIVE_INTAKE: Field[] = [
+export const LIVE_INTAKE: Field[] = [
   { name: "valet_id", label: "valetLabel", kind: "valet" }, { name: "guest_phone", label: "phone", ltr: true },
   { name: "plate", label: "plateLabel", ltr: true }, { name: "description", label: "vehicle", required: false }];
 
@@ -83,11 +83,12 @@ export function Outages({ me, eventId }: { me: Me; eventId?: number }) {
   const poll = usePoll(api.outages, 15_000, []);
   const people = usePoll(() => (eventId ? api.people(eventId) : Promise.resolve([])), 60_000, [eventId]);
   const valets = (people.data ?? []).filter((p) => p.role === "VALET");
-  const manager = atLeast(me, "MANAGER");
+  const manager = isAdmin(me);
   const zone = currentZone(); // the event being worked; the server reads entered times in its venue's zone
   return (
     <main className="page">
       <h1>{t("outagesTitle")}</h1>
+      <OpsTabs me={me} eventId={eventId} />
       <StaleBanner show={poll.stale} />
       <PageData poll={poll}>
         {(o) => (
@@ -121,19 +122,6 @@ export function Outages({ me, eventId }: { me: Me; eventId?: number }) {
                 </>
               ) : null}
             </section>
-
-            {o.whatsapp && eventId ? (
-              <section className="card" aria-labelledby="intake-h">
-                <h2 id="intake-h"><Icon name="car" /> {t("intakeOnBehalf")}</h2>
-                <p className="muted">{t("intakeOnBehalfHint")}</p>
-                <CommandForm fields={[...LIVE_INTAKE, { name: "confirmed_via", label: "confirmedVia", kind: "via" },
-                  { name: "reason", label: "reason", kind: "textarea" }]} submitLabel="recordIntake" valets={valets}
-                  zone={zone} disabled={poll.stale}
-                  send={(b, k) => api.intakeOnBehalf(eventId, b as Schemas["IntakeOnBehalfRequestRequest"], k)
-                    .then((r) => navigate(`/events/${eventId}/tickets/${r.id}`))}
-                  onDone={poll.refresh} />
-              </section>
-            ) : null}
 
             {manager && eventId ? (
               <section className="card" aria-labelledby="sys-h">

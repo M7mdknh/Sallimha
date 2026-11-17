@@ -25,3 +25,8 @@ export const venueTime = (iso: string | number, lang: string, zone = currentZone
 
 export const venueClock = (iso: string | number, lang: string, zone = currentZone()) =>
   new Date(iso).toLocaleTimeString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-GB", { timeZone: zone });
+
+/** Hours and minutes only (e.g. 21:05), in the venue's zone, with Western digits as on keys and tickets. */
+export const venueHM = (iso: string | number, lang: string, zone = currentZone()) =>
+  new Date(iso).toLocaleTimeString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-GB",
+    { timeZone: zone, hour: "2-digit", minute: "2-digit" });

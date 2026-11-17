@@ -40,8 +40,8 @@ demo:
 demo-clean:
 	SEED_ARGS= ./scripts/demo.sh
 
-# Current second-factor code for a synthetic demo account (manager, admin or owner). Local/test only.
-WHO ?= manager
+# Current second-factor code for the synthetic demo admin. Local/test only.
+WHO ?= admin
 demo-code:
 	$(UV) python manage.py demo_totp $(WHO)
 
