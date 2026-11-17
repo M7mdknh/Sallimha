@@ -20,6 +20,7 @@ hosting provider are marked *(provider)* and are completed once hosting is chose
 | 11 | Release rollback | [rollback.md](rollback.md) | Engineer |
 | 12 | Retention deletion | [retention-deletion.md](retention-deletion.md) | Admin |
 | 13 | Secret rotation | [secret-rotation.md](secret-rotation.md) | Engineer |
+| 14 | Admin access: first sign-in, lockout, lost phone (ADR-0012) | [admin-access.md](admin-access.md) | Engineer, two named staff |
 
 Ground rules that apply to every runbook:
 - Never delete a ticket, shift or audit record to "clean up". Every console action asks for a reason and is audited.

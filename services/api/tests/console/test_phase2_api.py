@@ -96,10 +96,9 @@ def test_directory_config_and_integrations_role_matrix(ops):
     assert post(adm, "/api/config/timings", timings).status_code == 200
     integration = adm.get("/api/integrations/whatsapp").json()
     assert integration["status"] == "simulated" and "token" not in str(integration).lower().replace("_configured", "")
-    assert post(sup, f"/api/staff/{ops.second_admin.id}/mfa").status_code == 403
-    assert post(adm, f"/api/staff/{ops.admin.id}/mfa").status_code == 403  # nobody issues their own
-    mfa = post(adm, f"/api/staff/{ops.second_admin.id}/mfa")
-    assert mfa.status_code == 200 and mfa.json()["otpauth_uri"].startswith("otpauth://")
+    assert post(adm, f"/api/staff/{ops.second_admin.id}/mfa").status_code == 404  # no second-factor reset in the app
+    refused = post(adm, f"/api/staff/{ops.second_admin.id}/setup-code")  # nor an admin's password (ADR-0012)
+    assert refused.status_code == 409 and refused.json()["code"] == "admin_access_procedure"
 
 
 def test_exports_and_reports(ops):

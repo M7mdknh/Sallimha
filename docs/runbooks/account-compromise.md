@@ -7,10 +7,13 @@
    epoch changes), and it can no longer sign in.
 2. If the person still holds custody of a car or key, the system raises a custody alert: resolve it with
    [stuck-accepted-task.md](stuck-accepted-task.md) steps.
-3. When it is safe: **Reactivate**, then **Setup code** and give the code to the person directly (never by message).
-   They choose a new password with it; every other session of theirs ends. Nobody else ever knows the password.
-4. Admins: another admin uses **Issue two-factor setup** for that person. The old authenticator stops working; the
-   new setup link is shown once and must be delivered out of band.
+3. Valets and supervisors, when it is safe: **Reactivate**, then **Setup code** and give the code to the person
+   directly (never by message). They choose a new password with it; every other session of theirs ends. Nobody else
+   ever knows the password.
+4. Admins: another admin reactivates the account in the app, but its sign-in is restored only with the controlled
+   procedure on the server — a requester, a different approver who checks the person's identity in person, a new
+   password and a new second factor together ([admin-access.md](admin-access.md), ADR-0012). No admin can reset
+   another admin from the app.
 5. An admin account is usable again only after both a new password and a new second factor.
 6. Review the audit log for that account's actions in the affected window *(provider log access)*.
 
@@ -21,4 +24,5 @@
 
 ## Login abuse
 - Repeated failures are throttled per account and network without locking the real user out; second-factor
-  failures lock the second factor after five attempts. An admin re-issues it.
+  failures lock the second factor after five attempts. Only the controlled procedure unlocks it
+  ([admin-access.md](admin-access.md)).

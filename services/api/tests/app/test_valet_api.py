@@ -91,8 +91,9 @@ def test_full_journey_in_the_app_without_any_staff_whatsapp_message(ops):
     (offer,) = dispatch.dispatch_event(ops.event.id)
     assert offer.assignee_id == valet.id and offer.offer_deadline is None  # window starts when the app shows it
     task = work(app)["task"]
-    assert (task["type"], task["step"], task["id"]) == ("RETRIEVAL", "offer", offer.id)
+    assert (task["type"], task["step"], task["id"], task["shown"]) == ("RETRIEVAL", "offer", offer.id, False)
     assert task["ticket"]["location"] == "A 12" and task["ticket"]["hook"] == 7
+    assert post(app, f"/api/valet/tasks/{offer.id}/shown").json()["outcome"] == "shown"  # the card is on screen
     offer.refresh_from_db()
     assert offer.offer_sent_at is not None and offer.offer_deadline <= offer.hard_deadline
 
@@ -183,6 +184,7 @@ def test_a_seen_offer_expires_after_its_response_window(ops):
     ticket = Ticket.objects.get()
     retrieval.request_retrieval(ticket.bindings.get(), ticket)
     (offer,) = dispatch.dispatch_event(ops.event.id)
+    assert post(app, f"/api/valet/tasks/{offer.id}/shown").status_code == 200
     shown = work(app)["task"]
     offer.refresh_from_db()
     assert shown["deadline"] is not None and offer.offer_deadline - offer.offer_sent_at == timedelta(seconds=30)

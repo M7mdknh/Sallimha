@@ -6,8 +6,16 @@ Paperless WhatsApp guest ticket; phone captured during registration; no required
 ### Approved 15 Nov 2026 (after initial review)
 Brand identity approved as supplied (font-inheritance fix only); venue-owned key hooks whose occupancy survives event closure; request withdrawal semantics; cancellation only before parking starts with guest-has-vehicle-and-keys confirmation; explicit staff receipt confirmation; ADR-0006 valet WhatsApp contract; supervisor console = monitoring, shift operations and exceptions without manual routine dispatch; Django 6.1 (latest patch) with 6.2 LTS upgrade plan; AT-35–AT-60. Recorded in ADR-0001 and ADR-0005/0006.
 
+### Approved 17 Nov 2026 — staff app pilot ([ADR-0011](adr/0011-staff-app-and-three-roles.md))
+User mandate "focused redesign for a small-team pilot", superseding the requirement that valets use WhatsApp exclusively: customers use WhatsApp only (ticket, request, status, code, feedback, help); valets and supervisors use a phone/tablet web app; three roles VALET, SUPERVISOR, ADMIN with an explicit, audited data migration of manager/admin/super admin to ADMIN; existing backend services and every invariant reused; Contact customer with scoped, audited phone access; staff device not working separate from a customer WhatsApp outage and from a whole-system outage; onboarding with one-time setup codes; no offline-sync platform; simulator development-only.
+
+### Approved 17 Nov 2026 — before staging ([ADR-0012](adr/0012-admin-access-and-offer-acknowledgement.md))
+User review of the ADR-0011 build: no admin-to-admin credential reset in normal staff management (valets and supervisors keep routine onboarding and reset); a controlled admin recovery procedure that names two people and cannot silently defeat two-person verification; My work reads without side effects and an authenticated, CSRF-protected, idempotent acknowledgement when the app displays an offer, which never restarts or extends its deadline, with the hard reservation expiry preserved. Also: "Do not assume that every former manager should retain full admin access in the pilot" (decision A1).
+
 ## Preserved from original operating documentation
-Events and separate shift activation; one active shift/person; WhatsApp valet channel; role hierarchy; manager incident closure; admin-only guest-phone export; super-admin WhatsApp connection; stage timing; server-held photos; ratings; filtered reports; configurable messages; retention zero means never delete; honest cancellation and unclaimed outcomes.
+Events and separate shift activation; one active shift/person; ~~WhatsApp valet channel~~; ~~role hierarchy~~; ~~manager~~ incident closure; admin-only guest-phone export; ~~super-admin~~ WhatsApp connection; stage timing; server-held photos; ratings; filtered reports; configurable messages; retention zero means never delete; honest cancellation and unclaimed outcomes.
+
+**Superseded 17 Nov 2026 (ADR-0011):** the WhatsApp valet channel became the staff web app (the retired flow stays in the code behind `STAFF_CHANNEL=whatsapp` until the pilot confirms it can be deleted); the five-role hierarchy became VALET / SUPERVISOR / ADMIN; manager incident closure, carryover approval and outage declaration are ADMIN; the super-admin WhatsApp connection view is ADMIN (credentials stay in the hosting secret store).
 
 ## Proposed defaults requiring review, not misrepresented as prior approval
 | Choice | Recommendation / reason |
@@ -15,16 +23,19 @@ Events and separate shift activation; one active shift/person; WhatsApp valet ch
 | Brand | Refined plum/gold Sallimha identity in DESIGN.md; visual proposal for review |
 | Stack | React/TypeScript + Django/DRF + PostgreSQL + worker + private object storage |
 | Scope | One organization, multiple venues/events; no public SaaS billing/onboarding |
-| Staff surface | Preserve WhatsApp; web registration app is not a V1 prerequisite |
+| Staff surface | ~~Preserve WhatsApp; web registration app is not a V1 prerequisite~~ — superseded: staff web app approved 17 Nov 2026 (ADR-0011) |
 | Offer timeout | 30 s instead of old guide's 90 s; pilot-configurable |
 | Dispatch | Oldest eligible request; original-valet affinity then longest-idle fallback |
 | Phone correction | Supervisor verification after a ticket has already been sent |
 | Vehicle identity | Require plate/usable identifier or reasoned exception; old shortcut allowed no description |
-| Unclaimed | Manager approves custody before close; stronger than original supervisor guide |
+| Unclaimed | Admin (formerly manager) approves custody before close; stronger than original supervisor guide |
 | Handover code | Six digits; limited attempts; keyed verifier; created at ready |
 | Busy definition | Intake and offered/accepted retrieval through handover consume capacity |
 | Audit | Application-append-only with operational controls; no absolute immutability claim |
 | Recovery/load goals | Pilot targets in architecture document, not demonstrated SLAs |
+| Offer window in the app | 30 s from the app's explicit acknowledgement, capped by the 60 s hard limit from reservation (ADR-0012) |
+| Valet password | 8 characters minimum for valets, 12 for supervisors and admins (decision A2) |
+| Admin access | Controlled server procedure with a requesting admin and a different approver; who may approve and who holds server access are owner decisions (A7, A8) |
 
 ## Original inconsistencies resolved
 - Journey deck placed guest linking after intake in its overview; valet guide issued QR immediately. Final user instruction replaces mandatory scan with phone capture and immediate ticket.
@@ -34,7 +45,7 @@ Events and separate shift activation; one active shift/person; WhatsApp valet ch
 - Original immutable-record wording is treated as a product control objective, not proof that a database administrator cannot alter storage.
 
 ## Inputs still needed before production
-Repository/source availability; hosting accounts/budget and approved region; WhatsApp Business sender/provider, template approvals and credentials; actual venue parking/key layout; forecast peak traffic; retention/legal policy owner; operational support contacts; domain; backup/monitoring ownership. These are deployment inputs, not reasons to ask for old PDFs again.
+Repository/source availability; hosting accounts/budget and approved region; WhatsApp Business sender/provider, template approvals (customer templates only) and credentials; staff phones/tablets for the real-device rehearsal; the staff-app pilot decisions A1–A8 (docs/decisions-needed.md); actual venue parking/key layout; forecast peak traffic; retention/legal policy owner; operational support contacts; domain; backup/monitoring ownership. These are deployment inputs, not reasons to ask for old PDFs again.
 
 ## Source provenance
 User-provided operational guides were read in full: `رحلة-المركبة.pdf` (14 pages), `١-الفاليت.pdf` (19), `٢-المشرف.pdf` (11), `٣-المدير.pdf` (14), `٤-الأدمن_.pdf` (8). User sketch `Notes_261115_042845.pdf` has one substantive diagram and a blank second page. This handoff consolidates their content; they are not dependencies and are not bundled.

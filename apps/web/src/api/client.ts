@@ -108,6 +108,8 @@ export const api = {
       call<Schemas["OkResponse"]>("POST", `/api/valet/tickets/${ticketId}/start-parking`, {}, key),
     park: (ticketId: number, body: Schemas["ParkRequestRequest"], key: string) =>
       call<Schemas["TicketStateResponse"]>("POST", `/api/valet/tickets/${ticketId}/park`, body, key),
+    offerShown: (taskId: number, key: string) =>
+      call<Schemas["OfferShownResponse"]>("POST", `/api/valet/tasks/${taskId}/shown`, {}, key),
     accept: (taskId: number, key: string) => valetTask(taskId, "accept", key),
     decline: (taskId: number, key: string) => valetTask(taskId, "decline", key),
     ready: (taskId: number, key: string) => valetTask(taskId, "ready", key),
@@ -174,7 +176,6 @@ export const api = {
   staffAction: (id: number, action: "role" | "deactivate" | "reactivate", body: Record<string, unknown>, key: string) =>
     call<Schemas["IdResponse"]>("POST", `/api/staff/${id}/${action}`, body, key),
   // Not replay-stored on the server: the URI is a secret shown once.
-  issueMfa: (id: number) => call<Schemas["MfaIssueResponse"]>("POST", `/api/staff/${id}/mfa`),
   venues: () => call<Schemas["VenueRow"][]>("GET", "/api/venues"),
   createEvent: (body: Schemas["CreateEventRequestRequest"], key: string) =>
     call<Schemas["IdResponse"]>("POST", "/api/events", body, key),

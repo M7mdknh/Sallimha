@@ -1,6 +1,8 @@
 # ADR-0011 — Staff web app, customer-only WhatsApp and three roles (small-team pilot)
 
-- Status: **Accepted 2026-11-17** (user mandate "focused redesign for a small-team pilot").
+- Status: **Accepted 2026-11-17** (user mandate "focused redesign for a small-team pilot"). Amended by
+  [ADR-0012](0012-admin-access-and-offer-acknowledgement.md): admins no longer issue credentials for other admins, and
+  the offer window starts with an explicit acknowledgement from the app, never with a read.
 - Supersedes: the requirement that valets work only in WhatsApp (docs/01, ADR-0006) and the five-role ladder
   (docs/02). ADR-0006 remains as the record of the retired valet WhatsApp contract; ADR-0007, 0008 and 0010 keep
   their rules with the channel changes below.
@@ -29,7 +31,8 @@
    belongs to, with the customer's number masked. Every console endpoint still requires SUPERVISOR or ADMIN.
 6. **Onboarding without shared credentials.** An admin adds a person (name, mobile, role) and receives a one-time
    setup code (shown once, stored hashed, 72 hours, five attempts). The person sets their own password with it.
-   Re-issuing a code is also the password reset. Admins still need the admin-issued second factor.
+   Re-issuing a code is also the password reset. Admins still need the second factor; since ADR-0012 an admin's
+   password and second factor come only from the controlled procedure on the server, never from another admin.
 7. **Staff connectivity loss** replaces "WhatsApp outage" as the reason for relayed actions. A supervisor marks one
    valet's device as not working (reason recorded); only then may the supervisor record that valet's acceptance,
    car ready, custody receipt, intake photos and parking, each with how it was confirmed (ADR-0008 rules otherwise
@@ -72,7 +75,7 @@
 | Declare / end the outage, record a system outage, reconcile | Manager+ | ADMIN |
 | Approve unclaimed, release carryover, resolve incident | Manager+ | ADMIN |
 | Create / close event, reports, ticket export | Manager+ | ADMIN |
-| Add people, roles, deactivate, setup codes | Manager+ (by rank) | ADMIN |
+| Add people, roles, deactivate, setup codes | Manager+ (by rank) | ADMIN (setup codes for valets and supervisors only, ADR-0012) |
 | Second-factor issue, settings, retention, message replay, phone export | Admin+ | ADMIN |
 | WhatsApp integration status | Super admin | ADMIN |
 | See all events of the organisation | Manager+ | ADMIN (supervisors and valets: assigned events only) |

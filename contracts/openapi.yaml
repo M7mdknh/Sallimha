@@ -1947,54 +1947,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
-  /api/staff/{staff_id}/mfa:
-    post:
-      operationId: staff_mfa_create
-      description: 'Issues TOTP enrolment. Deliberately not replay-stored: the URI
-        is a secret and is shown only once.'
-      parameters:
-      - in: path
-        name: staff_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - staff
-      security:
-      - sessionCookie: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MfaIssueResponse'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
-        '404':
-          description: Not found or out of scope
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
-        '428':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
   /api/staff/{staff_id}/reactivate:
     post:
       operationId: staff_reactivate_create
@@ -4403,6 +4355,61 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/valet/tasks/{task_id}/shown:
+    post:
+      operationId: valet_tasks_shown_create
+      description: |-
+        The app acknowledges that a retrieval offer is on screen; that starts its response window, once (ADR-0012).
+        Repeating it (a refresh, another tab, a retry after a lost reply) never moves the deadline.
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - valet
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferShownResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/valet/tickets/{ticket_id}/park:
     post:
       operationId: valet_tickets_park_create
@@ -4646,8 +4653,8 @@ paths:
   /api/valet/work:
     get:
       operationId: valet_work_retrieve
-      description: Polled by the app. Showing an offer here starts its response window
-        (the device has it).
+      description: 'Polled by the app. A read only: it never changes anything, including
+        an offer''s deadline (ADR-0012).'
       tags:
       - valet
       security:
@@ -4685,6 +4692,30 @@ paths:
           description: Not found or out of scope
 components:
   schemas:
+    AdminAccessRecord:
+      type: object
+      description: The last time an admin's sign-in was set up or recovered by the
+        controlled procedure, from the server.
+      properties:
+        at:
+          type: string
+          format: date-time
+        requested_by:
+          type: string
+          nullable: true
+        approved_by:
+          type: string
+          nullable: true
+        first_admin:
+          type: boolean
+        reason:
+          type: string
+      required:
+      - approved_by
+      - at
+      - first_admin
+      - reason
+      - requested_by
     AlertAckResponse:
       type: object
       properties:
@@ -4834,12 +4865,22 @@ components:
       type: object
       properties:
         outcome:
-          $ref: '#/components/schemas/OutcomeEnum'
+          $ref: '#/components/schemas/CodeResponseOutcomeEnum'
         remaining:
           type: integer
       required:
       - outcome
       - remaining
+    CodeResponseOutcomeEnum:
+      enum:
+      - ok
+      - wrong
+      - locked
+      type: string
+      description: |-
+        * `ok` - ok
+        * `wrong` - wrong
+        * `locked` - locked
     ConfigResponse:
       type: object
       properties:
@@ -5634,14 +5675,6 @@ components:
         * `in_person_check` - in_person_check
         * `known_guest` - known_guest
         * `other` - other
-    MfaIssueResponse:
-      type: object
-      properties:
-        otpauth_uri:
-          type: string
-          description: Shown once; deliver out of band
-      required:
-      - otpauth_uri
     MoveBrief:
       type: object
       properties:
@@ -5669,6 +5702,26 @@ components:
           maxLength: 2000
       required:
       - text
+    OfferShownResponse:
+      type: object
+      properties:
+        outcome:
+          $ref: '#/components/schemas/OfferShownResponseOutcomeEnum'
+        deadline:
+          type: string
+          format: date-time
+          description: When the offer lapses; the same for every repeat
+      required:
+      - deadline
+      - outcome
+    OfferShownResponseOutcomeEnum:
+      enum:
+      - shown
+      - already_shown
+      type: string
+      description: |-
+        * `shown` - shown
+        * `already_shown` - already_shown
     OkResponse:
       type: object
       properties:
@@ -5788,16 +5841,6 @@ components:
       description: |-
         * `DEAD` - DEAD
         * `DELIVERY_UNKNOWN` - DELIVERY_UNKNOWN
-    OutcomeEnum:
-      enum:
-      - ok
-      - wrong
-      - locked
-      type: string
-      description: |-
-        * `ok` - ok
-        * `wrong` - wrong
-        * `locked` - locked
     OutcomeResponse:
       type: object
       properties:
@@ -6239,7 +6282,13 @@ components:
           items:
             type: integer
           description: Operations they are on
+        admin_access:
+          allOf:
+          - $ref: '#/components/schemas/AdminAccessRecord'
+          nullable: true
+          description: 'Admins: the last controlled access (ADR-0012)'
       required:
+      - admin_access
       - can_sign_in
       - enabled
       - event_ids
@@ -6823,6 +6872,10 @@ components:
           format: date-time
           nullable: true
           description: When an offer lapses
+        shown:
+          type: boolean
+          description: 'A retrieval offer''s window has started: the app acknowledged
+            it'
         reason:
           type: string
         ticket:
@@ -6841,6 +6894,7 @@ components:
       - deadline
       - id
       - reason
+      - shown
       - status
       - step
       - ticket

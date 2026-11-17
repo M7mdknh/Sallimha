@@ -1,6 +1,6 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
-import { api, type ValetTask, type ValetWork } from "../api/client";
+import { api, newKey, type ValetTask, type ValetWork } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Id } from "../components/States";
 import { navigate } from "../router";
@@ -179,10 +179,27 @@ function MoveForm({ task, work, refresh }: { task: ValetTask; work: ValetWork; r
   );
 }
 
+/** Tells the server that a retrieval offer is on screen, which starts its response window once (ADR-0012). Only while
+ *  the page is visible; if the acknowledgement is lost it is sent again after the next poll. Repeats (a refresh,
+ *  another tab) never move the deadline, and the hard limit from the reservation applies whatever happens here. */
+function useAcknowledgeOffer(task: ValetTask, refresh: Refresh) {
+  const sending = useRef(false);
+  const pending = task.type === "RETRIEVAL" && task.step === "offer" && !task.shown;
+  useEffect(() => {
+    if (!pending || sending.current || document.visibilityState !== "visible") return;
+    sending.current = true;
+    api.valet.offerShown(task.id, newKey())
+      .then(() => refresh()) // the countdown now shows the response window, not the hard limit
+      .catch(() => undefined) // accepted elsewhere, lapsed or offline: the next poll shows the real state
+      .finally(() => { sending.current = false; });
+  }, [pending, task, refresh]);
+}
+
 /** The one current task, shown as what to do next. Everything comes from the server's step for this task. */
 export function TaskCard({ task, work, refresh, serverNow }: { task: ValetTask; work: ValetWork; refresh: Refresh;
   serverNow: () => number }) {
   const { t } = useT();
+  useAcknowledgeOffer(task, refresh);
   const ticket = task.ticket;
   const isOffer = task.step === "offer";
   const title = task.type === "INTAKE" ? t("intakeInProgress")

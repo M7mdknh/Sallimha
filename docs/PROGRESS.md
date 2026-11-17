@@ -2,6 +2,21 @@
 
 Newest first. Status vocabulary: PASS / PASS (SIMULATED) / FAIL / BLOCKED / NOT RUN. Results obtained with the local fake WhatsApp transport are **SIMULATED** and are not real integration evidence.
 
+## 2026-11-17 — Pre-staging fixes (ADR-0012)
+Evidence: [evidence/pre-staging-2026-11-17.md](evidence/pre-staging-2026-11-17.md). Nothing deployed; WhatsApp
+still SIMULATED.
+
+- No admin credential from the app: setup codes for admins refused, the in-app second-factor reset removed, and a
+  pending code cancelled when a role change involves ADMIN. Admin access goes through a controlled server procedure
+  (`manage.py admin_access`) with a requesting admin and a different approver; the last use shows on the Team page.
+- My work is a pure read; the app acknowledges a displayed offer with an explicit, CSRF-protected, idempotent
+  command that starts the window once and never past the hard limit.
+- docs/06, 07 and 09 brought in line with ADR-0011/0012 (IDs kept; AT-61–AT-72, R-74–R-86 added); A1–A8 with
+  recommendations; real-device checklist (NOT RUN).
+- Tests: backend 521 passed, retired channel 82 passed. Playwright full run 37 passed, 1 failed, 8 skipped; the
+  failure was a race in an old test (it read headings before Operations rendered), fixed with a waiting assertion,
+  and that file then passed 10/10. CI runs the full suite on the pushed commit.
+
 ## 2026-11-17 — Staff app pilot redesign (ADR-0011)
 Branch `build/phase-0-2`. Evidence: [evidence/staff-app-2026-11-17.md](evidence/staff-app-2026-11-17.md). Nothing
 deployed; WhatsApp still SIMULATED.

@@ -44,7 +44,7 @@ Navigation is by role; the server re-checks every permission, so an out-of-role 
 | **Incidents** `/events/:id/incidents` | Supervisor (resolve: admin) | Incident list and detail with notes |
 | **Carryover** `/carryover` | Admin | Cars and keys kept past their operation; approve and release |
 | **Outages** `/outages` | Supervisor reports; admin declares/ends; admin records past outages | Customer WhatsApp outage status, whole-system outage windows and reconciliation |
-| **Team** `/team` | Supervisor, admin | Tonight's shifts (start/end, available/busy/break, tasks done), **device not working** and **register a car for that valet**. Admins also: add people, one-time setup codes, team membership, roles, deactivate/reactivate, second-factor setup |
+| **Team** `/team` | Supervisor, admin | Tonight's shifts (start/end, available/busy/break, tasks done), **device not working** and **register a car for that valet**. Admins also: add people, one-time setup codes for valets and supervisors, team membership, roles, deactivate/reactivate; an admin's row shows the last controlled admin access (set up on the server, never in the app — ADR-0012) |
 | **Dashboard** `/dashboard` | Admin | Parked, waiting, delayed, delivered, request-to-ready (median and 95th percentile, defined on screen), unresolved problems, team availability and workload; link to the full report and exports |
 | **Settings** `/settings…` | Admin | Operation and venue; timings and wording; retention. **Advanced**: message delivery (dead letters, replay), WhatsApp status, simulator (development builds only) |
 
@@ -88,7 +88,8 @@ is never reassigned without a custody record; a queued message is not a delivere
 before the server confirms; every console action that needs accountability asks for a reason and is audited.
 
 **Offers in the app.** An offer reserves the valet from the moment the dispatcher makes it. Its 30-second response
-window starts when the valet's app first shows it; the 60-second hard limit from reservation still applies, so an
+window starts when the valet's app acknowledges that the card is on screen (an explicit, idempotent command;
+reading My work changes nothing — ADR-0012); the 60-second hard limit from reservation still applies, so an
 offer to a closed or locked phone is released and goes to the next fair valet ("offer not yet shown" appears in
 Problems after 15 seconds). The app polls every 3 seconds while in front and refreshes on return and reconnection;
 an optional alert sound is never the only way an offer is seen.
@@ -132,7 +133,7 @@ ASSISTED_FALLBACK. Message delivery (customer messages only) is tracked separate
 | App | Responsibility | Key modules |
 |---|---|---|
 | `core` | Cross-cutting | `audit` (append-only, DB trigger), `crypto` (Fernet field encryption, keyed hashes, key rotation), `idempotency`, `locks`, `worker`, `middleware` (503 on DB outage), `context.staff_channel`, health, `deploy_check`, `rotate_keys` |
-| `ops` | The operation | Models incl. account setup codes and customer messages. Services: `intake` (incl. `register_with_guest`, `park`), `dispatch` (incl. `offer_seen`, `accept_offer`, `decline_offer`), `handover` (incl. `mark_ready_by`, `deliver`), `custody`, `retrieval`, `relocation` (incl. `accept_move`), `holds`, `incidents`, `carryover`, `outage`, `shifts` (incl. `set_assisted`), `staffdir` (setup codes, assignments), `contact`, `reports` (incl. `dashboard`), `config`, `retention`, `opening`, `media`, `tokens`, `localtime` |
+| `ops` | The operation | Models incl. account setup codes and customer messages. Services: `intake` (incl. `register_with_guest`, `park`), `dispatch` (incl. `offer_seen` for the app's acknowledgement, `accept_offer`, `decline_offer`), `handover` (incl. `mark_ready_by`, `deliver`), `custody`, `retrieval`, `relocation` (incl. `accept_move`), `holds`, `incidents`, `carryover`, `outage`, `shifts` (incl. `set_assisted`), `staffdir` (setup codes, assignments, `grant_admin_access`), `contact`, `reports` (incl. `dashboard`), `config`, `retention`, `opening`, `media`, `tokens`, `localtime` |
 | `messaging` | Customer WhatsApp | Signed `webhook` → `inbound` inbox → `flows.guest` (request, rating, help) → `outbox` (retries, dead letters, relevance check) → `transport` (Cloud API or the simulator). The valet conversation (`flows.valet*`) is retired behind `STAFF_CHANNEL=whatsapp` |
 | `console` | Staff app API | `views_valet` + `valet` (the valet's work read model), console views for every screen above, serializers that define the API contract (`contracts/openapi.yaml`), permissions (`IsValet`, `IsConsoleStaff`), second factor, sign-in and setup throttling |
 

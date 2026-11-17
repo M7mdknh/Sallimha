@@ -95,6 +95,7 @@ def _task(staff, task) -> dict:
         deadline = min(d for d in (task.offer_deadline, task.hard_deadline) if d) if task.hard_deadline else None
     return {
         "id": task.id, "type": task.type, "status": task.status, "step": step, "deadline": deadline,
+        "shown": task.offer_sent_at is not None,
         "reason": _move_reason(task) if task.type == Task.Type.RELOCATION else "",
         "ticket": {
             "id": ticket.id, "number": _t(ticket),

@@ -113,6 +113,7 @@ class StaffDirectory(Command):
         rows = (Staff.objects.filter(org_id=actor.org_id).select_related("user")
                 .prefetch_related("assignments", "account_setups").order_by("-enabled", "role", "full_name"))
         now = timezone.now()
+        access = staffdir.last_admin_access([p.id for p in rows if p.role == Role.ADMIN])
         return out(s.StaffRow, [{
             "id": p.id, "full_name": p.full_name, "phone_masked": _masked(p.phone_e164), "role": p.role,
             "enabled": p.enabled, "username": p.user.username if p.user_id else None,
@@ -120,7 +121,8 @@ class StaffDirectory(Command):
             "can_sign_in": bool(p.user_id and p.user.has_usable_password()),
             "setup_pending": any(a.used_at is None and a.revoked_at is None and a.expires_at > now
                                  for a in p.account_setups.all()),
-            "event_ids": [a.event_id for a in p.assignments.all()]} for p in rows])
+            "event_ids": [a.event_id for a in p.assignments.all()],
+            "admin_access": access.get(p.id) if p.role == Role.ADMIN else None} for p in rows])
 
     @command_schema(s.CreateStaffRequest, s.IdResponse)
     @idempotent_post
@@ -190,16 +192,6 @@ class StaffTeam(Command):
         staff = _staff(actor, staff_id)
         staffdir.set_assignment(actor, staff, scoped_event(actor, data["event_id"]), data["member"])
         return out(s.IdResponse, {"id": staff.id})
-
-
-class StaffMfa(Command):
-    """Issues TOTP enrolment. Deliberately not replay-stored: the URI is a secret and is shown only once."""
-
-    @extend_schema(request=None, responses={200: s.MfaIssueResponse, **REFUSALS})
-    @domain_response
-    def post(self, request, staff_id):
-        actor = actor_of(request)
-        return out(s.MfaIssueResponse, {"otpauth_uri": staffdir.issue_mfa_enrolment(actor, _staff(actor, staff_id))})
 
 
 # --- dashboard ----------------------------------------------------------------------------------

@@ -420,6 +420,16 @@ class ResolveRequest(serializers.Serializer):
     outcome = serializers.CharField(max_length=2000)
 
 
+class AdminAccessRecord(serializers.Serializer):
+    """The last time an admin's sign-in was set up or recovered by the controlled procedure, from the server."""
+
+    at = serializers.DateTimeField()
+    requested_by = serializers.CharField(allow_null=True)
+    approved_by = serializers.CharField(allow_null=True)
+    first_admin = serializers.BooleanField()
+    reason = serializers.CharField(allow_blank=True)
+
+
 class StaffRow(serializers.Serializer):
     id = serializers.IntegerField()
     full_name = serializers.CharField()
@@ -432,6 +442,7 @@ class StaffRow(serializers.Serializer):
     can_sign_in = serializers.BooleanField(help_text="The person has set their own password")
     setup_pending = serializers.BooleanField(help_text="A one-time setup code is waiting to be used")
     event_ids = serializers.ListField(child=serializers.IntegerField(), help_text="Operations they are on")
+    admin_access = AdminAccessRecord(allow_null=True, help_text="Admins: the last controlled access (ADR-0012)")
 
 
 class CreateStaffRequest(serializers.Serializer):
@@ -447,10 +458,6 @@ class CreateStaffRequest(serializers.Serializer):
 
 class RoleRequest(serializers.Serializer):
     role = serializers.ChoiceField(choices=ROLES)
-
-
-class MfaIssueResponse(serializers.Serializer):
-    otpauth_uri = serializers.CharField(help_text="Shown once; deliver out of band")
 
 
 class VenueRow(serializers.Serializer):
@@ -786,10 +793,16 @@ class ValetTask(serializers.Serializer):
     status = serializers.ChoiceField(choices=["RESERVED", "OFFERED", "ACCEPTED"])
     step = serializers.ChoiceField(choices=VALET_STEPS, help_text="The valet's next action")
     deadline = serializers.DateTimeField(allow_null=True, help_text="When an offer lapses")
+    shown = serializers.BooleanField(help_text="A retrieval offer's window has started: the app acknowledged it")
     reason = serializers.CharField(allow_blank=True)
     ticket = ValetTicket()
     code = ValetCode(allow_null=True)
     custody = ValetCustody(allow_null=True)
+
+
+class OfferShownResponse(serializers.Serializer):
+    outcome = serializers.ChoiceField(choices=["shown", "already_shown"])
+    deadline = serializers.DateTimeField(help_text="When the offer lapses; the same for every repeat")
 
 
 class ValetRecent(serializers.Serializer):

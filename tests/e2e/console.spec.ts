@@ -5,8 +5,8 @@ import { loginAs, mainNav, noHorizontalOverflow } from "./helpers";
 test("a supervisor signs in and sees Operations problems-first in Arabic", async ({ page }) => {
   await loginAs(page, "supervisor");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  const headings = await page.getByRole("heading", { level: 2 }).allTextContents();
-  expect(headings[0]).toMatch(/تحتاج تدخلك/);
+  // Wait for Operations to render (the first read used to race a cold server): the first section is the problems.
+  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText(/تحتاج تدخلك/);
   await expect(page.getByTestId("list-waiting")).toBeVisible();
   await expect(page.getByTestId("list-retrieving")).toBeVisible();
   await expect(page.getByTestId("list-ready")).toBeVisible();

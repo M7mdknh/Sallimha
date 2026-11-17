@@ -1,7 +1,11 @@
-"""People directory, role grants and account onboarding (docs/02 matrix, ADR-0011). Deactivate, never delete.
+"""People directory, role grants and account onboarding (docs/02 matrix, ADR-0011, ADR-0012). Deactivate, never delete.
 
 Three roles: admins manage everyone except themselves. Nobody is given a password by someone else: an admin issues a
-one-time setup code and the person chooses their own password with it."""
+one-time setup code and the person chooses their own password with it. That is routine for valets and supervisors
+only. An admin's sign-in (first access, a locked second factor, a lost phone) is set up or recovered only with the
+controlled procedure, `grant_admin_access`, run from the server: two named people, password and second factor reset
+together, every session ended, and a record that every admin sees on the Team page. So no single admin can obtain
+another admin's credentials and act as a second person."""
 
 import secrets
 from datetime import timedelta
@@ -21,8 +25,9 @@ from django.utils import timezone
 from core.audit import audit
 from core.crypto import constant_time_equals, keyed_hash, keyed_hash_candidates
 from core.errors import DomainError
+from core.models import AuditEvent
 from core.phone import PhoneInvalid, parse_phone
-from ops.models import LIVE_TASK_STATUSES, ROLE_RANK, AccountSetup, EventAssignment, Role, Shift, Staff, Task
+from ops.models import LIVE_TASK_STATUSES, AccountSetup, EventAssignment, Role, Shift, Staff, Task
 from ops.permissions import actor_label, has_role
 from ops.services.alerts import raise_alert
 
@@ -95,6 +100,8 @@ def issue_setup_code(actor, staff, now=None) -> str:
             raise DomainError("forbidden")
         if not staff.enabled:
             raise DomainError("staff_disabled")
+        if staff.role == Role.ADMIN:
+            raise DomainError("admin_access_procedure")  # never from the app: grant_admin_access (ADR-0012)
         try:
             with transaction.atomic():
                 _ensure_user(staff)
@@ -176,6 +183,9 @@ def change_role(actor, staff, role: str) -> Staff:
         before = staff.role
         staff.role = role
         staff.session_epoch += 1  # every existing session must sign in again with the new privileges
+        if Role.ADMIN in (before, role) and before != role:  # a code issued for another role never opens an admin
+            AccountSetup.objects.filter(staff=staff, used_at__isnull=True, revoked_at__isnull=True).update(
+                revoked_at=timezone.now())
         if role == Role.ADMIN and before != Role.ADMIN:
             staff.mfa_secret_enc, staff.mfa_enrolled_at, staff.mfa_last_step = "", None, None  # admin must issue
         staff.save(update_fields=["role", "session_epoch", "mfa_secret_enc", "mfa_enrolled_at", "mfa_last_step"])
@@ -237,18 +247,78 @@ def set_assignment(actor, staff, event, assigned: bool) -> None:
         _audit("staff.assignment", actor, staff, event_id=event.id, assigned=bool(assigned))
 
 
-def issue_mfa_enrolment(actor, staff) -> str:
-    """Admin-issued TOTP enrolment (or reset after a lockout). Returns the provisioning URI once, for
-    out-of-band delivery; existing sessions of that person are invalidated."""
+def _admin_of(org_id, person) -> bool:
+    return bool(person is not None and person.org_id == org_id and person.enabled and person.role == Role.ADMIN)
+
+
+def grant_admin_access(target, *, requested_by, approved_by, reason: str, operator: str, first_admin: bool = False,
+                       now=None) -> tuple[str, str]:
+    """The controlled procedure for an admin's sign-in (ADR-0012): first access after promotion, a locked second
+    factor, a lost phone or a suspected compromise. Run only from the server (`manage.py admin_access`), never from
+    the app. Returns (setup code, second-factor URI), each shown once, for the target in person.
+
+    Two people: an enabled admin who requests it (the target may ask for themselves) and a different enabled
+    supervisor or admin who approves; neither is the operator's word alone. Only the very first admin of an
+    organisation, when nobody else could approve, goes through as `first_admin`. Password and second factor are
+    reset together and every session ends, so a code or factor handed out earlier is worthless afterwards."""
     from console import mfa
 
+    now = now or timezone.now()
+    reason = (reason or "").strip()
+    if not reason:
+        raise DomainError("reason_required")
+    if not (operator or "").strip():
+        raise DomainError("operator_required")
     with transaction.atomic():
-        staff = Staff.objects.select_for_update(no_key=True).get(pk=staff.pk)  # fresh role and epoch
-        if not _may_manage(actor, staff):
-            raise DomainError("forbidden")
-        if ROLE_RANK[staff.role] < ROLE_RANK[Role.ADMIN]:
-            raise DomainError("mfa_not_required")
-        Staff.objects.filter(pk=staff.pk).update(session_epoch=F("session_epoch") + 1)
-        uri = mfa.issue_secret(staff)
-        _audit("staff.mfa_issue", actor, staff)
-    return uri
+        target = Staff.objects.select_for_update(no_key=True).get(pk=target.pk)
+        if target.role != Role.ADMIN:
+            raise DomainError("not_admin")  # valets and supervisors: the routine setup code from the Team page
+        if not target.enabled:
+            raise DomainError("staff_disabled")
+        if first_admin:
+            if requested_by is not None or approved_by is not None:
+                raise DomainError("first_admin_has_no_approver")
+            if _other_admins(target):
+                raise DomainError("other_admins_exist")
+        else:
+            if not _admin_of(target.org_id, requested_by):
+                raise DomainError("requester_not_admin")
+            if approved_by is None or approved_by.pk in (requested_by.pk, target.pk):
+                raise DomainError("approver_must_differ")
+            if not (approved_by.org_id == target.org_id and approved_by.enabled and has_role(approved_by,
+                                                                                             Role.SUPERVISOR)):
+                raise DomainError("approver_not_authorized")
+        try:
+            with transaction.atomic():
+                user = _ensure_user(target)
+        except IntegrityError as exc:
+            raise DomainError("duplicate") from exc
+        user.set_unusable_password()  # whatever password existed (or someone set) stops working now
+        user.save(update_fields=["password"])
+        AccountSetup.objects.filter(staff=target, used_at__isnull=True, revoked_at__isnull=True).update(revoked_at=now)
+        Staff.objects.filter(pk=target.pk).update(session_epoch=F("session_epoch") + 1)
+        uri = mfa.issue_secret(target)  # new secret; clears enrolment, failures and any lock
+        code = f"{secrets.randbelow(10**8):08d}"
+        AccountSetup.objects.create(staff=target, code_hash=keyed_hash(f"{target.id}:{code}", "setup"),
+                                    issued_by=approved_by or target, expires_at=now + SETUP_TTL)
+        audit("staff.admin_access", actor_id=approved_by.id if approved_by else None,
+              actor_label=f"server-operator:{operator.strip()[:60]}", channel="system", entity_type="staff",
+              entity_id=target.id,
+              summary={"requested_by": requested_by.id if requested_by else None,
+                       "approved_by": approved_by.id if approved_by else None, "first_admin": bool(first_admin),
+                       "operator": operator.strip()[:60], "reason": reason[:200]})
+    return code, uri
+
+
+def last_admin_access(staff_ids) -> dict:
+    """The latest controlled-procedure record per person, for the Team page (names, not ids)."""
+    rows = {}
+    for row in (AuditEvent.objects.filter(action="staff.admin_access", entity_type="staff",
+                                          entity_id__in=list(staff_ids)).order_by("id")):
+        rows[int(row.entity_id)] = row
+    names = dict(Staff.objects.filter(pk__in={v for r in rows.values() for v in (
+        r.summary.get("requested_by"), r.summary.get("approved_by")) if v}).values_list("id", "full_name"))
+    return {sid: {"at": r.occurred_at, "requested_by": names.get(r.summary.get("requested_by")),
+                  "approved_by": names.get(r.summary.get("approved_by")),
+                  "first_admin": bool(r.summary.get("first_admin")), "reason": r.summary.get("reason", "")}
+            for sid, r in rows.items()}

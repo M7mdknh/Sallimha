@@ -1,5 +1,6 @@
-"""AT-46: admin accounts require TOTP (ADR-0011: the one consolidated privileged role); enrolment is admin-issued;
-codes cannot be replayed or brute-forced; privilege changes invalidate sessions (Security Guidance, c5e863d)."""
+"""AT-46: admin accounts require TOTP (ADR-0011: the one consolidated privileged role); enrolment and reset only by
+the controlled procedure (ADR-0012), never by another admin in the app; codes cannot be replayed or brute-forced;
+privilege changes invalidate sessions (Security Guidance, c5e863d)."""
 
 import pyotp
 from rest_framework.test import APIClient
@@ -26,44 +27,40 @@ def _manager(world, username="mgr"):
     return root, mgr
 
 
-def test_login_refused_until_admin_issues_enrolment(world):
-    root, mgr = _manager(world)
+def _controlled_access(world, staff) -> str:
+    """The server procedure: the person sets their password with the new code and gets a new second factor."""
+    code, uri = staffdir.grant_admin_access(staff, requested_by=world.admin, approved_by=world.supervisor,
+                                            reason="identity checked in person", operator="tech")
+    staffdir.complete_setup(staff.user.username, code, PASSWORD)
+    return pyotp.parse_uri(uri).secret
+
+
+def test_login_refused_until_the_controlled_procedure_issues_enrolment(world):
+    _root, mgr = _manager(world)
     client = APIClient()
     resp = _login(client, "mgr")
     assert resp.status_code == 400 and resp.json()["code"] == "mfa_enrolment_required"
     assert "otpauth_uri" not in resp.json()
-    uri = staffdir.issue_mfa_enrolment(root, mgr)
-    secret = pyotp.parse_uri(uri).secret
+    secret = _controlled_access(world, mgr)
     assert _login(client, "mgr").json() == {"ok": False, "mfa_required": True}
     assert client.get("/api/auth/me").status_code == 403
     assert _login(client, "mgr", pyotp.TOTP(secret).now()).json()["ok"] is True
     assert client.get("/api/auth/me").status_code == 200
-    assert AuditEvent.objects.filter(action="staff.mfa_issue").exists()
-
-
-def test_enrolment_issue_requires_admin(world):
-    _root, mgr = _manager(world)
-    import pytest
-
-    from core.errors import DomainError
-    with pytest.raises(DomainError):
-        staffdir.issue_mfa_enrolment(world.supervisor, mgr)
-    with pytest.raises(DomainError):
-        staffdir.issue_mfa_enrolment(mgr, mgr)  # nobody issues their own
+    assert AuditEvent.objects.filter(action="staff.admin_access").exists()
 
 
 def test_totp_code_cannot_be_replayed(world):
-    root, mgr = _manager(world, "mgr2")
-    secret = pyotp.parse_uri(staffdir.issue_mfa_enrolment(root, mgr)).secret
+    _root, mgr = _manager(world, "mgr2")
+    secret = _controlled_access(world, mgr)
     code = pyotp.TOTP(secret).now()
     assert _login(APIClient(), "mgr2", code).status_code == 200
     replay = _login(APIClient(), "mgr2", code)
     assert replay.status_code == 400 and replay.json()["code"] == "mfa_invalid"
 
 
-def test_mfa_locks_after_repeated_failures_until_admin_reset(world):
-    root, mgr = _manager(world, "mgr3")
-    secret = pyotp.parse_uri(staffdir.issue_mfa_enrolment(root, mgr)).secret
+def test_mfa_locks_after_repeated_failures_until_the_controlled_procedure(world):
+    _root, mgr = _manager(world, "mgr3")
+    secret = _controlled_access(world, mgr)
     for i in range(5):  # distinct networks: the per-network throttle must not be what stops this
         APIClient().post("/api/auth/login", {"username": "mgr3", "password": PASSWORD, "otp": "000000"},
                          format="json", REMOTE_ADDR=f"10.7.0.{i + 1}")
@@ -72,7 +69,7 @@ def test_mfa_locks_after_repeated_failures_until_admin_reset(world):
                               REMOTE_ADDR="10.7.1.1")
     assert locked.status_code == 400 and locked.json()["code"] == "mfa_locked"
     assert AuditEvent.objects.filter(action="auth.mfa_locked").exists()
-    new_secret = pyotp.parse_uri(staffdir.issue_mfa_enrolment(root, mgr)).secret  # admin reset + new enrolment
+    new_secret = _controlled_access(world, mgr)  # two people, new password and new second factor
     ok = APIClient().post("/api/auth/login", {"username": "mgr3", "password": PASSWORD,
                                               "otp": pyotp.TOTP(new_secret).now()}, format="json",
                           REMOTE_ADDR="10.7.2.1")

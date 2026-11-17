@@ -83,10 +83,14 @@ def make_ticket(event, registered_by, **fields):
 
 
 def onboard(admin, name, phone, role, password, username=None):
-    """A person added by an admin who then set their own password with the one-time setup code (ADR-0011)."""
+    """A person added by an admin who then set their own password with the one-time setup code (ADR-0011). An admin
+    is onboarded as a supervisor and promoted: their second factor needs the controlled procedure (ADR-0012)."""
     from ops.services import staffdir
 
-    staff = staffdir.create_staff(admin, name, phone, role, username=username)
+    staff = staffdir.create_staff(admin, name, phone, Role.SUPERVISOR if role == Role.ADMIN else role,
+                                  username=username)
     staffdir.complete_setup(staff.user.username, staffdir.issue_setup_code(admin, staff), password)
+    if role == Role.ADMIN:
+        staffdir.change_role(admin, staff, Role.ADMIN)
     staff.refresh_from_db()
     return staff

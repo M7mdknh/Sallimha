@@ -53,5 +53,6 @@ def test_mfa_issue_increments_epoch_from_database_not_stale_copy(world):
     manager = world.manager
     stale = Staff.objects.get(pk=manager.pk)
     Staff.objects.filter(pk=manager.pk).update(session_epoch=7)  # changed elsewhere after `stale` was read
-    staffdir.issue_mfa_enrolment(admin, stale)
+    staffdir.grant_admin_access(stale, requested_by=admin, approved_by=world.supervisor, reason="lost phone",
+                                operator="tech")
     assert Staff.objects.get(pk=manager.pk).session_epoch == 8

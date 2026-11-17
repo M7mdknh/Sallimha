@@ -94,46 +94,27 @@ function SetupCode({ person, disabled, autoOpen }: { person: Person; disabled: b
   );
 }
 
-/** The provisioning URI is a secret: kept in component state only, shown once, never logged or stored.
- *  Issuing replaces the person's current authenticator and signs them out, so it is confirmed first. */
-function MfaIssue({ person, disabled }: { person: Person; disabled: boolean }) {
-  const { t } = useT();
-  const [uri, setUri] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const { run, busy, problem } = useCommand();
-  if (uri) {
-    return (
-      <div className="secret-once span-all" role="status">
-        <p className="muted">{t("mfaOnce")}</p>
-        <code className="otp-uri" dir="ltr">{uri}</code>
-        <span className="row-actions">
-          <button type="button" className="btn btn-secondary" onClick={async () => {
-            try { await navigator.clipboard.writeText(uri); setCopied(true); } catch { setCopied(false); }
-          }}>{copied ? t("copied") : t("copy")}</button>
-          <button type="button" className="btn btn-quiet" onClick={() => { setUri(""); setCopied(false); }}>{t("close")}</button>
-        </span>
-      </div>
-    );
-  }
+/** Admin sign-in is never set up or reset from the app (ADR-0012): the technical owner runs the controlled procedure
+ *  on the server with two named people. Every admin sees its last use on the person's row, so it is never silent. */
+function AdminAccess({ person }: { person: Person }) {
+  const { t, lang } = useT();
+  const record = person.admin_access;
+  const when = record ? new Date(record.at).toLocaleString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-GB",
+    { dateStyle: "short", timeStyle: "short" }) : "";
   return (
-    <>
-      {confirming ? (
-        <span className="confirm-inline span-all" role="group" aria-label={t("issueMfa")}>
-          <span className="muted">{t("issueMfaConfirm")}</span>
-          <button type="button" className="btn btn-primary" data-mutation disabled={disabled || busy}
-            onClick={() => run(() => api.issueMfa(person.id), (r) => { setConfirming(false); setUri(r.otpauth_uri); })}>
-            {t("confirm")}
-          </button>
-          <button type="button" className="btn btn-quiet" onClick={() => setConfirming(false)}>{t("cancel")}</button>
-        </span>
-      ) : (
-        <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
-          <Icon name="shield" /> {t("issueMfa")}
-        </button>
-      )}
-      {problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
-    </>
+    <p className="muted span-all admin-access" data-testid={`admin-access-${person.id}`}>
+      <Icon name="shield" size={16} />{" "}
+      {record ? (
+        <>
+          {t("adminAccessLast")}: <Id>{when}</Id>
+          {record.first_admin ? <> · {t("adminAccessFirst")}</> : (
+            <> · {t("adminAccessRequested")} <bdi>{record.requested_by ?? "—"}</bdi>
+              {" · "}{t("adminAccessApproved")} <bdi>{record.approved_by ?? "—"}</bdi></>
+          )}
+          {record.reason ? <> · <bdi>{record.reason}</bdi></> : null}
+        </>
+      ) : t("adminAccessNote")}
+    </p>
   );
 }
 
@@ -237,18 +218,20 @@ export function People({ me, rows, eventId, disabled, onChanged }: { me: Me; row
                   <StatusPill tone={p.mfa_locked ? "danger" : p.mfa_enrolled ? "success" : "warning"} icon="shield"
                     label={p.mfa_locked ? t("mfaLockedLabel") : p.mfa_enrolled ? t("mfaOn") : t("mfaOff")} />
                 ) : null}
+                {p.role === "ADMIN" ? <AdminAccess person={p} /> : null}
                 {!self ? (
                   <div className="row-actions">
                     {p.enabled ? (
                       <>
-                        <SetupCode key={`${p.id}-${justAdded === p.id}`} person={p} disabled={disabled}
-                          autoOpen={justAdded === p.id || !p.can_sign_in} />
+                        {p.role !== "ADMIN" ? (
+                          <SetupCode key={`${p.id}-${justAdded === p.id}`} person={p} disabled={disabled}
+                            autoOpen={justAdded === p.id || !p.can_sign_in} />
+                        ) : null}
                         {eventId ? (
                           <SimpleCommand label={onTeam ? t("takeOffTeam") : t("putOnTeam")} disabled={disabled}
                             send={(key) => api.setTeam(p.id, eventId, !onTeam, key)} onDone={onChanged} />
                         ) : null}
                         <RoleChange key={p.role} person={p} disabled={disabled} onDone={onChanged} />
-                        {p.role === "ADMIN" ? <MfaIssue person={p} disabled={disabled} /> : null}
                         <Deactivate person={p} disabled={disabled} onDone={onChanged} />
                       </>
                     ) : (

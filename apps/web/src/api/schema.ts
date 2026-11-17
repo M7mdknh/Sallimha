@@ -763,23 +763,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/staff/{staff_id}/mfa": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Issues TOTP enrolment. Deliberately not replay-stored: the URI is a secret and is shown only once. */
-        post: operations["staff_mfa_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/staff/{staff_id}/reactivate": {
         parameters: {
             query?: never;
@@ -1437,6 +1420,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/valet/tasks/{task_id}/shown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description The app acknowledges that a retrieval offer is on screen; that starts its response window, once (ADR-0012).
+         *     Repeating it (a refresh, another tab, a retry after a lost reply) never moves the deadline.
+         */
+        post: operations["valet_tasks_shown_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/valet/tickets/{ticket_id}/park": {
         parameters: {
             query?: never;
@@ -1509,7 +1512,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Polled by the app. Showing an offer here starts its response window (the device has it). */
+        /** @description Polled by the app. A read only: it never changes anything, including an offer's deadline (ADR-0012). */
         get: operations["valet_work_retrieve"];
         put?: never;
         post?: never;
@@ -1539,6 +1542,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The last time an admin's sign-in was set up or recovered by the controlled procedure, from the server. */
+        AdminAccessRecord: {
+            /** Format: date-time */
+            at: string;
+            requested_by: string | null;
+            approved_by: string | null;
+            first_admin: boolean;
+            reason: string;
+        };
         AlertAckResponse: {
             id: number;
             acknowledged: boolean;
@@ -1605,9 +1617,16 @@ export interface components {
             code: string;
         };
         CodeResponse: {
-            outcome: components["schemas"]["OutcomeEnum"];
+            outcome: components["schemas"]["CodeResponseOutcomeEnum"];
             remaining: number;
         };
+        /**
+         * @description * `ok` - ok
+         *     * `wrong` - wrong
+         *     * `locked` - locked
+         * @enum {string}
+         */
+        CodeResponseOutcomeEnum: "ok" | "wrong" | "locked";
         ConfigResponse: {
             version: number;
             timings: {
@@ -1944,10 +1963,6 @@ export interface components {
          * @enum {string}
          */
         MethodEnum: "in_person_check" | "known_guest" | "other";
-        MfaIssueResponse: {
-            /** @description Shown once; deliver out of band */
-            otpauth_uri: string;
-        };
         MoveBrief: {
             status: components["schemas"]["MoveBriefStatusEnum"];
             valet: string;
@@ -1961,6 +1976,20 @@ export interface components {
         NoteRequestRequest: {
             text: string;
         };
+        OfferShownResponse: {
+            outcome: components["schemas"]["OfferShownResponseOutcomeEnum"];
+            /**
+             * Format: date-time
+             * @description When the offer lapses; the same for every repeat
+             */
+            deadline: string;
+        };
+        /**
+         * @description * `shown` - shown
+         *     * `already_shown` - already_shown
+         * @enum {string}
+         */
+        OfferShownResponseOutcomeEnum: "shown" | "already_shown";
         OkResponse: {
             ok: boolean;
         };
@@ -2011,13 +2040,6 @@ export interface components {
          * @enum {string}
          */
         OutboxAttentionStatusEnum: "DEAD" | "DELIVERY_UNKNOWN";
-        /**
-         * @description * `ok` - ok
-         *     * `wrong` - wrong
-         *     * `locked` - locked
-         * @enum {string}
-         */
-        OutcomeEnum: "ok" | "wrong" | "locked";
         OutcomeResponse: {
             outcome: string;
         };
@@ -2194,6 +2216,8 @@ export interface components {
             setup_pending: boolean;
             /** @description Operations they are on */
             event_ids: number[];
+            /** @description Admins: the last controlled access (ADR-0012) */
+            admin_access: components["schemas"]["AdminAccessRecord"] | null;
         };
         StageStat: {
             count: number;
@@ -2436,6 +2460,8 @@ export interface components {
              * @description When an offer lapses
              */
             deadline: string | null;
+            /** @description A retrieval offer's window has started: the app acknowledged it */
+            shown: boolean;
             reason: string;
             ticket: components["schemas"]["ValetTicket"];
             code: components["schemas"]["ValetCode"] | null;
@@ -4741,66 +4767,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IdResponse"];
-                };
-            };
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not found or out of scope */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            428: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    staff_mfa_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                staff_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MfaIssueResponse"];
                 };
             };
             400: {
@@ -7460,6 +7426,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OutcomeResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    valet_tasks_shown_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferShownResponse"];
                 };
             };
             400: {

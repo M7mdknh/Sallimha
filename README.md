@@ -80,7 +80,10 @@ Sign in as `admin` with the code from `make demo-code`.
 - **لوحة المتابعة** (Dashboard): parked cars, waiting and delayed requests, deliveries, request-to-ready time (defined
   on the screen), unresolved problems and the team. **التقرير الكامل والتصدير** opens the full report and CSV exports.
 - **الفريق** (Team): add a valet or supervisor (name, mobile, role), give them their one-time setup code, put them on
-  the operation's team, change role, deactivate or reactivate; admins also get second-factor setup.
+  the operation's team, change role, deactivate or reactivate. Setup codes are for valets and supervisors only: an
+  admin's sign-in (after promotion, a lockout or a lost phone) is set up by the technical owner on the server with two
+  named people, and the admin's row shows when and by whom ([runbooks/admin-access.md](docs/runbooks/admin-access.md),
+  ADR-0012).
 - **الإعدادات** (Settings): the operation and venue, timings and wording, retention; under **متقدم** (Advanced):
   message delivery (dead letters and replay), WhatsApp status and the simulator (development builds only).
 - Operations → **الأعطال**: declare or end a customer WhatsApp outage; after a whole-system outage record its window

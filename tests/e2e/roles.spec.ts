@@ -88,4 +88,12 @@ test("an admin adds a valet, who sets their own password with the one-time code 
 
   await page.reload();
   await expect(row).toContainText("يستطيع الدخول");
+
+  // Made an admin, the person's sign-in is no longer reset from the app (ADR-0012): no setup code, the note instead.
+  await row.getByLabel(`تغيير الدور: نواف ${n} (تجريبي)`).selectOption("ADMIN");
+  await row.getByRole("button", { name: "تغيير الدور" }).click();
+  await expect(row).toContainText("مسؤول النظام");
+  await expect(row.getByRole("button", { name: "رمز الإعداد" })).toHaveCount(0);
+  await expect(row.getByTestId(/^admin-access-/)).toContainText("يجريه المسؤول التقني على الخادم بشخصين");
+  await expect(row).toContainText("بلا تحقق ثنائي");
 });

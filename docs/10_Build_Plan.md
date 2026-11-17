@@ -62,14 +62,16 @@ Slices in CLAUDE.md order. Each slice is domain command → database constraints
 
 **Work:**
 - Provision staging per ADR-0004.
-- Configure the official sender, signed webhook and approved templates.
+- Configure the official sender, signed webhook and approved templates (customer templates only since ADR-0011).
+- First admin and every later admin through the controlled admin access procedure (ADR-0012), never from the app.
 - Exercise real messages: delivery failures, window expiry (AT-28 real), webhook signature (AT-50 real).
-- Browser QA in Arabic and English at 360 px, tablet and desktop.
+- Real-device rehearsal with staff phones and tablets (AT-72, docs/staging/real-device-checklist.md).
+- Browser QA in Arabic and English at 360/390 px, 768/1024 px tablets and desktop.
 - Security review.
 - Load scenario LOAD-01 with hardware and version reported.
 - Backup restore into an isolated environment (REC-01).
 
-**Exit, Gate 4:** STG-01, LOAD-01 and REC-01 evidence recorded.
+**Exit, Gate 4:** STG-01, AT-72, LOAD-01 and REC-01 evidence recorded.
 
 ## Phase 4 — Production readiness → **Gate 5**
 **Needs:** provider, region and data-location decision, domain, owners and retention policy.

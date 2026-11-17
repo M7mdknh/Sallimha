@@ -44,8 +44,8 @@ in this repository. Staging is **not deployed** from this branch; this list is w
 
 | Step | Command |
 |---|---|
-| First super admin | `uv run python manage.py createsuperuser` then link a `Staff` row (runbook "bootstrap") |
-| MFA enrolment for manager+ | `uv run python manage.py issue_mfa <username>` — the URI is shown once on the server console |
+| First admin | Create the organisation and the first admin's `Staff` row and sign-in account on the server (bootstrap steps to be written with the hosting choice), then `uv run python manage.py admin_access <sign-in> --first-admin --reason "…" --operator "…"` — setup code and second-factor link shown once on the server console |
+| Every later admin (promotion, lockout, lost phone) | `uv run python manage.py admin_access …` with a requesting admin and a different approver — [runbooks/admin-access.md](runbooks/admin-access.md) (ADR-0012). Never from the app |
 
 ## Environment flags for staging
 

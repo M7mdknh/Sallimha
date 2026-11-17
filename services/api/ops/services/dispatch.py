@@ -221,19 +221,23 @@ def _offer_still_valid(task, token, staff, now) -> bool:
             and shift is not None)
 
 
-def offer_seen(staff, task_id: int, now=None) -> None:
-    """Staff app (ADR-0011): the valet's device has shown the offer, which starts its response window — what
-    "WhatsApp accepted the message" did in the retired channel. The hard limit from reservation still applies."""
+def offer_seen(staff, task_id: int, now=None) -> str:
+    """Staff app (ADR-0011/0012): the valet's app acknowledges that the offer is on screen, which starts its response
+    window — what "WhatsApp accepted the message" did in the retired channel. Called by an explicit command, never by
+    a read. Returns shown | already_shown | stale. The window starts once: a repeated acknowledgement (refresh,
+    another tab) never restarts or extends it, and it never runs past the hard limit from the reservation."""
     now = now or timezone.now()
     with transaction.atomic():
         task = (Task.objects.select_for_update(no_key=True)
-                .filter(pk=task_id, assignee=staff, type=Task.Type.RETRIEVAL, status=Task.Status.OFFERED,
-                        offer_sent_at__isnull=True).first())
-        if task is None:
-            return
+                .filter(pk=task_id, assignee=staff, type=Task.Type.RETRIEVAL).first())
+        if task is None or task.status != Task.Status.OFFERED or (task.hard_deadline and now >= task.hard_deadline):
+            return "stale"  # already accepted, declined, expired or past its hard limit: nothing to start
+        if task.offer_sent_at is not None:
+            return "already_shown"
         task.offer_sent_at = now
         task.offer_deadline = min(now + timedelta(seconds=timings(task.event)["offer_window_s"]), task.hard_deadline)
         task.save(update_fields=["offer_sent_at", "offer_deadline"])
+    return "shown"
 
 
 def accept_offer(staff, task_id: int, now=None) -> str:

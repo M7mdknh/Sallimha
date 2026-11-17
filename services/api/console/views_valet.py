@@ -50,18 +50,31 @@ def _settle(outcome: str, ok: tuple[str, ...], refusals: dict | None = None) -> 
 @api_view(["GET"])
 @permission_classes([IsValet])
 def work(request):
-    """Polled by the app. Showing an offer here starts its response window (the device has it)."""
+    """Polled by the app. A read only: it never changes anything, including an offer's deadline (ADR-0012)."""
     staff = actor_of(request)
-    now = timezone.now()
-    offer = Task.objects.filter(assignee=staff, type=Task.Type.RETRIEVAL, status=Task.Status.OFFERED,
-                                offer_sent_at__isnull=True).values_list("id", flat=True).first()
-    if offer is not None:
-        dispatch.offer_seen(staff, offer, now)
-    return out(s.ValetWork, read.work(staff, now))
+    return out(s.ValetWork, read.work(staff, timezone.now()))
 
 
 class ValetCommand(APIView):
     permission_classes = [IsValet]
+
+
+class OfferShown(ValetCommand):
+    """The app acknowledges that a retrieval offer is on screen; that starts its response window, once (ADR-0012).
+    Repeating it (a refresh, another tab, a retry after a lost reply) never moves the deadline."""
+
+    @command_schema(None, s.OfferShownResponse)
+    @idempotent_post
+    @domain_response
+    def post(self, request, task_id):
+        staff = actor_of(request)
+        task = _own_task(staff, task_id)
+        outcome = dispatch.offer_seen(staff, task.id, timezone.now())
+        if outcome == "stale":
+            raise DomainError("stale")
+        task.refresh_from_db()
+        return out(s.OfferShownResponse, {"outcome": outcome, "deadline": min(task.offer_deadline,
+                                                                              task.hard_deadline)})
 
 
 class Availability(ValetCommand):
