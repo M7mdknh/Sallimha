@@ -13,7 +13,8 @@ import { SettingsTabs } from "./SettingsTabs";
 function SimOutageSwitch() {
   const { t } = useT();
   const state = usePoll(api.simOutage, 5_000, []);
-  const down = state.data?.down ?? false;
+  if (state.data === null) return null; // never offer a switch before the provider's actual state is known
+  const down = state.data.down;
   return (
     <div className={`sim-outage ${down ? "is-down" : ""}`} role="status">
       <span>{down ? t("simOutageOn") : t("simOutageOff")}</span>

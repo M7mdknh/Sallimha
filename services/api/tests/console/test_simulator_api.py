@@ -24,10 +24,25 @@ def test_simulator_send_text_runs_real_webhook_path(world, sim):
     assert SimulatedMessage.objects.filter(direction="in", phone=phone).exists()
 
 
-def test_simulator_lists_phones_and_messages(world, sim):
+def test_simulator_lists_customer_phones_only(world, sim):
+    """Staff work in the app (ADR-0011): the development simulator stands in for customers' phones only."""
+    from django.utils import timezone
+
+    from messaging import outbox
+    from tests.ops.intake_helpers import park
+
+    park(world.valets[0], world.event, phone="+966501112277")
+    outbox.send_due(timezone.now())  # the simulator shows what the fake provider was given
+    phones = sim.get("/api/dev/sim/phones").json()
+    assert [p["role"] for p in phones] == ["GUEST"] and phones[0]["phone"] == "+966501112277"
+    assert all(p["phone"] != world.valets[0].phone_e164 for p in phones)
+    assert sim.get("/api/dev/sim/messages", {"phone": "+966501112277"}).status_code == 200
+
+
+@pytest.mark.whatsapp_staff
+def test_retired_channel_lists_staff_phones_too(world, sim):
     phones = sim.get("/api/dev/sim/phones").json()
     assert any(p["phone"] == world.valets[0].phone_e164 and p["role"] == "VALET" for p in phones)
-    assert sim.get("/api/dev/sim/messages", {"phone": world.valets[0].phone_e164}).status_code == 200
 
 
 @override_settings(SIMULATOR_ENABLED=False)

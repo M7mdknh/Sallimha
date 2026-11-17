@@ -163,11 +163,13 @@ def test_registering_and_parking_for_a_valet_without_a_device(ops):
     assert created.status_code == 200, created.content
     ticket_id = created.json()["id"]
     assert Ticket.objects.get(pk=ticket_id).state == "RECEIVED"
+    assert sup.get(f"/api/tickets/{ticket_id}").json()["primary_action"] == "relay_intake_photo"
     for _ in range(4):
         sent = sup.post(f"/api/tickets/{ticket_id}/relay-intake-photo",
                         {"photo": SimpleUploadedFile("car.jpg", JPEG, content_type="image/jpeg"),
                          "confirmed_via": "in_person"}, format="multipart", HTTP_IDEMPOTENCY_KEY=uuid.uuid4().hex)
         assert sent.status_code == 200, sent.content
+    assert sup.get(f"/api/tickets/{ticket_id}").json()["primary_action"] == "relay_parked"  # photos complete
     assert post(sup, f"/api/tickets/{ticket_id}/relay-parked", {
         "valet_id": valet.id, "zone_code": "B", "detail": "8", "hook_number": 88,
         "confirmed_via": "radio"}).status_code == 200

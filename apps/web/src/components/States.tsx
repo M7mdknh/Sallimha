@@ -43,7 +43,7 @@ export function Empty({ text }: { text: string }) {
 }
 
 /** Status pill: always icon + label, never colour alone. */
-export function StatusPill({ tone, icon, label }: { tone: string; icon: string; label: string }) {
+export function StatusPill({ tone, icon, label }: { tone: string; icon: string; label: ReactNode }) {
   return (
     <span className={`pill pill-${tone}`}>
       <Icon name={icon} size={16} />

@@ -80,8 +80,8 @@ function Body({ d }: { d: Board }) {
         </div>
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th scope="col">{t("navTeam")}</th><th scope="col">{t("availability")}</th>
-              <th scope="col">{t("currentTask")}</th><th scope="col">{t("dashParkedBy")}</th><th scope="col">{t("dashDeliveredBy")}</th></tr></thead>
+            <thead><tr><th scope="col">{t("dashColName")}</th><th scope="col">{t("dashColStatus")}</th>
+              <th scope="col">{t("dashColTask")}</th><th scope="col">{t("dashParkedBy")}</th><th scope="col">{t("dashDeliveredBy")}</th></tr></thead>
             <tbody>
               {d.team.members.map((m) => {
                 const [tone, icon] = STATUS[m.status];

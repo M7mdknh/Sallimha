@@ -321,10 +321,10 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
             <StatusPill tone={data.contact_state === "CONFIRMED_IN_PERSON" ? "success" : "warning"}
               icon={data.contact_state === "CONFIRMED_IN_PERSON" ? "check" : "alert"} label={state(data.contact_state)} />
             {data.request ? <StatusPill tone="neutral" icon="clock" label={state(data.request.state)} /> : null}
-            {data.offered_to ? <StatusPill tone="warning" icon="user" label={`${t("offeredTo")}: ${data.offered_to}`} /> : null}
+            {data.offered_to ? <StatusPill tone="warning" icon="user" label={<>{t("offeredTo")}: <bdi>{data.offered_to}</bdi></>} /> : null}
             {data.move ? (
               <StatusPill tone={data.move.status === "ACCEPTED" ? "info" : "warning"} icon="pin"
-                label={`${data.move.status === "ACCEPTED" ? t("moveAccepted") : t("moveOffered")}: ${data.move.valet}`} />
+                label={<>{data.move.status === "ACCEPTED" ? t("moveAccepted") : t("moveOffered")}: <bdi>{data.move.valet}</bdi></>} />
             ) : null}
           </div>
           <dl className="facts">

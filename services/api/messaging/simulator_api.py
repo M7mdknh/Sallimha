@@ -30,9 +30,12 @@ def _guard():
 def phones(request):
     _guard()
     actor = actor_of(request)
+    from core.context import staff_app
+
     rows = []
-    for shift in Shift.objects.filter(ended_at__isnull=True, staff__org_id=actor.org_id).select_related("staff"):
-        rows.append({"phone": shift.staff.phone_e164, "label": shift.staff.full_name, "role": shift.staff.role})
+    if not staff_app():  # staff work in the app (ADR-0011): the simulator stands in for customers' phones only
+        for shift in Shift.objects.filter(ended_at__isnull=True, staff__org_id=actor.org_id).select_related("staff"):
+            rows.append({"phone": shift.staff.phone_e164, "label": shift.staff.full_name, "role": shift.staff.role})
     staff_phones = {r["phone"] for r in rows}
     for phone in (SimulatedMessage.objects.exclude(phone__in=staff_phones).values_list("phone", flat=True)
                   .distinct()):

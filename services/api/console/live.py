@@ -177,14 +177,20 @@ def _outage_actions(ticket, actor) -> list[str]:
     return actions
 
 
-PRIMARY_ORDER = ("relay_accept", "relay_ready", "relay_custody_ack", "relay_parked", "approve_unclaimed",
-                 "release_carryover", "confirm_receipt", "assisted_handover", "assisted_request")
+PRIMARY_ORDER = ("relay_accept", "relay_ready", "relay_custody_ack", "relay_intake_photo", "relay_parked",
+                 "approve_unclaimed", "release_carryover", "confirm_receipt", "assisted_handover", "assisted_request")
 
 
-def primary_action(actions: list[str]) -> str | None:
+def primary_action(actions: list[str], ticket=None) -> str | None:
     """The one action to put first for this ticket's situation; everything else goes under More actions. Recording
-    for a valet whose device is down comes first, then a waiting approval, then what a customer at the stand
-    usually needs. While a valet is simply doing the job there is nothing for a supervisor to press."""
+    for a valet whose device is down comes first (photos until there are four, then parking), then a waiting
+    approval, then what a customer at the stand usually needs. While a valet is simply doing the job there is
+    nothing for a supervisor to press."""
+    if ticket is not None and "relay_intake_photo" in actions:
+        from ops.services.intake import REQUIRED_PHOTOS, intake_photo_count
+
+        if intake_photo_count(ticket) >= REQUIRED_PHOTOS or ticket.photos_exception_reason:
+            actions = [a for a in actions if a != "relay_intake_photo"]
     return next((a for a in PRIMARY_ORDER if a in actions), None)
 
 
@@ -217,7 +223,7 @@ def ticket_detail(ticket, actor) -> dict:
         "incidents": incidents.brief(ticket),
         "timeline": [{"at": e.occurred_at, "action": e.action, "actor": e.actor_label} for e in timeline],
         "allowed_actions": actions,
-        "primary_action": primary_action(actions),
+        "primary_action": primary_action(actions, ticket),
         "guest_messages": [{"text": m.text, "received_at": m.received_at}
                            for m in ticket.guest_messages.order_by("-received_at")[:10]],
         "can_contact": bool(binding and binding.phone_enc),

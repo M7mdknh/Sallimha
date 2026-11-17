@@ -8,7 +8,7 @@ import { loginAs, noHorizontalOverflow } from "./helpers";
 //     and font like page zoom without changing the viewport.
 // Neither is the browser's zoom UI itself; that remains a manual check (docs/evidence/review-2026-11-16.md).
 
-const PAGES = ["/manage", "/staff", "/settings", "/outages", "/operations"];
+const PAGES = ["/dashboard", "/team", "/settings", "/settings/operation", "/settings/delivery", "/outages"];
 
 async function usable(page: Page, path: string) {
   await page.goto(path);
