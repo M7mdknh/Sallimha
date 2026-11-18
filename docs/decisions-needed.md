@@ -44,3 +44,11 @@ chat; secrets go straight into the hosting provider's secret store.
 | A6 | Optional alert sound is off by default; push notifications are not in the pilot | T | The task card is always the way an assignment is discovered | Keep it: sound off by default, each valet may turn it on; no push in the pilot. Revisit after the rehearsal using the count of "offer not yet shown" alerts |
 | A7 | Who holds server access and runs the admin access procedure (technical owner) | S | Names given to the procedure are the operator's attestation; server access is outside the app's roles (ADR-0012) | One named technical owner and one backup, neither of them a pilot admin if the team allows; otherwise record that overlap as an accepted risk |
 | A8 | Who may approve an admin's access | S | Implemented: any enabled supervisor or admin other than the requester and the target | Keep it as implemented, so a pilot with two admins can still recover either one; the approver checks identity in person |
+
+## Pilot usability (ADR-0013)
+| # | Decision | Blocks | Notes | Recommendation |
+|---|---|---|---|---|
+| M1 | Approve a Google Cloud billing account and a monthly ceiling for the Maps JavaScript API (staging, then production) | S (map only) | Without it the app runs with the text place and "map not configured"; docs/staging/google-maps.md | Approve a small staging ceiling with a daily quota cap; decide production after the rehearsal |
+| M2 | Location thresholds: stale after 30 s; approximate above 50 m; not saved above 150 m | T | Proposed defaults in ADR-0013 | Keep them for the rehearsal; adjust from real car-park readings (checklist item 15) |
+| M3 | Saudi plate: how the letter positions of the Arabic and Latin rows correspond | T | The 17 letters are verified; positions are not stated by the sources. Today only the entered script is shown | Confirm from real plates in the rehearsal (checklist item 18) before showing the other script |
+

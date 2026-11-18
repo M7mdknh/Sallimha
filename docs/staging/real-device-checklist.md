@@ -43,10 +43,20 @@ Write the device model, OS and browser version next to every line, and record ea
 14. A valet phone runs out of battery mid-task. The supervisor marks **Device not working**, records that valet's
     next action, then marks the device working again once it is back. The valet's app resumes at the server's step.
 
+## Location, plate and map (ADR-0013)
+15. Beside a parked car at ground level, basement and multi-storey: **Use my location** → note the reported accuracy
+    and how long it takes. The pin is kept only at 150 m or better, and an old fix is refused.
+16. Deny location permission on one phone. Parking still completes with zone, floor, spot and description.
+17. With the real Maps key (docs/staging/google-maps.md): open the map, tap and drag the pin, and check that the venue
+    centre is labelled as not the car. **Open in Google Maps** opens the right spot on iPhone and Android.
+18. Photograph three real Saudi plates. Enter each in Arabic and in Latin, and check that the preview matches the plate.
+    Confirm with the owner how the letter positions of the two rows correspond before any cross-script display is
+    added (it is used only as a search key today).
+
 ## Sign-in on real devices
-15. A new valet sets their password with a setup code on their own phone, then signs in with the mobile number typed
+19. A new valet sets their password with a setup code on their own phone, then signs in with the mobile number typed
     the local way (05…).
-16. An admin's sign-in goes through the controlled procedure (runbooks/admin-access.md): the second-factor link is
+20. An admin's sign-in goes through the controlled procedure (runbooks/admin-access.md): the second-factor link is
     scanned into an authenticator app on that admin's phone, and sign-in succeeds.
 
 **Exit:** every line PASS, or a FAIL with an owner and a decision before go-live. Record the results in

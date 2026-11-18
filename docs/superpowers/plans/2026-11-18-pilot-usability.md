@@ -36,4 +36,14 @@ Decisions go in ADR-0013. Executed inline (no subagents); TDD per task; ledger b
 
 ## Ledger
 - Before screenshots saved: docs/evidence/before-2026-11-18/ (from the bc7d8dd UI).
-- bc7d8dd: CI 44092787216 success (backend, web, image, e2e). Inline security review of bc7d8dd: no findings.
+- bc7d8dd: CI 44092787216 success (backend, web, image, e2e). Inline security review of bc7d8dd: one finding (secrets to non-interactive output), fixed in 94dc893.
+- 94dc893: review finding fixed (admin_access refuses non-interactive output).
+- Tasks 1–5 backend done with tests (phone, plate, receipt/message status, location, dashboard data); ADR-0013 written.
+- Ruling: plate cross-script display not shown (letter position correspondence unverified) — search key only — cost if
+  wrong: a search in the other script may miss; nothing displayed is wrong.
+- Ruling: Referrer-Policy changed same-origin → strict-origin-when-cross-origin (needed for website-restricted Maps
+  key; origin only, never path) — cost if wrong: none for privacy of paths; covered by staging test.
+- Ruling: chart is a 3-series line chart (hourly trend) not grouped bars (72 bars unreadable at 360 px); palette
+  validated with the dataviz script, all pairs.
+- Frontend: PhoneField, PlateField, Location (picker, view, lazy map), Register 3 stages, TaskCard, TicketPanel, Team
+  form, Operations queue, Dashboard, venue centre form, simulator next-failure; e2e helper + intake-location spec.

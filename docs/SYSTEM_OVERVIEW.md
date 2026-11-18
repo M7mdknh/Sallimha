@@ -33,26 +33,26 @@ Navigation is by role; the server re-checks every permission, so an out-of-role 
 | Screen | What it does |
 |---|---|
 | **My work** `/work` | The one current task as a card driven by the server's next step: an offer with a countdown (accept / decline), bring the car, car ready, enter the collection code, delivered; a move offer and the new location; custody acknowledgement. Availability (available / break), the operation's name, recent work. Connection indicator; a banner if the connection is lost or customer messages are delayed |
-| **Register car** `/register` | Six steps: 1 customer number and plate/description (+ message language), 2 confirm the number and send the WhatsApp ticket, 3 four photos with the camera, 4 did the ticket arrive?, 5 start parking, 6 zone (large choices), spot, key hook → parked. Steps 1–2 stay in memory only; from step 3 the server decides the step, so a reload or a second tab resumes correctly |
+| **Register car** `/register` | Valet | Three stages (ADR-0013): 1 customer number (country selector, Saudi Arabia default; server-validated) and the car (Saudi plate as entered, other plate as written, or no readable plate with a reason; make and colour) — the number as it will be read sits beside **Send ticket**, and a still-active duplicate plate is flagged first; 2 four camera photos, the ticket message's real status, then **Start parking**; 3 zone, floor, spot, a short description, an optional confirmed pin (browser location with accuracy, or placed on the map when configured) and the key hook, then **Parked**. No receipt question |
 
 ### Supervisor and admin
 | Screen (route) | Who | What it is for |
 |---|---|---|
 | **Sign in** `/login` | Everyone | Mobile number (or username) and password; admins also a 6-digit code. **First time / forgot password**: the one-time setup code from an admin becomes the person's own password |
-| **Operations** `/operations` → `/events/:id` | Supervisor, admin | Opens the active operation. Problems first (alerts, customer help), search by ticket or plate, then cars **waiting**, **on the way** and **ready** with waiting time and valet; counts; team summary; readiness check. Tabs: Cars, Incidents, Carryover (admin), Outages |
+| **Operations** `/operations` → `/events/:id` | Supervisor, admin | Opens the active operation. Search at the top; problems first (alerts, customer help, failed customer messages); one queue of active requests ordered by the longest wait — elapsed time with *late* in words, ticket and plate, stage, valet, place and hook — with waiting / on the way / ready filters; team availability in the header; counts in one line; the opening check only when something needs attention. Tablet: the car opens beside the list; phone: stacked |
 | **Ticket detail** `/events/:id/tickets/:tid` | Supervisor, admin | Beside the lists on tablets, full screen on phones. Facts, status, holds, incidents, the customer's stored messages, **Contact customer**, **one primary action** and the rest under **More actions** |
 | **Incidents** `/events/:id/incidents` | Supervisor (resolve: admin) | Incident list and detail with notes |
 | **Carryover** `/carryover` | Admin | Cars and keys kept past their operation; approve and release |
 | **Outages** `/outages` | Supervisor reports; admin declares/ends; admin records past outages | Customer WhatsApp outage status, whole-system outage windows and reconciliation |
 | **Team** `/team` | Supervisor, admin | Tonight's shifts (start/end, available/busy/break, tasks done), **device not working** and **register a car for that valet**. Admins also: add people, one-time setup codes for valets and supervisors, team membership, roles, deactivate/reactivate; an admin's row shows the last controlled admin access (set up on the server, never in the app — ADR-0012) |
-| **Dashboard** `/dashboard` | Admin | Parked, waiting, delayed, delivered, request-to-ready (median and 95th percentile, defined on screen), unresolved problems, team availability and workload; link to the full report and exports |
+| **Dashboard** `/dashboard` | Admin | The selected operation and its period; one band of four counts (parked, waiting with the oldest wait, delivered, request-to-ready median with its definition); activity by hour from recorded times (empty state until two hours exist); unresolved problems; team availability and workload; **Add staff**; link to the full report and exports |
 | **Settings** `/settings…` | Admin | Operation and venue; timings and wording; retention. **Advanced**: message delivery (dead letters, replay), WhatsApp status, simulator (development builds only) |
 
 ### Ticket actions (shown only when valid; primary first)
 | Situation | Actions |
 |---|---|
-| Car being received | Cancel (before parking; customer has car and keys), intake exception (photos/vehicle), intake transfer, confirm the customer received the ticket |
-| Contact problems | Correct the customer's number (revokes the old link and code); Contact customer |
+| Car being received | Cancel (before parking; customer has car and keys), intake exception (photos/vehicle), intake transfer |
+| Contact problems | Correct the customer's number (revokes the old link and code); resend the ticket after a failed or unknown message (ADR-0013); confirm receipt only after a correction; Contact customer |
 | Parked, no request | Assisted request, relocate (offer to a valet), propose unclaimed |
 | Retrieval in progress | Withdraw; after acceptance: withdraw with custody resolution, custody transfer |
 | Ready at the stand | Assisted handover (customer without phone or code) |
@@ -109,7 +109,7 @@ stateDiagram-v2
 ```
 Retrieval requests: WAITING_FOR_PARKING → QUEUED → OFFERED → ACCEPTED → COMPLETED (or WITHDRAWN).
 Tasks (intake, retrieval, relocation): OFFERED/RESERVED → ACCEPTED → COMPLETED, or RELEASED (expired, declined,
-superseded, custody resolved). Customer contact: UNCONFIRMED → CONFIRMED_IN_PERSON, CORRECTION_REQUIRED or
+superseded, custody resolved). Customer contact (no routine receipt question since ADR-0013; the ticket message shows its provider status): UNCONFIRMED → CONFIRMED_IN_PERSON, CORRECTION_REQUIRED or
 ASSISTED_FALLBACK. Message delivery (customer messages only) is tracked separately in the outbox.
 
 ## 4. Exceptions and recovery

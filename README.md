@@ -42,20 +42,29 @@ the supervisor; each person needs their own session.
 ### Walkthrough: registration to verified delivery
 The app opens in Arabic; **English** switches language (valets: menu at the top). Labels are Arabic (English).
 1. **Valet** — sign in as ماجد (`0550000101`). **مهامي** (My work) shows no task and the status *متاح* (Available).
-2. Tap **تسجيل سيارة** (Register car). Enter the customer's number `0501234567` and `ABC 1234 كامري بيضاء`, then
-   **التالي** (Next). Check the number with the customer and tap **إرسال التذكرة** (Send ticket): the customer's
-   WhatsApp ticket is queued at once.
-3. **التقاط صورة** (Take photo) four times (front, back, both sides). Answer **هل وصلت التذكرة؟** (Did the ticket
-   arrive?), tap **بدء الركن** (Start parking), then choose zone **A**, spot `12`, key hook `15` and **تم الركن**
-   (Parked).
-4. **Customer** — in another window sign in as `supervisor` and open http://127.0.0.1:5180/dev/simulator (a
+2. Tap **تسجيل سيارة** (Register car). Three stages:
+   - **العميل والسيارة** (Customer and car): the country is Saudi Arabia by default; type the customer's number as
+     they say it (`0501234567`, `050-123-4567`, Arabic digits or `+44 …` all work). Choose the plate type — **سعودية**
+     (three letters, Arabic or Latin, and the numbers, e.g. `ا ب ح` / `1234`), **لوحة أخرى** (as written) or
+     **لا توجد / غير مقروءة** (with a reason) — and add make and colour. The number as it will be read appears beside
+     **إرسال التذكرة** (Send ticket): read it back to the customer, then send. A wrong number is refused with the reason
+     and what you typed stays. The same plate still active in this operation is flagged before anything is registered.
+   - **الصور وبدء الركن** (Photos, then parking): take four photos (front, back, both sides); the customer's ticket
+     message shows its real status (waiting to send, sent, delivered, read, not delivered). Then **بدء الركن**.
+   - **مكان السيارة والمفتاح** (Where the car is, and the key): zone, floor, spot and a short description (`B1، بجانب
+     العمود 12`); optionally **استخدم موقعي** beside the car for a pin (shown with its accuracy; too approximate or old
+     positions are not saved; the map shows only when a Google Maps key is configured), then the key hook `15` and
+     **تم الركن** (Parked). There is no question about whether the ticket arrived (ADR-0013).
+3. **Customer** — in another window sign in as `supervisor` and open http://127.0.0.1:5180/dev/simulator (a
    development tool that stands in for the customer's phone). Open +966501234567 and tap **اطلب سيارتي** (Request my car).
-5. **Valet** — My work shows **طلب إحضار** (Retrieval request) with a countdown. **قبول** (Accept), bring the car,
+4. **Valet** — My work shows **طلب إحضار** (Retrieval request) with a countdown and the saved place: zone, floor,
+   spot, description and, if a pin was saved, **افتح في خرائط Google** (Open in Google Maps). **قبول** (Accept), bring the car,
    **السيارة جاهزة** (Car ready).
-6. **Customer** — the simulator thread shows a six-digit collection code. **Valet** — enter it and **تحقق**
+5. **Customer** — the simulator thread shows a six-digit collection code. **Valet** — enter it and **تحقق**
    (Verify), hand over the car, **تم التسليم** (Delivered). The customer receives the rating buttons.
-7. **Supervisor** — **التشغيل** (Operations) shows problems first, then cars waiting / on the way / ready with their
-   waiting time, and a search. **الفريق** (Team) shows who is on shift, busy or on a break.
+6. **Supervisor** — **التشغيل** (Operations): search at the top, problems first, then one queue of active requests
+   ordered by the longest wait (plate, valet, elapsed time, *late* marked in words), filters for waiting / on the way /
+   ready, and team availability in the header. On a tablet the car opens beside the list. **الفريق** (Team) shows who is on shift, busy or on a break.
 
 ### Walkthrough: exceptions (supervisor)
 Open a car from Operations. The detail shows one primary action and the rest under **إجراءات أخرى** (More actions):
@@ -69,6 +78,10 @@ customer writes on WhatsApp, the message is kept on the ticket and **عميل ي
 record their acceptance, car ready and custody receipt on the ticket, or register and park a car for them; each
 record names the valet, how you confirmed it and you. **عاد جهازه للعمل** ends it.
 
+**A customer message does not arrive:** the ticket shows *not delivered* and **لم تصل رسالة إلى العميل** appears in
+Problems (one per ticket). Open the car: **تصحيح رقم الضيف** (Correct guest number, old links stop working) or
+**إعادة إرسال التذكرة** (Resend the ticket). In the simulator, **اجعل الرسالة التالية تفشل** rehearses this.
+
 **Customer WhatsApp down:** in the simulator press **محاكاة انقطاع واتساب**. Staff keep working in the app; Operations
 and the valets' screens say customer messages are not arriving. Use **طلب إحضار بمساعدة المشرف** for a customer at
 the stand and **تسليم بمساعدة المشرف** to hand over without a code. When it ends, queued messages that are still true
@@ -77,8 +90,9 @@ the outage in Operations → **الأعطال** (Outages); supervisors report it
 
 ### Walkthrough: admin
 Sign in as `admin` with the code from `make demo-code`.
-- **لوحة المتابعة** (Dashboard): parked cars, waiting and delayed requests, deliveries, request-to-ready time (defined
-  on the screen), unresolved problems and the team. **التقرير الكامل والتصدير** opens the full report and CSV exports.
+- **لوحة المتابعة** (Dashboard): the operation and its period, four counts (parked, waiting with the oldest wait,
+  delivered, request-to-ready median — defined on the screen), activity by hour from recorded times, unresolved
+  problems, the team, and **إضافة موظف** (Add staff). **التقرير الكامل والتصدير** opens the full report and CSV exports.
 - **الفريق** (Team): add a valet or supervisor (name, mobile, role), give them their one-time setup code, put them on
   the operation's team, change role, deactivate or reactivate. Setup codes are for valets and supervisors only: an
   admin's sign-in (after promotion, a lockout or a lost phone) is set up by the technical owner on the server with two

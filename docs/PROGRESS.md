@@ -2,6 +2,26 @@
 
 Newest first. Status vocabulary: PASS / PASS (SIMULATED) / FAIL / BLOCKED / NOT RUN. Results obtained with the local fake WhatsApp transport are **SIMULATED** and are not real integration evidence.
 
+## 2026-11-18 — Pilot usability (ADR-0013)
+Evidence: [evidence/usability-2026-11-18.md](evidence/usability-2026-11-18.md). Nothing deployed; WhatsApp and
+location results SIMULATED; Google Maps with a real key BLOCKED (billing approval, decision M1).
+
+- **Review of bc7d8dd:** its CI passed. One finding fixed: `admin_access` refuses to print secrets outside an
+  interactive terminal.
+- **Dashboards:**
+  - Admin: the operation period, four counts, activity by hour from recorded times, team, problems, Add staff.
+  - Supervisor: problems first, one queue by longest wait with plate, valet and elapsed time, search and team at hand.
+- **No receipt question:** the ticket message's provider status is shown instead. A failure becomes one issue with
+  correct-number and resend.
+- **Phone entry:** a country selector, with the server as the authority and specific refusals.
+- **Plate entry:** Saudi plates kept as entered (verified letter set), other plates as written, an explicit
+  no-plate path, search in either script, and possible duplicates flagged.
+- **Parking place:** floor, description and an optional confirmed pin with accuracy. Google Maps is lazy-loaded with a
+  run-time key, and parking never waits for a position or a map.
+- **Intake:** three stages.
+- **Tests:** backend 590, retired channel 82, Playwright 41 passed / 0 failed / 11 skipped (full run), then 21 passed
+  on the specs touched by the last refinements.
+
 ## 2026-11-17 — Pre-staging fixes (ADR-0012)
 Evidence: [evidence/pre-staging-2026-11-17.md](evidence/pre-staging-2026-11-17.md). Nothing deployed; WhatsApp
 still SIMULATED.
