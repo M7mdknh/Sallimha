@@ -28,6 +28,9 @@ runbook: an admin gives them a setup code from the Team page.
    uv run python manage.py admin_access <target sign-in> --requested-by <requester sign-in> \
      --approved-by <approver sign-in> --reason "<why; how identity was checked>" --operator "<your name>"
    ```
+   Run it in an interactive shell (SSH, or `docker exec -it` into the container), never as a one-off job, a
+   scheduled task or a provider "run command" whose output is kept in logs: it refuses to print the secrets when its
+   output is not an interactive terminal. Do not copy the output anywhere.
    The command refuses a missing reason, a target who is not an enabled admin, a requester who is not an enabled
    admin, and an approver who is the requester, the target, a valet or from another organisation.
 4. It prints the sign-in name, an 8-digit setup code (valid 72 hours) and a second-factor link, **once**. Give them

@@ -188,12 +188,26 @@ def test_the_server_command_runs_the_same_rules_and_shows_the_secrets_once(world
     approver = person(world, "Approver", "+966551120016", Role.SUPERVISOR)
     with pytest.raises(CommandError, match="approver_must_differ"):
         call_command("admin_access", target.user.username, requested_by=target.user.username,
-                     approved_by=target.user.username, reason="test", operator="tech", stdout=io.StringIO())
+                     approved_by=target.user.username, reason="test", operator="tech", allow_non_interactive=True,
+                     stdout=io.StringIO())
     assert not AuditEvent.objects.filter(action="staff.admin_access").exists()
     out = io.StringIO()
     call_command("admin_access", target.user.username, requested_by=target.user.username,
-                 approved_by=approver.user.username, reason="locked out", operator="tech", stdout=out)
+                 approved_by=approver.user.username, reason="locked out", operator="tech",
+                 allow_non_interactive=True, stdout=out)
     printed = out.getvalue()
     assert "otpauth://" in printed
     code = next(line.split()[-1] for line in printed.splitlines() if "setup code" in line.lower())
     assert staffdir.complete_setup("+966551120015", code, PASSWORD).id == target.id
+
+
+def test_the_command_refuses_to_print_secrets_where_they_could_be_logged(world):
+    """A one-off job or a pipe can end up in hosted logs: secrets go only to an interactive terminal unless the
+    operator says otherwise on purpose."""
+    target = person(world, "Target", "+966551120017", Role.ADMIN)
+    approver = person(world, "Approver", "+966551120018", Role.SUPERVISOR)
+    with pytest.raises(CommandError, match="interactive terminal"):
+        call_command("admin_access", target.user.username, requested_by=target.user.username,
+                     approved_by=approver.user.username, reason="locked out", operator="tech",
+                     allow_non_interactive=False, stdout=io.StringIO())
+    assert not AuditEvent.objects.filter(action="staff.admin_access").exists()  # refused before any change

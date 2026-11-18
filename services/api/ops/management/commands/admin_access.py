@@ -31,8 +31,16 @@ class Command(BaseCommand):
                             help="Only for the organisation's very first admin, when nobody else could approve")
         parser.add_argument("--reason", required=True, help="Why, and how the person's identity was checked")
         parser.add_argument("--operator", required=True, help="Your name: the person running this on the server")
+        parser.add_argument("--allow-non-interactive", action="store_true",
+                            help="Print the secrets even when the output is not an interactive terminal (a pipe or a "
+                                 "job whose output may be logged). Avoid it.")
 
-    def handle(self, *args, target, requested_by, approved_by, first_admin, reason, operator, **options):
+    def handle(self, *args, target, requested_by, approved_by, first_admin, reason, operator,
+               allow_non_interactive=False, **options):
+        if not (allow_non_interactive or self.stdout.isatty()):
+            # A one-off job, a pipe or a provider "run command" can keep its output in logs; the code and the
+            # second-factor link must only ever appear on the operator's screen.
+            raise CommandError("refused: run this in an interactive terminal (secrets are printed once)")
         person = _person(target, "target")
         requester = _person(requested_by, "--requested-by") if requested_by else None
         approver = _person(approved_by, "--approved-by") if approved_by else None
