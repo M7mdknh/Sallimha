@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 
-import { api, isAdmin, type Me, type Schemas } from "../api/client";
+import { ApiError, api, isAdmin, type Me, type Schemas } from "../api/client";
 import { Icon } from "../components/Icon";
 import { EMPTY_PHONE, PhoneField, type PhoneValue } from "../components/PhoneField";
 import { EMPTY_PLATE, PlateField, plateBody, type PlateValue } from "../components/PlateField";
@@ -15,10 +15,12 @@ export type Field = { name: string; label: StringKey;
   kind?: "text" | "number" | "datetime" | "textarea" | "valet" | "via" | "phone" | "plate"; required?: boolean; ltr?: boolean };
 
 /** A small form whose fields map 1:1 to a command body. Local times are the venue's (labelled with the zone). */
-export function CommandForm({ fields, submitLabel, valets, zone, disabled, destructive, send, onDone }: {
+export function CommandForm({ fields, submitLabel, valets, zone, disabled, destructive, send, onDone, openTicket }: {
   fields: Field[]; submitLabel: StringKey; valets: Schemas["PersonRow"][]; zone: string; disabled: boolean;
-  destructive?: boolean; send: (body: Record<string, unknown>, key: string) => Promise<unknown>; onDone: () => void }) {
-  const { t, error } = useT();
+  destructive?: boolean; send: (body: Record<string, unknown>, key: string) => Promise<unknown>; onDone: () => void;
+  openTicket?: (ticketId: number) => void }) {
+  const { t, error, state } = useT();
+  const [dup, setDup] = useState<{ ticket: string; ticketId: number; state: string } | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [phone, setPhone] = useState<PhoneValue>(EMPTY_PHONE);
   const [plate, setPlate] = useState<PlateValue>(EMPTY_PLATE);
@@ -26,8 +28,8 @@ export function CommandForm({ fields, submitLabel, valets, zone, disabled, destr
   const { run, busy, problem, done, setProblem } = useCommand();
   const set = (name: string, value: string) => setValues((v) => ({ ...v, [name]: value }));
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
+  async function submit(e: FormEvent | null, confirmDuplicate = false) {
+    e?.preventDefault();
     const missing = fields.find((f) => f.kind !== "phone" && f.kind !== "plate" && f.required !== false &&
       !String(values[f.name] ?? "").trim());
     if (missing) return setProblem(error("invalid_input"));
@@ -38,7 +40,16 @@ export function CommandForm({ fields, submitLabel, valets, zone, disabled, destr
       else if (f.kind === "plate") Object.assign(body, plateBody(plate, description));
       else body[f.name] = f.kind === "number" || f.kind === "valet" ? Number(v) : v;
     }
-    if (await run((key) => send(body, key), onDone)) {
+    if (confirmDuplicate) body.confirm_duplicate = true;
+    const sent = (key: string) => send(body, key).catch((err: unknown) => {
+      if (err instanceof ApiError && err.code === "possible_duplicate") {
+        setDup({ ticket: String(err.detail.ticket ?? ""), ticketId: Number(err.detail.ticket_id),
+          state: String(err.detail.ticket_state ?? "") });
+      }
+      throw err;
+    });
+    setDup(null);
+    if (await run(sent, onDone)) {
       setValues({});
       setPhone(EMPTY_PHONE);
       setPlate(EMPTY_PLATE);
@@ -79,7 +90,17 @@ export function CommandForm({ fields, submitLabel, valets, zone, disabled, destr
           )}
         </label>
       ))}
-      {problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
+      {dup ? (
+        <div className="notice notice-warning duplicate span-all" role="alert" data-testid="possible-duplicate">
+          <p><strong>{t("duplicateTitle")}</strong> <Id>{dup.ticket}</Id> · {state(dup.state)}</p>
+          <span className="row-actions start">
+            {openTicket ? <button type="button" className="btn btn-secondary" onClick={() => openTicket(dup.ticketId)}>
+              {t("open")} <Id>{dup.ticket}</Id></button> : null}
+            <button type="button" className="btn btn-quiet" disabled={disabled || busy}
+              onClick={() => void submit(null, true)}>{t("duplicateAnyway")}</button>
+          </span>
+        </div>
+      ) : problem ? <p className="form-error span-all" role="alert">{problem}</p> : null}
       {done && !problem ? <p className="muted span-all" role="status">{t("saved")}</p> : null}
       <div className="span-all">
         <button type="submit" className={`btn ${destructive ? "btn-danger" : "btn-primary"}`} data-mutation

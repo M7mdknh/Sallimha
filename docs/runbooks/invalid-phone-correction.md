@@ -4,7 +4,8 @@
 
 ## Signs
 - The guest says they did not receive the ticket, or the valet typed the number wrong.
-- Attention item "Guest ticket receipt not confirmed".
+- The ticket shows its message as *not delivered*, and Problems shows "A customer message was not delivered" (one
+  per ticket at a time; ADR-0013).
 
 ## Steps (supervisor)
 1. Find the ticket (**Find a ticket**, by number or plate) and open it.
@@ -12,7 +13,11 @@
    message from another number.
 3. Use **Correct guest number**, enter the number and the reason. The old link and collection code are revoked
    and a new ticket message is sent to the new number.
-4. The ticket now needs in-person confirmation again; the valet asks the guest to confirm receipt.
+4. If the number was right but the message failed or is unconfirmed, use **Resend the ticket** instead (for
+   *unconfirmed*, ask the guest first: it may have arrived). A failed collection-code message is fixed by
+   correcting the number, which issues a new code.
+5. Once the guest shows the ticket on their phone, you may record **Confirm the guest received the ticket** (only
+   offered after a correction). There is no routine receipt question for valets (ADR-0013).
 
 ## Notes
 - A request arriving from an unbound number raises "Request from an unbound number". Treat it as a possible

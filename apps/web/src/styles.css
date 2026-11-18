@@ -551,7 +551,9 @@ html[lang="ar"] .plate-input:lang(ar) { letter-spacing: normal; }
 .legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--sl-ink); }
 .legend li { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
-.chart-area { position: relative; }
+/* Labels stay readable on phones: below 560 px the chart scrolls sideways inside its card, never the page. */
+.chart-area { overflow-x: auto; overscroll-behavior-x: contain; direction: ltr; } /* time runs left to right */
+.chart-canvas { position: relative; min-width: 560px; }
 .chart-area svg { width: 100%; height: auto; display: block; overflow: visible; }
 .chart-area .grid line { stroke: var(--sl-border); stroke-width: 1; }
 .chart-area .grid text, .chart-area .axis { fill: var(--sl-muted); font-size: 12px; font-variant-numeric: tabular-nums; }

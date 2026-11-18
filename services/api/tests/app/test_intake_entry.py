@@ -89,7 +89,7 @@ def test_a_possible_duplicate_is_shown_and_needs_an_explicit_choice(ops):
     again = intake(login_as(ops.valets[1]), plate_letters="ABJ", plate_digits="1234")  # same plate, Latin entry
     assert again.status_code == 409
     assert again.json() == {"code": "possible_duplicate", "ticket": first.json()["ticket"],
-                            "ticket_state": "RECEIVED", "mine": False}
+                            "ticket_id": first.json()["id"], "ticket_state": "RECEIVED", "mine": False}
     assert Ticket.objects.count() == 1
     anyway = intake(login_as(ops.valets[1]), plate_letters="ABJ", plate_digits="1234", confirm_duplicate=True)
     assert anyway.status_code == 200 and Ticket.objects.count() == 2
@@ -110,3 +110,20 @@ def test_search_finds_a_plate_in_either_script(ops):
     for q in ("ABJ 1234", "ا ب ح ١٢٣٤", "abj1234", "1234"):
         rows = supervisor.get(f"/api/events/{ops.event.id}/tickets", {"q": q}).json()
         assert [r["ticket"] for r in rows] == ["#001"], q
+
+
+def test_the_team_form_for_a_valet_without_a_device_catches_duplicates_too(ops):
+    from ops.models import Shift
+    from ops.services import shifts
+
+    first = intake(login_as(ops.valets[0]))
+    shifts.set_assisted(ops.supervisor, Shift.objects.get(staff=ops.valets[1], ended_at__isnull=True), True,
+                        "battery flat")
+    body = {"valet_id": ops.valets[1].id, "guest_phone": "0501234567", "plate_kind": "SAUDI", "plate_letters": "ABJ",
+            "plate_digits": "1234", "confirmed_via": "radio", "reason": "device not working"}
+    supervisor = login_as(ops.supervisor)
+    refused = post(supervisor, f"/api/events/{ops.event.id}/intake-on-behalf", body)
+    assert refused.status_code == 409 and refused.json()["code"] == "possible_duplicate"
+    assert refused.json()["ticket_id"] == first.json()["id"]
+    anyway = post(supervisor, f"/api/events/{ops.event.id}/intake-on-behalf", {**body, "confirm_duplicate": True})
+    assert anyway.status_code == 200, anyway.content

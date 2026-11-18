@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import type { Schemas } from "../api/client";
 import { useT, type StringKey } from "../strings";
@@ -23,6 +23,9 @@ const PAD = { top: 14, right: 40, bottom: 26, left: 30 };
 export function ActivityChart({ hours, zone }: { hours: Hour[]; zone: string }) {
   const { t, lang } = useT();
   const [active, setActive] = useState<number | null>(null);
+  const area = useRef<HTMLDivElement>(null);
+  // On a phone the chart scrolls inside its card; open it on the latest hours in both languages.
+  useLayoutEffect(() => { if (area.current) area.current.scrollLeft = area.current.scrollWidth; }, [hours.length]);
   if (hours.length < 2) return <p className="empty" data-testid="activity-empty">{t("activityTooLittle")}</p>;
 
   const max = Math.max(1, ...hours.flatMap((h) => SERIES.map((s) => h[s.key])));
@@ -45,7 +48,8 @@ export function ActivityChart({ hours, zone }: { hours: Hour[]; zone: string }) 
       <ul className="legend" aria-hidden="true">
         {SERIES.map((s) => <li key={s.key}><span className="swatch" style={{ background: s.color }} /> {t(s.label)}</li>)}
       </ul>
-      <div className="chart-area" onMouseLeave={() => setActive(null)}>
+      <div className="chart-area" ref={area}>
+       <div className="chart-canvas" onMouseLeave={() => setActive(null)}>
         <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t("activityTitle")} direction="ltr">
           {ticks.map((v) => (
             <g key={v} className="grid">
@@ -81,7 +85,9 @@ export function ActivityChart({ hours, zone }: { hours: Hour[]; zone: string }) 
           ))}
         </svg>
         {shown !== null ? (
-          <div className="chart-tip" role="status" style={{ left: `${(x(shown) / W) * 100}%` }}>
+          <div className="chart-tip" role="status" style={{ left: `${(x(shown) / W) * 100}%`,
+            // Keep the tooltip inside the card at both ends of the time axis.
+            transform: `translateX(${x(shown) / W > 0.7 ? -100 : x(shown) / W < 0.3 ? 0 : -50}%)` }}>
             <strong dir="ltr">{label(hours[shown])}</strong>
             {SERIES.map((s) => (
               <span key={s.key}><span className="swatch" style={{ background: s.color }} /> {t(s.label)}{" "}
@@ -89,6 +95,7 @@ export function ActivityChart({ hours, zone }: { hours: Hour[]; zone: string }) 
             ))}
           </div>
         ) : null}
+       </div>
       </div>
       <details className="chart-table">
         <summary>{t("showAsTable")}</summary>

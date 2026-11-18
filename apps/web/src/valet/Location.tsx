@@ -2,6 +2,7 @@ import { type FormEvent, lazy, Suspense, useCallback, useEffect, useState } from
 
 import { api, type Schemas, type ValetWork } from "../api/client";
 import { Icon } from "../components/Icon";
+import { ChunkBoundary } from "../components/ChunkBoundary";
 import { Id } from "../components/States";
 import { latinDigits } from "../components/PhoneField";
 import { useT } from "../strings";
@@ -30,7 +31,7 @@ function useMapsConfig(): Config | null {
 
 export type Pin = LatLng & { source: "gps" | "pin"; accuracy: number | null; deviceAt: string | null };
 type Fix = { status: "idle" | "locating" | "denied" | "unavailable" | "insecure" }
-  | { status: "found"; lat: number; lng: number; accuracy: number; at: number };
+  | { status: "found"; lat: number; lng: number; accuracy: number; at: number; stale: boolean };
 
 /** Browser geolocation only (no Geolocation API). Asked when the valet taps, beside the car; never in the background. */
 function useCurrentPosition() {
@@ -40,8 +41,9 @@ function useCurrentPosition() {
     if (!("geolocation" in navigator)) return setFix({ status: "unavailable" });
     setFix({ status: "locating" });
     navigator.geolocation.getCurrentPosition(
+      // Staleness is judged once, when the position arrives: a pin accepted then never turns "old" on screen later.
       (p) => setFix({ status: "found", lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy,
-        at: p.timestamp }),
+        at: p.timestamp, stale: Date.now() - p.timestamp > STALE_MS }),
       (err) => setFix({ status: err.code === err.PERMISSION_DENIED ? "denied" : "unavailable" }),
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 });
   }, []);
@@ -50,7 +52,7 @@ function useCurrentPosition() {
 
 function fixQuality(fix: Fix): "good" | "approximate" | "too_coarse" | "stale" | null {
   if (fix.status !== "found") return null;
-  if (Date.now() - fix.at > STALE_MS) return "stale";
+  if (fix.stale) return "stale";
   if (fix.accuracy > MAX_M) return "too_coarse";
   return fix.accuracy > GOOD_M ? "approximate" : "good";
 }
@@ -80,10 +82,12 @@ function MapBlock({ centre, pin, onPin, label }: { centre: LatLng | null; pin: L
   return (
     <div className="map-frame">
       {!pin ? <p className="map-caption"><Icon name="alert" size={16} /> {t("mapVenueCentre")}</p> : null}
-      <Suspense fallback={<p className="muted">{t("mapLoading")}</p>}>
-        <ParkingMap apiKey={config!.api_key} mapId={config!.map_id} centre={start} pin={pin} onPin={onPin}
-          onFailed={fail} label={label} />
-      </Suspense>
+      <ChunkBoundary fallback={<p className="notice notice-warning" data-testid="map-state"><Icon name="alert" /> {t("mapUnavailable")}</p>}>
+        <Suspense fallback={<p className="muted">{t("mapLoading")}</p>}>
+          <ParkingMap apiKey={config!.api_key} mapId={config!.map_id} centre={start} pin={pin} onPin={onPin}
+            onFailed={fail} label={label} />
+        </Suspense>
+      </ChunkBoundary>
     </div>
   );
 }

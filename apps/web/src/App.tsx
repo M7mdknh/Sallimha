@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { ApiError, api, isAdmin, type Me } from "./api/client";
+import { ChunkBoundary } from "./components/ChunkBoundary";
 import { LoadFailed, SkeletonRows } from "./components/States";
 import { Login } from "./pages/Login";
 import { navigate, usePath } from "./router";
@@ -41,8 +42,10 @@ export function App() {
 
   const me = session.me;
   return (
-    <Suspense fallback={<main className="page"><SkeletonRows /></main>}>
-      {me.role === "VALET" ? <ValetApp me={me} /> : <Console me={me} path={path} />}
-    </Suspense>
+    <ChunkBoundary fallback={<main className="page"><LoadFailed onRetry={() => window.location.reload()} /></main>}>
+      <Suspense fallback={<main className="page"><SkeletonRows /></main>}>
+        {me.role === "VALET" ? <ValetApp me={me} /> : <Console me={me} path={path} />}
+      </Suspense>
+    </ChunkBoundary>
   );
 }

@@ -39,6 +39,9 @@ test("an admin has Dashboard, Operations, Team and Settings, with technical tool
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(mainNav(page).getByRole("link")).toHaveText(["لوحة المتابعة", "التشغيل", "الفريق", "الإعدادات"]);
   await expect(page.getByTestId("request-to-ready-def")).toContainText(/من طلب العميل حتى يبلّغ الفاليه/);
+  await page.getByTestId("add-staff").click(); // Add staff opens the Team page with the add form open
+  await expect(page.getByTestId("add-person")).toHaveAttribute("open", "");
+  await mainNav(page).getByRole("link", { name: "لوحة المتابعة" }).click();
   await mainNav(page).getByRole("link", { name: "الإعدادات" }).click();
   const tabs = page.getByRole("navigation", { name: "الإعدادات" });
   await expect(tabs).toContainText("متقدم");

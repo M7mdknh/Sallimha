@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
 
 import {
-  PHONE, customerRequests, device, loginAs, loginValet, noHorizontalOverflow, openTicket, registerAndPark, taskStep,
+  PHONE, cameraPhoto, customerRequests, device, enterCar, loginAs, loginValet, noHorizontalOverflow, openTicket, parkHere,
+  registerAndPark, taskStep,
 } from "./helpers";
 
 // Phone and tablet review (ADR-0011): every main screen of the three roles in Arabic and English at 360, 390, 768
@@ -67,16 +68,35 @@ test("every main screen fits phones and tablets in Arabic and English", async ({
   await loginValet(registering.page, "sara");
   await registering.page.getByRole("link", { name: "تسجيل سيارة" }).click();
   await registering.page.getByLabel("رقم جوال العميل").fill("0501239902");
+  await registering.page.getByLabel("الحروف").fill("ا ب ح");
+  await registering.page.getByLabel("الأرقام").fill("٨٨١٢");
+
+  // A third valet at the parking stage: the location picker (map not configured in tests).
+  const parking = await device(browser, PHONE);
+  await loginValet(parking.page, "fahad");
+  await parking.page.getByRole("link", { name: "تسجيل سيارة" }).click();
+  const parkFlow = parking.page.getByTestId("register");
+  await enterCar(parkFlow, "0501239903", "PRK 3300 هايلكس");
+  await parkFlow.getByRole("button", { name: "إرسال التذكرة" }).click();
+  for (let i = 1; i <= 4; i += 1) {
+    await parkFlow.locator("input[type=file]").setInputFiles(await cameraPhoto(parking.page, `park-${i}`));
+    await expect(parkFlow.locator(".photo-count")).toContainText(`${i}`);
+  }
+  await parkFlow.getByRole("button", { name: "بدء الركن" }).click();
+  await expect(parkFlow).toHaveAttribute("data-step", "park");
 
   for (const lang of ["ar", "en"] as const) {
-    for (const p of [valet.page, registering.page, page, admin.page]) await setLang(p, lang);
+    for (const p of [valet.page, registering.page, parking.page, page, admin.page]) await setLang(p, lang);
     for (const size of SIZES) {
-      for (const p of [valet.page, registering.page, page, admin.page]) await p.setViewportSize(size);
+      for (const p of [valet.page, registering.page, parking.page, page, admin.page]) await p.setViewportSize(size);
       await valet.page.goto("/work");
       await taskStep(valet.page, "offer");
       await capture(valet.page, lang, "valet-offer");
       await registering.page.goto("/register");
       await capture(registering.page, lang, "valet-register");
+      await parking.page.goto("/register");
+      await expect(parking.page.getByTestId("location-picker")).toBeVisible();
+      await capture(parking.page, lang, "valet-park");
       await page.goto(ticketUrl);
       await expect(page.locator(".ticket-panel")).toBeVisible();
       await capture(page, lang, "supervisor-ticket");
@@ -103,5 +123,9 @@ test("every main screen fits phones and tablets in Arabic and English", async ({
   await ticket.locator(".action-form").getByRole("button", { name: "سحب طلب الإحضار", exact: true }).click();
   await taskStep(valet.page, "none");
   await setOfferTimings(admin.page, 30, 60);
-  for (const c of [valet.context, registering.context, admin.context]) await c.close();
+  await setLang(parking.page, "ar");
+  await parking.page.goto("/register");
+  await parkHere(parking.page.getByTestId("register"), { zone: "C", spot: "2", hook: "233" });
+  await expect(parking.page.getByTestId("parked-done")).toBeVisible();
+  for (const c of [valet.context, registering.context, parking.context, admin.context]) await c.close();
 });

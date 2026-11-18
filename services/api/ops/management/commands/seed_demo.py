@@ -87,7 +87,7 @@ SYNTHETIC_JPEG = b"\xff\xd8\xff\xe0" + b"SALLIMHA-SYNTHETIC-PHOTO" * 8
 
 def _activity(event):
     """Mid-event state built through the real services (all synthetic, guest numbers are fictional)."""
-    from ops.models import RetrievalRequest
+    from ops.models import RetrievalRequest, Ticket
     from ops.services import dispatch, intake, retrieval
 
     v1, v2, v3 = Staff.objects.filter(role=Role.VALET, org=event.org).order_by("id")
@@ -95,7 +95,6 @@ def _activity(event):
     def park(valet, phone, plate, zone, spot, hook):
         ticket = intake.register_vehicle(valet)
         intake.confirm_guest_phone(valet, ticket, phone)
-        intake.confirm_guest_receipt(valet, ticket, True)
         intake.record_vehicle(valet, ticket, plate)
         for _ in range(4):
             intake.attach_intake_media(valet, ticket, SYNTHETIC_JPEG, "image/jpeg")
@@ -112,6 +111,8 @@ def _activity(event):
             dispatch.accept_offer(v3, task.id)  # as the valet would in the app
     c = intake.register_vehicle(v2)
     intake.confirm_guest_phone(v2, c, "+966500000203")
-    intake.confirm_guest_receipt(v2, c, False)
+    # Synthetic history for the dashboard's hourly chart: the two parked cars arrived earlier in the evening.
+    Ticket.objects.filter(pk=a.pk).update(created_at=timezone.now() - timedelta(hours=3, minutes=10))
+    Ticket.objects.filter(pk=b.pk).update(created_at=timezone.now() - timedelta(hours=2, minutes=5))
     dispatch.raise_alerts(timezone.now())
     assert RetrievalRequest.objects.filter(event=event).count() == 2

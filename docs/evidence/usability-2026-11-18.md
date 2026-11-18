@@ -27,17 +27,20 @@ Branch `build/phase-0-2`. These are local runs plus CI on the pushed commit; not
 ## Results
 | Check | Result |
 |---|---|
-| Backend (`pytest`, staff channel = app) | **590 passed** |
+| Backend (`pytest`, staff channel = app), final | **592 passed** |
 | Retired valet-WhatsApp channel (`-m whatsapp_staff`, `SALLIMHA_TEST_ALL_LEGACY=1`) | **82 passed** |
-| Browser, full suite (Playwright, installed Chrome, desktop and mobile projects), run 4 | **41 passed, 0 failed, 11 skipped** (desktop-only tests with explicit device sizes) |
-| Browser, after the last UI refinements (layout, roles, console, intake-location specs) | **21 passed, 5 skipped**; layout spec rerun alone: 1 passed |
+| Browser, full suite (Playwright, installed Chrome, desktop and mobile projects), run 6 after the review fixes | **42 passed, 0 failed, 12 skipped** (desktop-only tests with explicit device sizes) |
+| After run 6 (chart scroll and tooltip only) | A one-off check against `make demo` (synthetic hours): no page overflow at 390/768/1024; the tooltip stays inside the card at both ends in Arabic and English. CI runs the full suite on the final commit. |
 | Earlier runs, for the record | Run 2: 31 passed, 10 failed (old selectors and knock-on effects). Run 3: 39 passed, 2 failed (the layout test's offer lapsed during its slow screenshot loop: the test now lengthens the offer window through the admin timings API and restores it; one knock-on). All fixed before run 4. |
 | Ruff, TypeScript type check, production build, contract regenerated (`--fail-on-warn`) | PASS |
 | Bundle | Entry chunk 579 kB → 317 kB (gzip 160 → 99 kB) after splitting at the role boundary; the map chunk (49 kB) loads only when a map is opened |
 
 ## Screenshots
 - Before: [before-2026-11-18/](before-2026-11-18/) (the bc7d8dd interface: `<lang>-<width>-<screen>.png`).
-- After: [screens/](screens/) (`<lang>/<width>-<screen>.png`, 360/390/768/1024 px, Arabic and English). The layout test
+- After: [screens/](screens/) (`<lang>/<width>-<screen>.png`, 360/390/768/1024 px, Arabic and English), including the
+  parking stage (`valet-park`). The chart with data (`*-admin-dashboard-activity.png`) was taken from `make demo`,
+  whose synthetic seed spreads arrivals over three hours; the test database starts empty, so the chart there shows
+  its empty state. The layout test
   lengthens the offer window for itself, so the valet offer screenshots show a longer countdown than the 30 s default.
 
 ## Interface review
@@ -53,7 +56,23 @@ Branch `build/phase-0-2`. These are local runs plus CI on the pushed commit; not
   - Arabic times whose AM/PM word was misplaced inside left-to-right identifiers (times are now 24-hour in both
     languages).
 
+## Fixed after the advisor's final review (before the last runs)
+- **Repeat failures:** a ticket message that fails again after a resend now raises a new issue; one open issue per
+  ticket. Test: `test_a_message_that_fails_again_after_a_resend_raises_a_new_issue`.
+- **Copy:** "unconfirmed" says "tell the supervisor", since no issue is raised for it. The issue label says
+  "check the number", since a failed collection code is fixed by a correction, not a resend.
+- **Lazy loading:** the valet app, the console and the map are wrapped in an error boundary; a failed download shows
+  the retry state. Playwright aborts the valet chunk and checks the retry.
+- **Stale positions:** judged once, when the position arrives. An accepted pin no longer turns "old" on screen.
+- **Team form:** a possible duplicate shows the existing ticket with Open and "a different car — register it".
+  Server test `test_the_team_form_for_a_valet_without_a_device_catches_duplicates_too`. The panel itself is not
+  browser-tested.
+- **Map load failure:** browser-tested with a dummy key and Google's address blocked. Nothing was sent to Google
+  (SIMULATED).
+- **Seed and runbook:** the demo seed no longer answers the receipt question. The phone-correction runbook was updated.
+
 ## Not verified here
+- Tapping or dragging the pin on a real map: NOT RUN (needs a key; checklist item 17).
 - **Google Maps with a real key:** BLOCKED. Billing and a key need the owner's approval (decision M1;
   docs/staging/google-maps.md).
 - **Real phones in a real car park** (accuracy, permission prompts, plate letter order on real plates): NOT RUN

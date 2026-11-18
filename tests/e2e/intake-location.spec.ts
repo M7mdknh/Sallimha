@@ -4,6 +4,7 @@ import { type Browser, expect, type Page, test } from "@playwright/test";
 
 import {
   cameraPhoto, customerCode, customerRequests, enterCar, loginAs, loginValet, openTicket, parkHere, PHONE, taskStep,
+  VALETS,
 } from "./helpers";
 
 async function valetDevice(browser: Browser, lang: "ar" | "en", geo?: { latitude: number; longitude: number; accuracy: number }) {
@@ -165,11 +166,32 @@ test("a failed customer ticket is one supervisor issue with resend; the valet se
   await again.getByRole("button", { name: "إعادة إرسال التذكرة" }).last().click(); // its form submits
   await expect(again).toContainText(/في الانتظار|أُرسلت|وصلت/, { timeout: 30_000 });
 
+  // A configured key whose map cannot load (Google blocked here): labelled, and parking carries on.
+  await valet.page.route("**/api/maps/config", (r) => r.fulfill({ json: { configured: true, api_key: "test-key", map_id: "" } }));
+  await valet.page.route(/https:\/\/maps\.googleapis\.com\/.*/, (r) => r.abort());
   await photosAndStart(valet.page);
+  await flow.getByRole("button", { name: /الخريطة: تحقق أو ضع الدبوس/ }).click();
+  await expect(flow.getByTestId("map-state")).toContainText("تعذّر تحميل الخريطة", { timeout: 20_000 });
   await flow.getByRole("button", { name: /استخدم موقعي/ }).click();
   await expect(flow.getByText("الموقع قديم. أعد المحاولة.")).toBeVisible();
   await expect(flow.getByTestId("pin-block")).toHaveAttribute("data-pin", "none");
   await parkHere(flow, { zone: "C", spot: "4", hook: "173" });
   await expect(valet.page.getByTestId("parked-done")).toBeVisible();
+  await valet.context.close();
+});
+
+
+test("a screen that fails to download shows a retry instead of a blank page", async ({ browser }, info) => {
+  test.skip(info.project.name !== "desktop", "explicit device sizes");
+  const valet = await valetDevice(browser, "ar");
+  await valet.page.route(/\/assets\/ValetApp-.*\.js$/, (r) => r.abort());
+  await valet.page.goto("/login");
+  await valet.page.getByLabel(/رقم الجوال أو اسم المستخدم/).fill(`0${VALETS.majed.phone.slice(4)}`);
+  await valet.page.getByLabel(/^كلمة المرور$/).fill(VALETS.majed.password);
+  await valet.page.getByRole("button", { name: /^دخول$/ }).click();
+  await expect(valet.page.getByText("تعذّر تحميل البيانات")).toBeVisible();
+  await valet.page.unroute(/\/assets\/ValetApp-.*\.js$/);
+  await valet.page.getByRole("button", { name: "إعادة المحاولة" }).click();
+  await expect(valet.page.getByTestId("connection")).toBeVisible();
   await valet.context.close();
 });

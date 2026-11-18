@@ -19,8 +19,8 @@ location results SIMULATED; Google Maps with a real key BLOCKED (billing approva
 - **Parking place:** floor, description and an optional confirmed pin with accuracy. Google Maps is lazy-loaded with a
   run-time key, and parking never waits for a position or a map.
 - **Intake:** three stages.
-- **Tests:** backend 590, retired channel 82, Playwright 41 passed / 0 failed / 11 skipped (full run), then 21 passed
-  on the specs touched by the last refinements.
+- **Tests:** backend 592, retired channel 82, Playwright 42 passed / 0 failed / 12 skipped (full run after the review
+  fixes); CI on the final commit.
 
 ## 2026-11-17 — Pre-staging fixes (ADR-0012)
 Evidence: [evidence/pre-staging-2026-11-17.md](evidence/pre-staging-2026-11-17.md). Nothing deployed; WhatsApp

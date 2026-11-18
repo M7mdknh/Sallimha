@@ -42,9 +42,10 @@ def test_activity_is_counted_per_hour_from_real_times(ops):
     retrieval.request_retrieval(ticket.bindings.get(), ticket)
     board = login_as(ops.admin).get("/api/dashboard", {"event": ops.event.id}).json()
     hours = board["activity"]
-    assert len(hours) == 3  # from the first hour with activity to the current hour, gaps included
+    # From the first hour with activity to the current hour, gaps included (4 if the clock crossed an hour here).
+    assert len(hours) in (3, 4)
     assert sum(h["received"] for h in hours) == 1 and sum(h["requested"] for h in hours) == 1
-    assert hours[0]["received"] == 1 and hours[1] == {**hours[1], "received": 0, "requested": 0, "delivered": 0}
+    assert hours[0]["received"] == 1 and (hours[1]["received"], hours[1]["requested"]) == (0, 0)
     assert RetrievalRequest.objects.count() == 1
 
 

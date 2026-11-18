@@ -72,7 +72,7 @@ def test_seed_demo_with_activity_builds_mid_event_state(db):
     call_command("seed_demo", "--reset", "--with-activity")
     assert set(RetrievalRequest.objects.values_list("state", flat=True)) == {"OFFERED", "ACCEPTED"}
     assert Ticket.objects.filter(state="RECEIVED", contact_state="UNCONFIRMED").exists()
-    assert {"guest_contact_unconfirmed", "wait_warning"} <= set(Alert.objects.values_list("kind", flat=True))
+    assert {"wait_warning"} <= set(Alert.objects.values_list("kind", flat=True))  # no receipt question (ADR-0013)
 
 
 def test_simulated_outage_refuses_inbound_and_reports_degraded(as_supervisor, world):

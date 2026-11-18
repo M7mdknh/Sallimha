@@ -139,6 +139,7 @@ function TonightsTeam({ eventId, snapshot, disabled, refresh }: { eventId: numbe
             disabled={disabled}
             send={(b, k) => api.intakeOnBehalf(eventId, b as Schemas["IntakeOnBehalfRequestRequest"], k)
               .then((r) => navigate(`/events/${eventId}/tickets/${r.id}`))}
+            openTicket={(id) => navigate(`/events/${eventId}/tickets/${id}`)}
             onDone={refresh} />
         </section>
       ) : null}

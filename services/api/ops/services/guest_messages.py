@@ -2,7 +2,8 @@
 
 Status comes only from the outbox row and the provider's status events: queued is not sent, sent is not delivered,
 and an unknown outcome is neither. A failed or dead customer message raises one supervisor issue per ticket and phone
-binding; the supervisor corrects the number (existing, audited, revokes old credentials) or resends the ticket."""
+binding while it is open (a failure after a resend raises a new one); the supervisor corrects the number (existing,
+audited, revokes old credentials) or resends the ticket."""
 
 from django.db import transaction
 from django.utils import timezone
@@ -53,8 +54,10 @@ def _failed(row) -> None:
     ticket, binding = row.ticket, row.binding
     if ticket is None or binding is None or binding.revoked_at is not None or ticket.state not in OPEN_STATES:
         return
+    if Alert.objects.filter(ticket=ticket, kind="guest_message_failed", acknowledged_at__isnull=True).exists():
+        return  # one open issue per ticket; repeated callbacks and dead letters for it add nothing
     raise_alert(ticket.event, "guest_message_failed", ticket=ticket, severity="critical",
-                dedupe_key=f"guest_message_failed:{ticket.id}:{binding.revision}",
+                dedupe_key=f"guest_message_failed:{row.id}",  # a later failure (after a resend) is a new issue
                 detail={"kind": row.kind})
 
 

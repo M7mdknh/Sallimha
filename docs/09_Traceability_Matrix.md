@@ -224,7 +224,7 @@ Status: **Approved 2026-11-15** (user decision 6); **amended 2026-11-17** for [A
 | AT-75 | Phone entry | E.164; specific refusals; input kept; several tickets per number | `tests/core/test_phone.py`; `tests/app/test_intake_entry.py`; Playwright `intake-location.spec.ts` |
 | AT-76 | Plate entry | As entered; order kept; no guessing; search either script | `tests/core/test_plate.py`; `tests/app/test_intake_entry.py`; Playwright `intake-location.spec.ts` |
 | AT-77 | Possible duplicate | Shown before registering; override; later visits allowed | `tests/app/test_intake_entry.py`; Playwright `intake-location.spec.ts` |
-| AT-78 | Location capture and fallbacks | Confirmed pins only; parking never blocked | `tests/app/test_parking_location.py`; Playwright `intake-location.spec.ts` (SIMULATED positions, map unconfigured) |
+| AT-78 | Location capture and fallbacks | Confirmed pins only; parking never blocked | `tests/app/test_parking_location.py`; Playwright `intake-location.spec.ts` (SIMULATED positions; map unconfigured, and a map load failure with Google blocked). Tapping or dragging the pin on a real map: NOT RUN |
 | AT-79 | Retrieval and relocation with the pin | Saved place first; link with coordinates only; old pin until completion | `tests/app/test_parking_location.py`; Playwright `intake-location.spec.ts` |
 | AT-80 | Dashboards | Real data, empty states, phone and tablet, both languages | `tests/app/test_dashboards.py`; Playwright `layout.spec.ts`, `console.spec.ts`, `roles.spec.ts` |
 

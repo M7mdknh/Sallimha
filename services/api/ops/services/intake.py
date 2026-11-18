@@ -211,8 +211,8 @@ def register_with_guest(valet, guest_phone: str, entry: VehicleEntry, language: 
         twin = possible_duplicate(ticket, entry.key)
         if twin is not None and not confirm_duplicate:
             mine = twin.tasks.filter(assignee=valet, status__in=LIVE_TASK_STATUSES).exists()
-            raise DomainError("possible_duplicate", ticket=f"#{twin.display_number:03d}", ticket_state=twin.state,
-                              mine=mine)
+            raise DomainError("possible_duplicate", ticket=f"#{twin.display_number:03d}", ticket_id=twin.id,
+                              ticket_state=twin.state, mine=mine)
         ticket = _lock_ticket(ticket)
         apply_vehicle(ticket, entry)
         _bump(ticket, "vehicle_plate", "plate_kind", "plate_key", "vehicle_description", "vehicle_raw",

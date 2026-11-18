@@ -121,3 +121,17 @@ def test_correcting_the_number_still_revokes_the_old_credentials(ops):
     # after a correction it still means something
     assert "confirm_receipt" in detail(supervisor, ticket_id)["allowed_actions"]
 
+
+
+def test_a_message_that_fails_again_after_a_resend_raises_a_new_issue(ops):
+    app = login_as(ops.valets[0])
+    ticket_id = register(app)
+    SimulatorControl.set_next("permanent")
+    outbox.send_due(timezone.now())
+    supervisor = login_as(ops.supervisor)
+    assert post(supervisor, f"/api/tickets/{ticket_id}/resend-ticket").status_code == 200
+    SimulatorControl.set_next("permanent")
+    outbox.send_due(timezone.now())
+    issues = Alert.objects.filter(kind="guest_message_failed", ticket_id=ticket_id)
+    assert issues.count() == 2 and issues.filter(acknowledged_at__isnull=True).count() == 1
+
