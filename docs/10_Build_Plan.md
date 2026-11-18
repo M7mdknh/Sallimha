@@ -31,7 +31,7 @@ Slices in CLAUDE.md order. Each slice is domain command → database constraints
 | Slice | Content | Key tests |
 |---|---|---|
 | 1.0 Spine | Organization, venue, key stations, event, staff, roles, shifts, event scoping, audit, idempotency, inbox/outbox and worker loop | AT-42, AT-48 (DB part), AT-49, AT-50 (mock), AT-25, AT-26 |
-| 1.1 Registration | “مركبة جديدة”, phone normalization and confirmation, ticket send, explicit receipt confirmation, vehicle identity, abandoned-intake cancellation before parking starts | AT-01, AT-02, AT-35, AT-38, AT-55, AT-56 |
+| 1.1 Registration | “مركبة جديدة”, phone normalization and confirmation, ticket send, ~~explicit receipt confirmation~~ (retired by ADR-0013), vehicle identity, abandoned-intake cancellation before parking starts | AT-01, AT-02, AT-35, AT-38, AT-55, AT-56 |
 | 1.2 Parking | Intake photos (private storage), “بدء الركن”, location, venue key hook, PARKED, intake custody transfer | AT-03, AT-33 (collision), AT-37 |
 | 1.3 Guest request | Opaque actions, one request, early request, multi-ticket selection, correction | AT-04, AT-10, AT-16, AT-17, AT-18 |
 | 1.4 Atomic dispatch and custody | Queue order, affinity, longest-idle, per-event lock, offers, expiry, cooldown, alerts, acceptance races, availability and breaks. Plus `transfer_custody` for **accepted** work: establish key and car location, revoke old action authority, new valet acknowledges. Used by accepted-valet-offline, break, shift-end and deactivation exceptions | AT-05–09, AT-11–14, AT-19, AT-32, AT-39, AT-54, AT-57, AT-60 |
@@ -40,7 +40,7 @@ Slices in CLAUDE.md order. Each slice is domain command → database constraints
 
 **Exit, Gate 2 (extended set, also stated in `09_Traceability_Matrix.md`):** the following pass against real PostgreSQL and a real worker process, with WhatsApp mocked and labelled. Failures are fixed before scope expands.
 - docs/06 Gate 2 scenarios: AT-01–19, AT-32–34.
-- Phase 1 additions: AT-25, AT-26, AT-35, AT-37, AT-38, AT-39, AT-42, AT-48 (database-role part), AT-49, AT-50 (simulated), AT-54, AT-55, AT-56, AT-57, AT-60, and AT-53/AT-59 limited to the live view.
+- Phase 1 additions: AT-25, AT-26, AT-35 (retired 18 Nov 2026 by ADR-0013; replaced by AT-73/AT-74), AT-37, AT-38, AT-39, AT-42, AT-48 (database-role part), AT-49, AT-50 (simulated), AT-54, AT-55, AT-56, AT-57, AT-60, and AT-53/AT-59 limited to the live view.
 
 ## Phase 2 — Operational completeness → **Gate 3**
 **Work:**

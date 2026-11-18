@@ -133,7 +133,7 @@ def test_a_valet_with_a_car_cannot_be_made_a_supervisor(world):
 
     valet = world.valets[0]
     open_shift(world.event, valet, world.supervisor)
-    intake.register_with_guest(valet, "+966501234001", "ABC 1234")
+    intake.register_with_guest(valet, "+966501234001", intake.vehicle_entry("OTHER", text="ABC 1234"))
     with pytest.raises(DomainError, match="custody_open"):
         staffdir.change_role(world.admin, valet, Role.SUPERVISOR)
 

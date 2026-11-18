@@ -64,6 +64,8 @@ Arabic is default. Preserve the guest's selected language; English is supported.
 | Request withdrawn by supervisor | أُلغي طلب إحضار مركبتك لتذكرة {ticket}، ومركبتك ما زالت مركونة بأمان. يمكنك طلبها مجددًا متى شئت. | Your retrieval request for ticket {ticket} was withdrawn. Your car is still safely parked; you can request it again any time. |
 
 ## Guest receipt and ownership
+> **Since [ADR-0013](adr/0013-pilot-usability-intake-location-dashboards.md):** no receipt question at intake. The valet reads the formatted number back to the customer beside **Send ticket**; the ticket message is then shown as the provider reports it (queued ≠ sent ≠ delivered; unknown is neither). A failed or dead message raises one supervisor issue with *correct the number* (revokes old credentials) and *resend the ticket*. The paragraph below describes the retired check.
+
 Confirming receipt at intake means the person at the counter has the correct ticket on their phone; a delivery callback alone is insufficient. Staff should visually match event/ticket and vehicle, without reading unrelated private messages.
 
 The proposed collection code is created for READY, rotated if necessary, rate-limited to five failed attempts per ticket before supervisor review, and invalidated after delivery. Do not show it in a retrieval offer or normal staff list. Server validation is authoritative. A verified code authorizes handover eligibility; only the staff's final physical-delivery confirmation closes the ticket.

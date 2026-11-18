@@ -461,6 +461,34 @@ paths:
                 items:
                   $ref: '#/components/schemas/SimMessage'
           description: ''
+  /api/dev/sim/next-send:
+    post:
+      operationId: dev_sim_next_send_create
+      description: Make the next outbound send fail permanently, or lose its response,
+        to rehearse the failure path (SIMULATED).
+      tags:
+      - dev-simulator
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimNextSendRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SimNextSendRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SimNextSendRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimNextSendRequest'
+          description: ''
   /api/dev/sim/outage:
     get:
       operationId: dev_sim_outage_retrieve
@@ -1403,6 +1431,23 @@ paths:
           description: ''
         '404':
           description: Not found or out of scope
+  /api/maps/config:
+    get:
+      operationId: maps_config_retrieve
+      description: |-
+        The browser key and Map ID for the parking map, served at run time so no key is built into the app. Empty
+        when unconfigured: the app then labels the map as not configured and keeps the structured location (ADR-0013).
+      tags:
+      - maps
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapsConfig'
+          description: ''
   /api/media/{media_id}:
     get:
       operationId: media_retrieve
@@ -3718,6 +3763,72 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/tickets/{ticket_id}/resend-ticket:
+    post:
+      operationId: tickets_resend_ticket_create
+      description: Queue the customer's ticket message again after it failed or its
+        outcome is unknown (ADR-0013).
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: ticket_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReconcileHandoverRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/tickets/{ticket_id}/withdraw:
     post:
       operationId: tickets_withdraw_create
@@ -4534,70 +4645,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
-  /api/valet/tickets/{ticket_id}/receipt:
-    post:
-      operationId: valet_tickets_receipt_create
-      parameters:
-      - in: header
-        name: Idempotency-Key
-        schema:
-          type: string
-        description: Unique per intended action; a repeat replays the stored result
-        required: true
-      - in: path
-        name: ticket_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - valet
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReceiptRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ReceiptRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ReceiptRequestRequest'
-        required: true
-      security:
-      - sessionCookie: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ContactStateResponse'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
-        '404':
-          description: Not found or out of scope
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
-        '428':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
   /api/valet/tickets/{ticket_id}/start-parking:
     post:
       operationId: valet_tickets_start_parking_create
@@ -4690,8 +4737,92 @@ paths:
           description: ''
         '404':
           description: Not found or out of scope
+  /api/venues/{venue_id}/map-centre:
+    post:
+      operationId: venues_map_centre_create
+      description: Where the parking map opens for this venue (ADR-0013). Admin only;
+        audited.
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        schema:
+          type: string
+        description: Unique per intended action; a repeat replays the stored result
+        required: true
+      - in: path
+        name: venue_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - venues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VenueCentreRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VenueCentreRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VenueCentreRequestRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          description: Not found or out of scope
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '428':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
 components:
   schemas:
+    ActivityHour:
+      type: object
+      properties:
+        hour:
+          type: string
+          format: date-time
+          description: Start of the hour, venue time
+        received:
+          type: integer
+        requested:
+          type: integer
+        delivered:
+          type: integer
+      required:
+      - delivered
+      - hour
+      - received
+      - requested
     AdminAccessRecord:
       type: object
       description: The last time an admin's sign-in was set up or recovered by the
@@ -4785,6 +4916,9 @@ components:
           $ref: '#/components/schemas/AvailabilityEnum'
       required:
       - availability
+    BlankEnum:
+      enum:
+      - ''
     CarryoverRow:
       type: object
       properties:
@@ -4940,16 +5074,6 @@ components:
         * `CONFIRMED_IN_PERSON` - CONFIRMED_IN_PERSON
         * `CORRECTION_REQUIRED` - CORRECTION_REQUIRED
         * `ASSISTED_FALLBACK` - ASSISTED_FALLBACK
-    ContactStateResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-        contact_state:
-          $ref: '#/components/schemas/ContactStateEnum'
-      required:
-      - contact_state
-      - id
     CreateEventRequestRequest:
       type: object
       properties:
@@ -5014,10 +5138,16 @@ components:
       type: object
       properties:
         event:
-          $ref: '#/components/schemas/EventBrief'
+          $ref: '#/components/schemas/DashboardEvent'
         generated_at:
           type: string
           format: date-time
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityHour'
+          description: Per hour, from recorded times; empty when nothing happened
+            yet
         cars:
           $ref: '#/components/schemas/DashboardCars'
         waiting_requests:
@@ -5041,6 +5171,7 @@ components:
         team:
           $ref: '#/components/schemas/DashboardTeam'
       required:
+      - activity
       - cars
       - delay_threshold_s
       - delayed_requests
@@ -5070,6 +5201,28 @@ components:
       - ready
       - receiving
       - retrieving
+    DashboardEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/EventStatusEnum'
+        venue:
+          type: string
+        time_zone:
+          type: string
+        period:
+          $ref: '#/components/schemas/EventPeriod'
+      required:
+      - id
+      - name
+      - period
+      - status
+      - time_zone
+      - venue
     DashboardMember:
       type: object
       properties:
@@ -5210,6 +5363,20 @@ components:
       - status
       - time_zone
       - venue
+    EventPeriod:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+          nullable: true
+          description: Closed or planned end; null while open-ended
+      required:
+      - end
+      - start
     EventReport:
       type: object
       properties:
@@ -5286,6 +5453,21 @@ components:
       required:
       - received_at
       - text
+    GuestMessageStatus:
+      type: object
+      description: Queued is not sent; sent is not delivered; unknown is neither (ADR-0013).
+      properties:
+        status:
+          $ref: '#/components/schemas/MessageStatusEnum'
+        queued_at:
+          type: string
+          format: date-time
+        error:
+          type: string
+      required:
+      - error
+      - queued_at
+      - status
     Health:
       type: object
       properties:
@@ -5472,25 +5654,49 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+        plate_kind:
+          $ref: '#/components/schemas/PlateKindEnum'
+        plate_letters:
+          type: string
+          description: 'Saudi plate: three letters, Arabic or Latin, in reading order'
+          maxLength: 20
+        plate_digits:
+          type: string
+          description: 'Saudi plate: one to four digits, any digit shapes'
+          maxLength: 10
+        plate_text:
+          type: string
+          description: Other plate, as written on it
+          maxLength: 40
+        vehicle_description:
+          type: string
+          description: Make, colour, marks; required when there is no plate
+          maxLength: 200
+        plate_missing_reason:
+          type: string
+          maxLength: 200
         valet_id:
           type: integer
         guest_phone:
           type: string
           minLength: 1
           maxLength: 40
-        plate:
+        guest_region:
           type: string
           minLength: 1
-          maxLength: 40
-        description:
-          type: string
-          maxLength: 200
+          default: SA
+          description: Country the number is read in when it has no + (ISO 3166-1
+            alpha-2)
+          maxLength: 2
         confirmed_via:
           $ref: '#/components/schemas/ConfirmedViaEnum'
+        confirm_duplicate:
+          type: boolean
+          default: false
       required:
       - confirmed_via
       - guest_phone
-      - plate
+      - plate_kind
       - reason
       - valet_id
     LanguageEnum:
@@ -5501,6 +5707,18 @@ components:
       description: |-
         * `ar` - ar
         * `en` - en
+    LatLng:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+      required:
+      - lat
+      - lng
     LiveRequest:
       type: object
       properties:
@@ -5511,6 +5729,11 @@ components:
         ticket:
           type: string
         vehicle:
+          type: string
+        plate:
+          type: string
+          description: As entered (ADR-0013)
+        description:
           type: string
         state:
           $ref: '#/components/schemas/RequestStateEnum'
@@ -5533,10 +5756,12 @@ components:
           type: integer
       required:
       - assignee
+      - description
       - elapsed_s
       - failed_offers
       - hook
       - location
+      - plate
       - request_id
       - requested_at
       - state
@@ -5554,6 +5779,12 @@ components:
           - $ref: '#/components/schemas/OutageBrief'
           nullable: true
           description: Declared customer WhatsApp outage
+        wait_warning_s:
+          type: integer
+          description: A request waiting longer is late
+        wait_critical_s:
+          type: integer
+          description: A request waiting longer is critical
         generated_at:
           type: string
           format: date-time
@@ -5595,6 +5826,8 @@ components:
       - outage
       - requests
       - team
+      - wait_critical_s
+      - wait_warning_s
     LoginRequestRequest:
       type: object
       properties:
@@ -5623,6 +5856,21 @@ components:
           type: boolean
       required:
       - ok
+    MapsConfig:
+      type: object
+      description: The browser key is restricted to approved sites and the Maps JavaScript
+        API (docs/staging/google-maps.md).
+      properties:
+        configured:
+          type: boolean
+        api_key:
+          type: string
+        map_id:
+          type: string
+      required:
+      - api_key
+      - configured
+      - map_id
     MeResponse:
       type: object
       properties:
@@ -5665,6 +5913,24 @@ components:
       description: |-
         * `INTAKE` - INTAKE
         * `INCIDENT` - INCIDENT
+    MessageStatusEnum:
+      enum:
+      - queued
+      - sent
+      - delivered
+      - read
+      - failed
+      - unknown
+      - not_sent
+      type: string
+      description: |-
+        * `queued` - queued
+        * `sent` - sent
+        * `delivered` - delivered
+        * `read` - read
+        * `failed` - failed
+        * `unknown` - unknown
+        * `not_sent` - not_sent
     MethodEnum:
       enum:
       - in_person_check
@@ -5675,6 +5941,16 @@ components:
         * `in_person_check` - in_person_check
         * `known_guest` - known_guest
         * `other` - other
+    ModeEnum:
+      enum:
+      - permanent
+      - unknown
+      - transient
+      type: string
+      description: |-
+        * `permanent` - permanent
+        * `unknown` - unknown
+        * `transient` - transient
     MoveBrief:
       type: object
       properties:
@@ -5702,6 +5978,9 @@ components:
           maxLength: 2000
       required:
       - text
+    NullEnum:
+      enum:
+      - null
     OfferShownResponse:
       type: object
       properties:
@@ -5850,6 +6129,8 @@ components:
       - outcome
     ParkRequestRequest:
       type: object
+      description: The place and the key hook (ADR-0013). The pin is optional and
+        only ever a confirmed one.
       properties:
         zone_code:
           type: string
@@ -5857,10 +6138,46 @@ components:
           maxLength: 20
         detail:
           type: string
+          description: Spot
           maxLength: 80
+        floor:
+          type: string
+          maxLength: 20
+        note:
+          type: string
+          description: Short description, e.g. beside pillar 12
+          maxLength: 120
         hook_number:
           type: integer
           minimum: 1
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+        location_source:
+          default: ''
+          description: |-
+            gps: the device beside the car; pin: placed on the map
+
+            * `gps` - gps
+            * `pin` - pin
+          oneOf:
+          - $ref: '#/components/schemas/PinSourceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        accuracy_m:
+          type: number
+          format: double
+          nullable: true
+          description: As the browser reported it (gps only)
+        location_device_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Capture time reported by the device
       required:
       - hook_number
       - zone_code
@@ -5887,6 +6204,71 @@ components:
       required:
       - count
       - required
+    PinSourceEnum:
+      enum:
+      - gps
+      - pin
+      type: string
+      description: |-
+        * `gps` - gps
+        * `pin` - pin
+    Place:
+      type: object
+      description: Zone and spot are always there; floor and description if given;
+        a pin only if one was confirmed.
+      properties:
+        zone:
+          type: string
+        spot:
+          type: string
+        floor:
+          type: string
+        note:
+          type: string
+        pin:
+          allOf:
+          - $ref: '#/components/schemas/PlacePin'
+          nullable: true
+      required:
+      - floor
+      - note
+      - pin
+      - spot
+      - zone
+    PlacePin:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        source:
+          $ref: '#/components/schemas/PinSourceEnum'
+        accuracy_m:
+          type: number
+          format: double
+          nullable: true
+        recorded_at:
+          type: string
+          format: date-time
+      required:
+      - accuracy_m
+      - lat
+      - lng
+      - recorded_at
+      - source
+    PlateKindEnum:
+      enum:
+      - SAUDI
+      - OTHER
+      - NONE
+      type: string
+      description: |-
+        * `SAUDI` - SAUDI
+        * `OTHER` - OTHER
+        * `NONE` - NONE
     ReasonRequestRequest:
       type: object
       properties:
@@ -5896,13 +6278,6 @@ components:
           maxLength: 200
       required:
       - reason
-    ReceiptRequestRequest:
-      type: object
-      properties:
-        received:
-          type: boolean
-      required:
-      - received
     ReconcileHandoverRequestRequest:
       type: object
       properties:
@@ -5945,6 +6320,13 @@ components:
           type: string
           minLength: 1
           maxLength: 40
+        guest_region:
+          type: string
+          minLength: 1
+          default: SA
+          description: Country the number is read in when it has no + (ISO 3166-1
+            alpha-2)
+          maxLength: 2
         plate:
           type: string
           minLength: 1
@@ -6174,6 +6556,20 @@ components:
       - id
       - kind
       - provider_message_id
+    SimNextSendRequest:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/ModeEnum'
+      required:
+      - mode
+    SimNextSendRequestRequest:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/ModeEnum'
+      required:
+      - mode
     SimOutage:
       type: object
       properties:
@@ -6341,7 +6737,6 @@ components:
     StepEnum:
       enum:
       - photos
-      - receipt
       - start_parking
       - park
       - offer
@@ -6353,7 +6748,6 @@ components:
       type: string
       description: |-
         * `photos` - photos
-        * `receipt` - receipt
         * `start_parking` - start_parking
         * `park` - park
         * `offer` - offer
@@ -6583,12 +6977,22 @@ components:
         can_contact:
           type: boolean
           description: A number exists and may be opened (audited)
+        guest_message:
+          allOf:
+          - $ref: '#/components/schemas/GuestMessageStatus'
+          nullable: true
+          description: The customer's ticket message, from the provider
+        place:
+          allOf:
+          - $ref: '#/components/schemas/Place'
+          nullable: true
       required:
       - allowed_actions
       - assignee
       - can_contact
       - contact_state
       - event_id
+      - guest_message
       - guest_messages
       - holds
       - hook
@@ -6601,6 +7005,7 @@ components:
       - parked_by
       - parking_started
       - phone_masked
+      - place
       - plate
       - primary_action
       - registered_by
@@ -6766,23 +7171,52 @@ components:
       - venue
     ValetIntakeRequestRequest:
       type: object
+      description: How the car is identified (ADR-0013). The server validates and
+        normalises; nothing is transliterated.
       properties:
+        plate_kind:
+          $ref: '#/components/schemas/PlateKindEnum'
+        plate_letters:
+          type: string
+          description: 'Saudi plate: three letters, Arabic or Latin, in reading order'
+          maxLength: 20
+        plate_digits:
+          type: string
+          description: 'Saudi plate: one to four digits, any digit shapes'
+          maxLength: 10
+        plate_text:
+          type: string
+          description: Other plate, as written on it
+          maxLength: 40
+        vehicle_description:
+          type: string
+          description: Make, colour, marks; required when there is no plate
+          maxLength: 200
+        plate_missing_reason:
+          type: string
+          maxLength: 200
         guest_phone:
           type: string
           minLength: 1
-          maxLength: 30
-        vehicle:
+          maxLength: 40
+        guest_region:
           type: string
           minLength: 1
-          description: Plate and/or a short description
-          maxLength: 200
+          default: SA
+          description: Country the number is read in when it has no + (ISO 3166-1
+            alpha-2)
+          maxLength: 2
         language:
           allOf:
           - $ref: '#/components/schemas/LanguageEnum'
           default: ar
+        confirm_duplicate:
+          type: boolean
+          default: false
+          description: Register although the same plate is active here
       required:
       - guest_phone
-      - vehicle
+      - plate_kind
     ValetIntakeResponse:
       type: object
       properties:
@@ -6858,7 +7292,6 @@ components:
             The valet's next action
 
             * `photos` - photos
-            * `receipt` - receipt
             * `start_parking` - start_parking
             * `park` - park
             * `offer` - offer
@@ -6938,6 +7371,25 @@ components:
         early_request:
           type: boolean
           description: The customer already asked for the car
+        message:
+          nullable: true
+          description: |-
+            The customer's ticket message, as the provider reports it
+
+            * `queued` - queued
+            * `sent` - sent
+            * `delivered` - delivered
+            * `read` - read
+            * `failed` - failed
+            * `unknown` - unknown
+            * `not_sent` - not_sent
+          oneOf:
+          - $ref: '#/components/schemas/MessageStatusEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        place:
+          allOf:
+          - $ref: '#/components/schemas/Place'
+          nullable: true
         handover_blocked:
           type: boolean
       required:
@@ -6947,10 +7399,12 @@ components:
       - hook
       - id
       - location
+      - message
       - number
       - phone_masked
       - photos
       - photos_required
+      - place
       - state
       - vehicle
     ValetVenue:
@@ -6962,7 +7416,13 @@ components:
             $ref: '#/components/schemas/ZoneOut'
         hook_count:
           type: integer
+        centre:
+          allOf:
+          - $ref: '#/components/schemas/LatLng'
+          nullable: true
+          description: Where the map opens; never a car's position
       required:
+      - centre
       - hook_count
       - zones
     ValetWork:
@@ -7004,6 +7464,22 @@ components:
       - shift
       - task
       - venue
+    VenueCentreRequestRequest:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+          maximum: 90
+          minimum: -90
+        lng:
+          type: number
+          format: double
+          maximum: 180
+          minimum: -180
+      required:
+      - lat
+      - lng
     VenueRow:
       type: object
       properties:
@@ -7019,7 +7495,13 @@ components:
             type: string
         key_hooks:
           type: integer
+        centre:
+          allOf:
+          - $ref: '#/components/schemas/LatLng'
+          nullable: true
+          description: Where the parking map opens
       required:
+      - centre
       - id
       - key_hooks
       - name

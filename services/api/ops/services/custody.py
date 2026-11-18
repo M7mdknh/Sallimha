@@ -146,10 +146,11 @@ def withdraw_accepted_with_custody_resolution(actor, req, *, zone_code: str, det
             tokens.revoke(task=task, now=now)
             ticket.codes.filter(consumed_at__isnull=True, revoked_at__isnull=True).update(revoked_at=now)
             ticket.state = Ticket.State.PARKED
-            ticket.location_zone = zone
-            ticket.location_detail = detail.strip()[:80]
+            from ops.services.location import PLACE_FIELDS, apply_place
+
+            apply_place(ticket, zone=zone, spot=detail, now=now)  # recorded by the supervisor: any old pin cleared
             ticket.version += 1
-            ticket.save(update_fields=["state", "location_zone", "location_detail", "version"])
+            ticket.save(update_fields=["state", *PLACE_FIELDS, "version"])
             req.state = RetrievalRequest.State.WITHDRAWN
             req.withdrawn_at = now
             req.withdrawn_by = actor

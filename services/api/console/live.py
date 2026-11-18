@@ -47,6 +47,9 @@ def _outage_brief(org) -> dict | None:
 
 
 def snapshot(event, now) -> dict:
+    from ops.services.dispatch import timings
+
+    cfg = timings(event)
     alerts = sorted(
         Alert.objects.filter(event=event, acknowledged_at__isnull=True).select_related("ticket"),
         key=lambda a: (_SEVERITY.get(a.severity, 2), a.created_at),
@@ -60,6 +63,7 @@ def snapshot(event, now) -> dict:
         task = req.current_task
         requests.append({
             "request_id": req.id, "ticket_id": ticket.id, "ticket": _t(ticket), "vehicle": _vehicle(ticket),
+            "plate": ticket.vehicle_plate, "description": ticket.vehicle_description,
             "state": req.state, "ticket_state": ticket.state, "requested_at": req.requested_at,
             "elapsed_s": int((now - req.requested_at).total_seconds()),
             "assignee": task.assignee.full_name if task and task.status in LIVE_TASK_STATUSES else None,
@@ -98,6 +102,7 @@ def snapshot(event, now) -> dict:
         "generated_at": now,
         "health": {"worker": worker_status(now), "whatsapp": whatsapp_status()},
         "outage": _outage_brief(event.org),
+        "wait_warning_s": cfg["wait_warning_s"], "wait_critical_s": cfg["wait_critical_s"],
         "attention": [{"id": a.id, "kind": a.kind, "severity": a.severity, "created_at": a.created_at,
                        "ticket": _t(a.ticket) if a.ticket_id else None, "ticket_id": a.ticket_id} for a in alerts],
         "counts": counts,
@@ -114,9 +119,13 @@ def allowed_actions(ticket, req, binding, actor=None) -> list[str]:
     actions = []
     if ticket.state == Ticket.State.RECEIVED and ticket.parking_started_at is None:
         actions += ["cancel", "except_intake", "intake_transfer"]
-    if ticket.state == Ticket.State.RECEIVED and binding is not None and \
-            ticket.contact_state != Ticket.Contact.CONFIRMED_IN_PERSON:
-        actions.append("confirm_receipt")
+    if binding is not None and ticket.contact_state == Ticket.Contact.CORRECTION_REQUIRED and \
+            ticket.state in (Ticket.State.RECEIVED, Ticket.State.PARKED, Ticket.State.RETRIEVING, Ticket.State.READY):
+        actions.append("confirm_receipt")  # only after a correction: never a routine question (ADR-0013)
+    from ops.services import guest_messages
+
+    if binding is not None and guest_messages.can_resend(ticket):
+        actions.append("resend_ticket")
     if req is not None and req.state in ("WAITING_FOR_PARKING", "QUEUED", "OFFERED"):
         actions.append("withdraw")
     if req is not None and req.state == "ACCEPTED":
@@ -178,7 +187,7 @@ def _outage_actions(ticket, actor) -> list[str]:
 
 
 PRIMARY_ORDER = ("relay_accept", "relay_ready", "relay_custody_ack", "relay_intake_photo", "relay_parked",
-                 "approve_unclaimed", "release_carryover", "confirm_receipt", "assisted_handover", "assisted_request")
+                 "approve_unclaimed", "release_carryover", "resend_ticket", "assisted_handover", "assisted_request")
 
 
 def primary_action(actions: list[str], ticket=None) -> str | None:
@@ -195,7 +204,7 @@ def primary_action(actions: list[str], ticket=None) -> str | None:
 
 
 def ticket_detail(ticket, actor) -> dict:
-    from ops.services import holds, incidents
+    from ops.services import guest_messages, holds, incidents, location
 
     binding = ticket.bindings.filter(revoked_at__isnull=True).first()
     req = RetrievalRequest.objects.filter(ticket=ticket).order_by("-id").first()
@@ -227,6 +236,8 @@ def ticket_detail(ticket, actor) -> dict:
         "guest_messages": [{"text": m.text, "received_at": m.received_at}
                            for m in ticket.guest_messages.order_by("-received_at")[:10]],
         "can_contact": bool(binding and binding.phone_enc),
+        "guest_message": guest_messages.ticket_message_detail(ticket),
+        "place": location.describe(ticket) if ticket.location_zone_id else None,
     }
 
 
@@ -238,11 +249,16 @@ def search(event, q: str) -> list[dict]:
     q = q.strip()[:40]
     if not q:
         return []
+    from core.phone import normalize_digits
+    from core.plate import search_key
+
     qs = Ticket.objects.filter(event=event).select_related("location_zone")
-    number = q.lstrip("#")
+    number = normalize_digits(q).lstrip("#")
+    key = search_key(q)  # either script, any spacing (ADR-0013)
+    by_plate = Q(plate_key__contains=key) | Q(vehicle_plate__icontains=q) if key else Q(vehicle_plate__icontains=q)
     if number.isdigit() and len(number) <= 6:
-        qs = qs.filter(Q(display_number=int(number)) | Q(vehicle_plate__icontains=number))
+        qs = qs.filter(Q(display_number=int(number)) | by_plate)
     else:
-        qs = qs.filter(vehicle_plate__icontains=q)
+        qs = qs.filter(by_plate)
     return [{"id": t.id, "ticket": _t(t), "state": t.state, "vehicle": _vehicle(t), "location": _location(t),
              "hook": _hook(t)} for t in qs.order_by("display_number")[:20]]

@@ -99,6 +99,37 @@ def guest_phone_rows(actor, event) -> list[dict]:
     return rows
 
 
+def hourly_activity(event, now) -> list[dict]:
+    """Cars received, requests made and cars delivered per hour of the operation, in the venue's time, from the
+    recorded timestamps. Empty when nothing happened yet; at most the last 24 hours with activity."""
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+
+    zone = ZoneInfo(event.venue.timezone)
+
+    def hour(t):
+        local = t.astimezone(zone)
+        return local.replace(minute=0, second=0, microsecond=0)
+
+    series = {"received": Ticket.objects.filter(event=event).values_list("created_at", flat=True),
+              "requested": RetrievalRequest.objects.filter(event=event).values_list("requested_at", flat=True),
+              "delivered": Ticket.objects.filter(event=event, delivered_at__isnull=False)
+              .values_list("delivered_at", flat=True)}
+    counts: dict = {}
+    for name, times in series.items():
+        for t in times:
+            counts.setdefault(hour(t), {"received": 0, "requested": 0, "delivered": 0})[name] += 1
+    if not counts:
+        return []
+    last = max(max(counts), hour(now))
+    first = max(min(counts), last - timedelta(hours=23))
+    out, h = [], first
+    while h <= last:
+        out.append({"hour": h, **counts.get(h, {"received": 0, "requested": 0, "delivered": 0})})
+        h += timedelta(hours=1)
+    return out
+
+
 def dashboard(actor, event, now) -> dict:
     """Admin overview of one operation, from the same rows and timestamps as the live view and the report. No scores:
     counts, one clearly defined duration and who is doing what."""
@@ -136,8 +167,10 @@ def dashboard(actor, event, now) -> dict:
                    .exclude(staff_id__in=on_shift).count())
     return {
         "event": {"id": event.id, "name": event.name, "status": event.status, "venue": event.venue.name,
-                  "time_zone": event.venue.timezone},
+                  "time_zone": event.venue.timezone,
+                  "period": {"start": event.starts_at, "end": event.closed_at or event.ends_at}},
         "generated_at": now,
+        "activity": hourly_activity(event, now),
         "cars": {"receiving": states.get("RECEIVED", 0), "parked": states.get("PARKED", 0),
                  "retrieving": states.get("RETRIEVING", 0), "ready": states.get("READY", 0),
                  "delivered": states.get("DELIVERED", 0)},

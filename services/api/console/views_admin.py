@@ -228,7 +228,32 @@ class Venues(Command):
         venues = (Venue.objects.filter(org_id=actor.org_id).prefetch_related("zones")
                   .annotate(hooks=Coalesce(Sum("key_stations__hook_count"), 0)).order_by("name"))
         return out(s.VenueRow, [{"id": v.id, "name": v.name, "time_zone": v.timezone, "key_hooks": v.hooks,
-                                 "zones": [z.code for z in v.zones.all() if z.active]} for v in venues])
+                                 "zones": [z.code for z in v.zones.all() if z.active],
+                                 "centre": ({"lat": float(v.latitude), "lng": float(v.longitude)}
+                                            if v.latitude is not None else None)} for v in venues])
+
+
+class VenueCentre(Command):
+    """Where the parking map opens for this venue (ADR-0013). Admin only; audited."""
+
+    @command_schema(s.VenueCentreRequest, s.IdResponse)
+    @idempotent_post
+    @domain_response
+    def post(self, request, venue_id):
+        from decimal import Decimal
+
+        actor = actor_of(request)
+        require(actor, Role.ADMIN)
+        venue = Venue.objects.filter(pk=venue_id, org_id=actor.org_id).first()
+        if venue is None:
+            raise Http404
+        data = validated(s.VenueCentreRequest, request.data)
+        venue.latitude = Decimal(str(data["lat"])).quantize(Decimal("0.000001"))
+        venue.longitude = Decimal(str(data["lng"])).quantize(Decimal("0.000001"))
+        venue.save(update_fields=["latitude", "longitude"])
+        audit("venue.map_centre", actor_id=actor.id, actor_label=actor_label(actor), channel="console",
+              entity_type="venue", entity_id=venue.id, summary={"lat": data["lat"], "lng": data["lng"]})
+        return out(s.IdResponse, {"id": venue.id})
 
 
 class CreateEvent(Command):

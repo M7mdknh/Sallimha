@@ -30,7 +30,7 @@ Status: **Approved 2026-11-15** (user decision 6); **amended 2026-11-17** for [A
 | R-02 | Phone: Arabic/Persian digits normalized, country code kept, international numbers allowed, masked confirmation, never confused with a hook | 01§2 | A | AT-01 | U I | 1 | mock |
 | R-03 | Service-messaging permission recorded at confirmation; no marketing use | 01§2, 04 | A | AT-01, AT-02 | I | 1 | mock |
 | R-04 | Ticket sent immediately after confirmation, before parking | 01§2 | A | AT-02, AT-28 | I C | 1 / 3 | mock / real |
-| R-05 | Explicit staff confirmation that the intended guest received the ticket; provider status alone never confirms; “contact unconfirmed” exception visible | 01§2, 02, ADR-0005 C3 | A | AT-35 | I E | 1 | mock |
+| R-05 | ~~Explicit staff confirmation that the guest received the ticket~~ — **retired by ADR-0013**: provider status shown instead (never treated as confirmation); failures raise a supervisor issue (R-87) | 01§2, 02, ADR-0005 C3, ADR-0013 | A | AT-73, AT-74 | I E | 1 / P | mock |
 | R-06 | No messages to a guessed number; correction path for a wrong number | 01§2, 03 | A | AT-17 | I | 1 | mock |
 | R-07 | Usable vehicle identifier required, or a reasoned supervisor exception | 01§2, 07 | D | AT-03 | U I | 1 | mock |
 | R-08 | Four photos before movement; ticket, uploader and server receipt time; private originals; upload time never labelled capture time | 01§2, 04, ADR-0005 C8 | P / A | AT-03, AT-21, AT-29 | I | 1 | mock |
@@ -145,6 +145,18 @@ Status: **Approved 2026-11-15** (user decision 6); **amended 2026-11-17** for [A
 | R-85 | Phone and tablet layouts in Arabic and English at 360, 390, 768 and 1024 px | ADR-0011 | A | AT-71 | E M | P | — |
 | R-86 | Real devices: camera capture, locked screen, missed offer, connectivity loss and recovery | ADR-0011, ADR-0012 | A | AT-72 | M | 3 | — |
 
+## Usability: intake, phone, plate, location, dashboards (ADR-0013)
+| ID | Requirement | Source | Origin | Tests | Layer | Phase | WA |
+|---|---|---|---|---|---|---|---|
+| R-87 | No receipt question; ticket message status from provider events; one deduplicated failure issue with correct-number and resend | ADR-0013 | A | AT-73, AT-74 | I E | P | mock |
+| R-88 | Phone entry with a country selector (SA default); server authority with specific refusals; canonical E.164; input kept; no phone uniqueness on tickets | ADR-0013 | A | AT-75 | U I E | P | — |
+| R-89 | Saudi plate entry stored as entered (verified 17-letter set); other plates as typed; explicit missing-plate path; search by normalised key in either script | ADR-0013 | A | AT-76 | U I E | P | — |
+| R-90 | Possible duplicate active plate shown before registering; explicit override; finished tickets never block | ADR-0013 | A | AT-77 | I E | P | — |
+| R-91 | Parking place: zone/spot required, floor and description, optional confirmed pin with accuracy, source and times; never the venue centre; parking never blocked by the map | ADR-0013 | A | AT-78 | I E | P | — |
+| R-92 | Retrieval and relocation use the saved place and pin; Open in Google Maps with coordinates only; pin set or cleared with every place write | ADR-0013 | A | AT-79 | I E | P | — |
+| R-93 | Maps JavaScript API lazy-loaded with a run-time, website-restricted key; unconfigured or failing map labelled; no Geolocation API; referrer sends origin only | ADR-0013 | A | AT-78, staging header test | I E M | P / 3 | — |
+| R-94 | Admin dashboard and supervisor Operations as specified, from real data, with clear empty states | ADR-0013 | A | AT-80, AT-71 | I E M | P | — |
+
 ## Non-functional
 | ID | Requirement | Source | Origin | Tests | Layer | Phase | WA |
 |---|---|---|---|---|---|---|---|
@@ -159,7 +171,7 @@ Status: **Approved 2026-11-15** (user decision 6); **amended 2026-11-17** for [A
 
 | ID | Scenario | Required outcome |
 |---|---|---|
-| AT-35 | Ticket sent; valet confirms or denies in-person receipt | CONFIRMED_IN_PERSON only by staff confirmation; denial or no answer leaves the exception visible; a delivery callback alone never confirms |
+| AT-35 | ~~Ticket sent; valet confirms or denies in-person receipt~~ (retired, ADR-0013) | CONFIRMED_IN_PERSON only by staff confirmation; denial or no answer leaves the exception visible; a delivery callback alone never confirms |
 | AT-36 | Photo sent outside intake with 0, 1 or several open incidents; invalid type or oversize | Explicit incident selection; never attached to the “latest” incident; invalid files rejected |
 | AT-37 | Intake started by A, parked by B | Custody transfer recorded; `parked_by`=B; retrieval affinity goes to B |
 | AT-38 | Each guest message across states and in both languages | Queued never claims retrieval; no ETA; language preserved; identifiers isolated LTR |
@@ -203,10 +215,23 @@ Status: **Approved 2026-11-15** (user decision 6); **amended 2026-11-17** for [A
 | AT-71 | Main screens at 360/390/768/1024 px, both languages | No sideways overflow; screenshots reviewed | Playwright `layout.spec.ts` |
 | AT-72 | Real phones and tablets | Manual checklist passes | docs/staging/real-device-checklist.md — NOT RUN |
 
+## Acceptance scenarios added 2026-11-18 (ADR-0013; also listed in docs/06)
+
+| ID | Scenario | Required outcome | Automated evidence |
+|---|---|---|---|
+| AT-73 | No receipt question | Photos → Start parking; nothing waits; no automatic CONFIRMED_IN_PERSON | `tests/app/test_message_status.py`; Playwright `valet-app.spec.ts`, `intake-location.spec.ts` |
+| AT-74 | Message status and failure handling | Provider status only; one issue; resend rules; correction revokes | `tests/app/test_message_status.py`; Playwright `intake-location.spec.ts` (SIMULATED) |
+| AT-75 | Phone entry | E.164; specific refusals; input kept; several tickets per number | `tests/core/test_phone.py`; `tests/app/test_intake_entry.py`; Playwright `intake-location.spec.ts` |
+| AT-76 | Plate entry | As entered; order kept; no guessing; search either script | `tests/core/test_plate.py`; `tests/app/test_intake_entry.py`; Playwright `intake-location.spec.ts` |
+| AT-77 | Possible duplicate | Shown before registering; override; later visits allowed | `tests/app/test_intake_entry.py`; Playwright `intake-location.spec.ts` |
+| AT-78 | Location capture and fallbacks | Confirmed pins only; parking never blocked | `tests/app/test_parking_location.py`; Playwright `intake-location.spec.ts` (SIMULATED positions, map unconfigured) |
+| AT-79 | Retrieval and relocation with the pin | Saved place first; link with coordinates only; old pin until completion | `tests/app/test_parking_location.py`; Playwright `intake-location.spec.ts` |
+| AT-80 | Dashboards | Real data, empty states, phone and tablet, both languages | `tests/app/test_dashboards.py`; Playwright `layout.spec.ts`, `console.spec.ts`, `roles.spec.ts` |
+
 ## Coverage check
-- Every docs/06 scenario AT-01…AT-34 appears at least once above; AT-61…AT-72 map to R-74…R-86 and amended rows.
+- Every docs/06 scenario AT-01…AT-34 appears at least once above; AT-61…AT-72 map to R-74…R-86 and AT-73…AT-80 to R-87…R-94 and amended rows. AT-35 is retired (ADR-0013).
 - Every row has at least one test ID.
 - **Extended Gate 2 set** (identical in `10_Build_Plan.md`):
   - docs/06 Gate 2 scenarios: AT-01–19, AT-32–34.
-  - Phase 1 additions: AT-25, AT-26, AT-35, AT-37, AT-38, AT-39, AT-42, AT-48 (database-role part), AT-49, AT-50 (simulated), AT-54, AT-55, AT-56, AT-57, AT-60, and AT-53/AT-59 limited to the live view.
+  - Phase 1 additions: AT-25, AT-26, AT-35 (retired 18 Nov 2026 by ADR-0013; replaced by AT-73/AT-74), AT-37, AT-38, AT-39, AT-42, AT-48 (database-role part), AT-49, AT-50 (simulated), AT-54, AT-55, AT-56, AT-57, AT-60, and AT-53/AT-59 limited to the live view.
 - Everything else is Gate 3 or later.

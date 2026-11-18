@@ -57,7 +57,10 @@ Derived available = enabled staff + active event shift + available preference + 
 Intake reservation and retrieval reservation must contend on the same staff capacity constraint. A web dashboard or WhatsApp button cannot override a busy assignment without an explicit transfer.
 
 ### Contact and message state
-Contact: UNCONFIRMED / CONFIRMED_IN_PERSON / CORRECTION_REQUIRED / ASSISTED_FALLBACK. CONFIRMED_IN_PERSON is set only by an explicit staff confirmation that the intended guest received the ticket.
+Contact: UNCONFIRMED / CONFIRMED_IN_PERSON / CORRECTION_REQUIRED / ASSISTED_FALLBACK. CONFIRMED_IN_PERSON is set only by an explicit staff confirmation that the intended guest received the ticket. Since [ADR-0013](adr/0013-pilot-usability-intake-location-dashboards.md) no transition asks for it: UNCONFIRMED is the normal state, and a supervisor records CONFIRMED_IN_PERSON only after a phone correction. The staff app shows the ticket message's provider status instead; a failed or dead customer message raises `guest_message_failed` (one per ticket and binding).
+
+### Vehicle identification and parking place (ADR-0013)
+Plate kind SAUDI (three letters, one to four digits, stored as entered), OTHER (as typed) or NONE (description and reason required); `plate_key` is an internal search key, never displayed. Place: zone and spot (required), floor and a short description, and an optional confirmed pin (latitude, longitude, source `gps` or `pin`, accuracy for gps, device-reported capture time, server time recorded). The pin is whole or absent (database constraint) and is set or cleared with every write of zone and spot.
 Message: PENDING / SENDING / SENT / DELIVERED / READ / FAILED / DELIVERY_UNKNOWN.
 These do not substitute for the vehicle state. Provider “delivered” is not proof that the intended car owner controls the phone. Read receipts are optional; do not block operations awaiting READ.
 

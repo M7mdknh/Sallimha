@@ -171,7 +171,9 @@ SECURE_REDIRECT_EXEMPT = [r"^healthz$", r"^readyz$"]
 SECURE_HSTS_SECONDS = 0 if IS_DEV else int(os.environ.get("SECURE_HSTS_SECONDS", "3600"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
 SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "0") == "1"
-SECURE_REFERRER_POLICY = "same-origin"
+# Cross-site requests carry the origin only (never the path, which holds ticket ids): a website-restricted Google
+# Maps browser key is checked against it (ADR-0013). Same-site requests keep the full referrer.
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["console.auth.CsrfSessionAuthentication"],
@@ -194,6 +196,8 @@ SPECTACULAR_SETTINGS = {
         "CarryoverStatusEnum": "console.serializers.CARRYOVER_STATUSES",
         "WhatsAppStatusEnum": "console.serializers.WHATSAPP_STATUSES",
         "OutboxAttentionStatusEnum": "console.serializers.OUTBOX_ATTENTION_STATUSES",
+        "MessageStatusEnum": "console.serializers.MESSAGE_STATUSES",
+        "PinSourceEnum": "console.serializers.PIN_SOURCES",
     },
 }
 
@@ -208,6 +212,11 @@ WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
 STAFF_CHANNEL = os.environ.get("STAFF_CHANNEL", "app")
 if STAFF_CHANNEL not in {"app", "whatsapp"}:
     raise ImproperlyConfigured("STAFF_CHANNEL must be app or whatsapp")
+# Parking map (ADR-0013): a browser key restricted to the staff app's sites and the Maps JavaScript API, and a Map ID
+# for advanced markers. Unset by default: the app then shows "map not configured" and keeps the text location.
+GOOGLE_MAPS_BROWSER_KEY = os.environ.get("GOOGLE_MAPS_BROWSER_KEY", "").strip()
+GOOGLE_MAPS_MAP_ID = os.environ.get("GOOGLE_MAPS_MAP_ID", "").strip()
+
 SIMULATOR_ENABLED = os.environ.get("SIMULATOR_ENABLED", "1" if IS_DEV else "0") == "1"
 if SIMULATOR_ENABLED and not IS_DEV:
     raise ImproperlyConfigured("SIMULATOR_ENABLED is only allowed in local/test environments")

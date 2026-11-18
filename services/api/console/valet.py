@@ -17,7 +17,7 @@ from ops.models import (
     Task,
     Ticket,
 )
-from ops.services import holds, intake, shifts
+from ops.services import guest_messages, holds, intake, location, shifts
 from ops.services.outage import active_whatsapp_outage
 
 RECENT = 5
@@ -54,11 +54,7 @@ def _intake_step(staff, ticket, photos: int) -> tuple[str, CustodyTransfer | Non
         return "park", None
     if photos < intake.REQUIRED_PHOTOS and not ticket.photos_exception_reason:
         return "photos", None
-    binding = ticket.bindings.filter(revoked_at__isnull=True).first()
-    if binding is not None and binding.receipt_answered_at is None and \
-            ticket.contact_state == Ticket.Contact.UNCONFIRMED:
-        return "receipt", None
-    return "start_parking", None
+    return "start_parking", None  # no receipt question (ADR-0013): the message status is shown instead
 
 
 def _retrieval_step(staff, task, ticket) -> tuple[str, CustodyTransfer | None]:
@@ -101,10 +97,12 @@ def _task(staff, task) -> dict:
             "id": ticket.id, "number": _t(ticket),
             "vehicle": " ".join(p for p in (ticket.vehicle_plate, ticket.vehicle_description) if p) or "—",
             "location": f"{zone.code} {ticket.location_detail}".strip() if zone else "",
+            "place": location.describe(ticket) if zone else None,
             "hook": occupancy.hook_number if occupancy else None,
             "phone_masked": binding.phone_masked if binding else None,
             "photos": photos, "photos_required": intake.REQUIRED_PHOTOS,
             "contact_state": ticket.contact_state, "state": ticket.state,
+            "message": guest_messages.ticket_message(ticket),
             "early_request": RetrievalRequest.objects.filter(
                 ticket=ticket, state=RetrievalRequest.State.WAITING_FOR_PARKING).exists(),
             "handover_blocked": holds.handover_blocked(ticket),
@@ -120,8 +118,12 @@ def _task(staff, task) -> dict:
 def _venue(event) -> dict:
     station = KeyStation.objects.filter(venue_id=event.venue_id).order_by("id").first()
     zones = ParkingZone.objects.filter(venue_id=event.venue_id, active=True).order_by("code")
+    venue = event.venue
+    centre = ({"lat": float(venue.latitude), "lng": float(venue.longitude)}
+              if venue.latitude is not None and venue.longitude is not None else None)
     return {"zones": [{"code": z.code, "label_ar": z.label_ar, "label_en": z.label_en} for z in zones],
-            "hook_count": station.hook_count if station else 0}
+            "hook_count": station.hook_count if station else 0,
+            "centre": centre}  # where the map opens: never a car's position (ADR-0013)
 
 
 def work(staff, now) -> dict:

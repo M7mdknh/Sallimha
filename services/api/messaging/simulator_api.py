@@ -90,3 +90,15 @@ def outage_mode(request):
     if request.method == "POST":
         SimulatorControl.set_outage(validated(cs.SimOutageRequest, request.data)["down"])
     return out(cs.SimOutage, {"down": SimulatorControl.outage_active()})
+
+
+@extend_schema(request=cs.SimNextSendRequest, responses={200: cs.SimNextSendRequest}, tags=["dev-simulator"])
+@api_view(["POST"])
+@permission_classes([IsConsoleStaff])
+@domain_response
+def next_send(request):
+    """Make the next outbound send fail permanently, or lose its response, to rehearse the failure path (SIMULATED)."""
+    _guard()
+    mode = validated(cs.SimNextSendRequest, request.data)["mode"]
+    SimulatorControl.set_next(mode)
+    return out(cs.SimNextSendRequest, {"mode": mode})

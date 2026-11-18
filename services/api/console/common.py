@@ -116,7 +116,7 @@ def domain_response(fn):
             return Response({"code": "invalid_input", "fields": err.errors}, status=400)
         except DomainError as err:
             status = 403 if err.code == "forbidden" else 409
-            return Response({"code": err.code}, status=status)
+            return Response({"code": err.code, **err.detail}, status=status)  # detail: set by server code only
 
     return wrapper
 

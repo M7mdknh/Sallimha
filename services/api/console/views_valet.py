@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 
 from console import serializers as s
 from console import valet as read
-from console.common import IsValet, actor_of, domain_response, idempotent_post, out, validated
+from console.common import IsSignedInStaff, IsValet, actor_of, domain_response, idempotent_post, out, validated
 from console.views import IDEMPOTENCY, REFUSALS, command_schema
 from core.errors import DomainError
 from ops.models import LIVE_TASK_STATUSES, CustodyTransfer, Task, Ticket
@@ -39,6 +39,22 @@ def _own_task(staff, task_id) -> Task:
     return task
 
 
+def place_from(data) -> dict:
+    """Floor, description and the optional confirmed pin from a park or move request (ADR-0013)."""
+    from ops.services.location import pin_from
+
+    pin = pin_from(data.get("lat"), data.get("lng"), data.get("location_source") or "", data.get("accuracy_m"),
+                   data.get("location_device_at"))
+    return {"floor": data.get("floor", ""), "note": data.get("note", ""), "pin": pin}
+
+
+def vehicle_from(data) -> intake.VehicleEntry:
+    return intake.vehicle_entry(data["plate_kind"], letters=data.get("plate_letters", ""),
+                                digits=data.get("plate_digits", ""), text=data.get("plate_text", ""),
+                                description=data.get("vehicle_description", ""),
+                                missing_reason=data.get("plate_missing_reason", ""))
+
+
 def _settle(outcome: str, ok: tuple[str, ...], refusals: dict | None = None) -> dict:
     """Outcomes that changed (or already had changed) the state succeed; anything else is a refusal the app shows."""
     if outcome in ok:
@@ -53,6 +69,16 @@ def work(request):
     """Polled by the app. A read only: it never changes anything, including an offer's deadline (ADR-0012)."""
     staff = actor_of(request)
     return out(s.ValetWork, read.work(staff, timezone.now()))
+
+
+@extend_schema(responses={200: s.MapsConfig})
+@api_view(["GET"])
+@permission_classes([IsSignedInStaff])
+def maps_config(request):
+    """The browser key and Map ID for the parking map, served at run time so no key is built into the app. Empty
+    when unconfigured: the app then labels the map as not configured and keeps the structured location (ADR-0013)."""
+    key, map_id = settings.GOOGLE_MAPS_BROWSER_KEY, settings.GOOGLE_MAPS_MAP_ID
+    return out(s.MapsConfig, {"configured": bool(key), "api_key": key, "map_id": map_id})
 
 
 class ValetCommand(APIView):
@@ -96,7 +122,9 @@ class Intake(ValetCommand):
     def post(self, request):
         staff = actor_of(request)
         data = validated(s.ValetIntakeRequest, request.data)
-        ticket = intake.register_with_guest(staff, data["guest_phone"], data["vehicle"], data.get("language", "ar"))
+        ticket = intake.register_with_guest(staff, data["guest_phone"], vehicle_from(data), data.get("language", "ar"),
+                                            region=data.get("guest_region") or "SA",
+                                            confirm_duplicate=data.get("confirm_duplicate", False))
         return out(s.ValetIntakeResponse, {"id": ticket.id, "ticket": f"#{ticket.display_number:03d}"})
 
 
@@ -120,17 +148,6 @@ class Photo(ValetCommand):
                                           "required": intake.REQUIRED_PHOTOS})
 
 
-class Receipt(ValetCommand):
-    @command_schema(s.ReceiptRequest, s.ContactStateResponse)
-    @idempotent_post
-    @domain_response
-    def post(self, request, ticket_id):
-        staff = actor_of(request)
-        ticket = intake.confirm_guest_receipt(staff, _own_ticket(staff, ticket_id),
-                                              validated(s.ReceiptRequest, request.data)["received"])
-        return out(s.ContactStateResponse, {"id": ticket.id, "contact_state": ticket.contact_state})
-
-
 class StartParking(ValetCommand):
     @command_schema(None, s.OkResponse)
     @idempotent_post
@@ -149,7 +166,7 @@ class Park(ValetCommand):
         staff = actor_of(request)
         data = validated(s.ParkRequest, request.data)
         ticket = intake.park(staff, _own_ticket(staff, ticket_id), data["zone_code"], data.get("detail", ""),
-                             data["hook_number"])
+                             data["hook_number"], **place_from(data))
         return out(s.TicketStateResponse, {"id": ticket.id, "state": ticket.state})
 
 
@@ -245,5 +262,6 @@ class Moved(ValetCommand):
         data = validated(s.ParkRequest, request.data)
         with transaction.atomic():
             ticket = relocation.complete_relocation(staff, task, zone_code=data["zone_code"],
-                                                    detail=data.get("detail", ""), hook_number=data["hook_number"])
+                                                    detail=data.get("detail", ""), hook_number=data["hook_number"],
+                                                    **place_from(data))
         return out(s.TicketStateResponse, {"id": ticket.id, "state": ticket.state})

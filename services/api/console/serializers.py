@@ -96,6 +96,8 @@ class LiveRequest(serializers.Serializer):
     ticket_id = serializers.IntegerField()
     ticket = serializers.CharField()
     vehicle = serializers.CharField()
+    plate = serializers.CharField(allow_blank=True, help_text="As entered (ADR-0013)")
+    description = serializers.CharField(allow_blank=True)
     state = serializers.ChoiceField(choices=REQUEST_STATES)
     ticket_state = serializers.ChoiceField(choices=TICKET_STATES)
     requested_at = serializers.DateTimeField()
@@ -142,6 +144,8 @@ class OutageBrief(serializers.Serializer):
 class LiveSnapshot(serializers.Serializer):
     event = EventBrief()
     outage = OutageBrief(allow_null=True, help_text="Declared customer WhatsApp outage")
+    wait_warning_s = serializers.IntegerField(help_text="A request waiting longer is late")
+    wait_critical_s = serializers.IntegerField(help_text="A request waiting longer is critical")
     generated_at = serializers.DateTimeField()
     health = Health()
     attention = AttentionItem(many=True)
@@ -197,6 +201,46 @@ class GuestMessageOut(serializers.Serializer):
     received_at = serializers.DateTimeField()
 
 
+
+PIN_SOURCES = ["gps", "pin"]
+
+
+class PlacePin(serializers.Serializer):
+    lat = serializers.FloatField()
+    lng = serializers.FloatField()
+    source = serializers.ChoiceField(choices=PIN_SOURCES)
+    accuracy_m = serializers.FloatField(allow_null=True)
+    recorded_at = serializers.DateTimeField()
+
+
+class Place(serializers.Serializer):
+    """Zone and spot are always there; floor and description if given; a pin only if one was confirmed."""
+
+    zone = serializers.CharField()
+    spot = serializers.CharField(allow_blank=True)
+    floor = serializers.CharField(allow_blank=True)
+    note = serializers.CharField(allow_blank=True)
+    pin = PlacePin(allow_null=True)
+
+
+class MapsConfig(serializers.Serializer):
+    """The browser key is restricted to approved sites and the Maps JavaScript API (docs/staging/google-maps.md)."""
+
+    configured = serializers.BooleanField()
+    api_key = serializers.CharField(allow_blank=True)
+    map_id = serializers.CharField(allow_blank=True)
+
+
+MESSAGE_STATUSES = ["queued", "sent", "delivered", "read", "failed", "unknown", "not_sent"]
+
+
+class GuestMessageStatus(serializers.Serializer):
+    """Queued is not sent; sent is not delivered; unknown is neither (ADR-0013)."""
+
+    status = serializers.ChoiceField(choices=MESSAGE_STATUSES)
+    queued_at = serializers.DateTimeField()
+    error = serializers.CharField(allow_blank=True)
+
 class TicketDetail(serializers.Serializer):
     id = serializers.IntegerField()
     ticket = serializers.CharField()
@@ -224,6 +268,8 @@ class TicketDetail(serializers.Serializer):
     primary_action = serializers.CharField(allow_null=True, help_text="The one action to offer first, if any")
     guest_messages = GuestMessageOut(many=True, help_text="What the customer wrote on WhatsApp (stored here)")
     can_contact = serializers.BooleanField(help_text="A number exists and may be opened (audited)")
+    guest_message = GuestMessageStatus(allow_null=True, help_text="The customer's ticket message, from the provider")
+    place = Place(allow_null=True)
 
 
 class StartShiftRequest(serializers.Serializer):
@@ -280,8 +326,29 @@ class IntakeTransferRequest(ReasonRequest):
     to_staff_id = serializers.IntegerField()
 
 
+def _guest_region():
+    return serializers.CharField(max_length=2, required=False, default="SA",
+                                 help_text="Country the number is read in when it has no + (ISO 3166-1 alpha-2)")
+
+
+class VehicleEntryFields(serializers.Serializer):
+    """How the car is identified (ADR-0013). The server validates and normalises; nothing is transliterated."""
+
+    plate_kind = serializers.ChoiceField(choices=["SAUDI", "OTHER", "NONE"])
+    plate_letters = serializers.CharField(max_length=20, required=False, allow_blank=True,
+                                          help_text="Saudi plate: three letters, Arabic or Latin, in reading order")
+    plate_digits = serializers.CharField(max_length=10, required=False, allow_blank=True,
+                                         help_text="Saudi plate: one to four digits, any digit shapes")
+    plate_text = serializers.CharField(max_length=40, required=False, allow_blank=True,
+                                       help_text="Other plate, as written on it")
+    vehicle_description = serializers.CharField(max_length=200, required=False, allow_blank=True,
+                                                help_text="Make, colour, marks; required when there is no plate")
+    plate_missing_reason = serializers.CharField(max_length=200, required=False, allow_blank=True)
+
+
 class CorrectPhoneRequest(ReasonRequest):
     phone = serializers.CharField(max_length=40)
+    guest_region = _guest_region()
 
 
 class CorrectPhoneResponse(serializers.Serializer):
@@ -460,12 +527,23 @@ class RoleRequest(serializers.Serializer):
     role = serializers.ChoiceField(choices=ROLES)
 
 
+class LatLng(serializers.Serializer):
+    lat = serializers.FloatField()
+    lng = serializers.FloatField()
+
+
 class VenueRow(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     time_zone = serializers.CharField()
     zones = serializers.ListField(child=serializers.CharField())
     key_hooks = serializers.IntegerField()
+    centre = LatLng(allow_null=True, help_text="Where the parking map opens")
+
+
+class VenueCentreRequest(serializers.Serializer):
+    lat = serializers.FloatField(min_value=-90, max_value=90)
+    lng = serializers.FloatField(min_value=-180, max_value=180)
 
 
 class CreateEventRequest(serializers.Serializer):
@@ -648,13 +726,13 @@ class ReconcileHandoverRequest(ReasonRequest):
     evidence = serializers.CharField(max_length=2000)
 
 
-class IntakeOnBehalfRequest(ReasonRequest):
+class IntakeOnBehalfRequest(ReasonRequest, VehicleEntryFields):
     """Registers the car in the valet's custody (RECEIVED). Parking is confirmed separately (relay-parked)."""
     valet_id = serializers.IntegerField()
     guest_phone = serializers.CharField(max_length=40)
-    plate = serializers.CharField(max_length=40)
-    description = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    guest_region = _guest_region()
     confirmed_via = serializers.ChoiceField(choices=CONFIRMED_VIA)
+    confirm_duplicate = serializers.BooleanField(required=False, default=False)
 
 
 class RelayPhotoRequest(serializers.Serializer):
@@ -673,6 +751,7 @@ class RelayParkedRequest(serializers.Serializer):
 class ReconcileIntakeRequest(ReasonRequest):
     valet_id = serializers.IntegerField()
     guest_phone = serializers.CharField(max_length=40)
+    guest_region = _guest_region()
     plate = serializers.CharField(max_length=40)
     description = serializers.CharField(max_length=200, required=False, allow_blank=True)
     zone_code = serializers.CharField(max_length=20)
@@ -689,6 +768,10 @@ class PersonRow(serializers.Serializer):
     role = serializers.ChoiceField(choices=ROLES)
 
 
+class SimNextSendRequest(serializers.Serializer):
+    mode = serializers.ChoiceField(choices=["permanent", "unknown", "transient"])
+
+
 class SimOutageRequest(serializers.Serializer):
     down = serializers.BooleanField()
 
@@ -701,7 +784,7 @@ class SimOutage(serializers.Serializer):
 
 AVAILABILITY = ["available", "unavailable", "break_pending"]
 TASK_TYPES = ["INTAKE", "RETRIEVAL", "RELOCATION"]
-VALET_STEPS = ["photos", "receipt", "start_parking", "park", "offer", "custody_ack", "bring", "code", "deliver", "move"]
+VALET_STEPS = ["photos", "start_parking", "park", "offer", "custody_ack", "bring", "code", "deliver", "move"]
 
 
 class SetupRequest(serializers.Serializer):
@@ -757,6 +840,7 @@ class ZoneOut(serializers.Serializer):
 class ValetVenue(serializers.Serializer):
     zones = ZoneOut(many=True)
     hook_count = serializers.IntegerField()
+    centre = LatLng(allow_null=True, help_text="Where the map opens; never a car's position")
 
 
 class ValetTicket(serializers.Serializer):
@@ -771,6 +855,9 @@ class ValetTicket(serializers.Serializer):
     contact_state = serializers.ChoiceField(choices=CONTACT_STATES)
     state = serializers.ChoiceField(choices=TICKET_STATES)
     early_request = serializers.BooleanField(help_text="The customer already asked for the car")
+    message = serializers.ChoiceField(choices=MESSAGE_STATUSES, allow_null=True,
+                                      help_text="The customer's ticket message, as the provider reports it")
+    place = Place(allow_null=True)
     handover_blocked = serializers.BooleanField()
 
 
@@ -835,10 +922,12 @@ class AvailabilityResponse(serializers.Serializer):
     availability = serializers.ChoiceField(choices=AVAILABILITY)
 
 
-class ValetIntakeRequest(serializers.Serializer):
-    guest_phone = serializers.CharField(max_length=30)
-    vehicle = serializers.CharField(max_length=200, help_text="Plate and/or a short description")
+class ValetIntakeRequest(VehicleEntryFields):
+    guest_phone = serializers.CharField(max_length=40)
+    guest_region = _guest_region()
     language = serializers.ChoiceField(choices=["ar", "en"], required=False, default="ar")
+    confirm_duplicate = serializers.BooleanField(required=False, default=False,
+                                                 help_text="Register although the same plate is active here")
 
 
 class ValetIntakeResponse(serializers.Serializer):
@@ -860,9 +949,22 @@ class ReceiptRequest(serializers.Serializer):
 
 
 class ParkRequest(serializers.Serializer):
+    """The place and the key hook (ADR-0013). The pin is optional and only ever a confirmed one."""
+
     zone_code = serializers.CharField(max_length=20)
-    detail = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    detail = serializers.CharField(max_length=80, required=False, allow_blank=True, help_text="Spot")
+    floor = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    note = serializers.CharField(max_length=120, required=False, allow_blank=True,
+                                 help_text="Short description, e.g. beside pillar 12")
     hook_number = serializers.IntegerField(min_value=1)
+    lat = serializers.FloatField(required=False, allow_null=True, default=None)
+    lng = serializers.FloatField(required=False, allow_null=True, default=None)
+    location_source = serializers.ChoiceField(choices=PIN_SOURCES, required=False, default="", allow_blank=True,
+                                              help_text="gps: the device beside the car; pin: placed on the map")
+    accuracy_m = serializers.FloatField(required=False, allow_null=True, default=None,
+                                        help_text="As the browser reported it (gps only)")
+    location_device_at = serializers.DateTimeField(required=False, allow_null=True, default=None,
+                                                   help_text="Capture time reported by the device")
 
 
 class OutcomeResponse(serializers.Serializer):
@@ -910,9 +1012,26 @@ class DashboardTeam(serializers.Serializer):
     members = DashboardMember(many=True)
 
 
+class EventPeriod(serializers.Serializer):
+    start = serializers.DateTimeField()
+    end = serializers.DateTimeField(allow_null=True, help_text="Closed or planned end; null while open-ended")
+
+
+class DashboardEvent(EventBrief):
+    period = EventPeriod()
+
+
+class ActivityHour(serializers.Serializer):
+    hour = serializers.DateTimeField(help_text="Start of the hour, venue time")
+    received = serializers.IntegerField()
+    requested = serializers.IntegerField()
+    delivered = serializers.IntegerField()
+
+
 class Dashboard(serializers.Serializer):
-    event = EventBrief()
+    event = DashboardEvent()
     generated_at = serializers.DateTimeField()
+    activity = ActivityHour(many=True, help_text="Per hour, from recorded times; empty when nothing happened yet")
     cars = DashboardCars()
     waiting_requests = serializers.IntegerField(help_text="Requested and not yet accepted by a valet")
     delayed_requests = serializers.IntegerField(help_text="Waiting longer than delay_threshold_s")

@@ -246,7 +246,7 @@ def mover_task(staff, payload: str, now=None) -> Task | None:
 
 
 def complete_relocation(actor, task, *, zone_code: str, detail: str, hook_number: int, confirmed_via: str = "",
-                        now=None) -> Ticket:
+                        floor: str = "", note: str = "", pin=None, now=None) -> Ticket:
     """Records the move. The mover may complete their own accepted move; a supervisor may record it only after
     acceptance and only having confirmed it in person or by radio. The mover is always the accepting valet."""
     now = now or timezone.now()
@@ -278,10 +278,11 @@ def complete_relocation(actor, task, *, zone_code: str, detail: str, hook_number
                     old.save(update_fields=["released_at", "released_by", "release_reason"])
                 KeyOccupancy.objects.create(key_station=station, hook_number=int(hook_number), ticket=ticket,
                                             occupied_at=now, occupied_by=task.assignee)
-            ticket.location_zone = zone
-            ticket.location_detail = detail.strip()[:80]
+            from ops.services.location import PLACE_FIELDS, apply_place
+
+            apply_place(ticket, zone=zone, spot=detail, floor=floor, note=note, pin=pin, now=now)  # old pin cleared
             ticket.version += 1
-            ticket.save(update_fields=["location_zone", "location_detail", "version"])
+            ticket.save(update_fields=[*PLACE_FIELDS, "version"])
             task.status = Task.Status.COMPLETED
             task.completed_at = now
             task.save(update_fields=["status", "completed_at"])

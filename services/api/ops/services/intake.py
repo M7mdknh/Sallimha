@@ -1,6 +1,7 @@
 """Vehicle intake and parking (docs/01 §2–§3, docs/04 intake table, ADR-0005 C1/C3/C4)."""
 
 import re
+from dataclasses import dataclass
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
@@ -11,6 +12,7 @@ from core.context import staff_channel
 from core.crypto import encrypt_text, keyed_hash
 from core.errors import DomainError
 from core.phone import ParsedPhone, PhoneInvalid, parse_phone
+from core.plate import PlateInvalid, other_plate, saudi_plate, search_key
 from messaging import outbox
 from ops.models import (
     LIVE_TASK_STATUSES,
@@ -133,31 +135,100 @@ def confirm_guest_phone(valet, ticket, e164: str, language: str = "ar", now=None
     return binding
 
 
-def register_with_guest(valet, guest_phone: str, vehicle: str, language: str = "ar", now=None) -> Ticket:
-    """Staff app, steps 1–2 (ADR-0011): the valet entered the customer's number and the vehicle and confirmed the
-    number on screen. One transaction registers the car in the valet's custody, records the vehicle, binds the
-    customer and queues their WhatsApp ticket; a refused number or vehicle leaves nothing behind."""
+@dataclass(frozen=True)
+class VehicleEntry:
+    """How the valet identified the car (ADR-0013): a Saudi plate as entered, another plate as typed, or no readable
+    plate with a description and a reason. `key` is the internal search key; it is never shown as the plate."""
+    kind: str
+    plate: str
+    key: str
+    description: str
+    missing_reason: str = ""
+
+
+ACTIVE_STATES = (Ticket.State.RECEIVED, Ticket.State.PARKED, Ticket.State.RETRIEVING, Ticket.State.READY,
+                 Ticket.State.UNCLAIMED)
+
+
+def vehicle_entry(kind: str, *, letters: str = "", digits: str = "", text: str = "", description: str = "",
+                  missing_reason: str = "") -> VehicleEntry:
+    description = (description or "").strip()[:200]
+    try:
+        if kind == Ticket.PlateKind.SAUDI:
+            plate = saudi_plate(letters, digits)
+        elif kind == Ticket.PlateKind.OTHER:
+            plate = other_plate(text)
+        elif kind == Ticket.PlateKind.NONE:
+            if len(description) < 2:
+                raise DomainError("vehicle_unidentified")  # make, colour, marks: something staff can match
+            if not (missing_reason or "").strip():
+                raise DomainError("reason_required")
+            return VehicleEntry(kind=kind, plate="", key="", description=description,
+                                missing_reason=missing_reason.strip()[:200])
+        else:
+            raise DomainError("invalid_input")
+    except PlateInvalid as exc:
+        raise DomainError(exc.code) from exc
+    return VehicleEntry(kind=kind, plate=plate.display, key=plate.key, description=description)
+
+
+def guest_number(raw: str, region: str = "SA") -> ParsedPhone:
+    try:
+        return parse_phone(raw, region)
+    except PhoneInvalid as exc:
+        raise DomainError(exc.code) from exc
+
+
+def possible_duplicate(ticket, key: str):
+    """Another car with the same plate still active in this operation (delivered and cancelled cars never count)."""
+    if not key:
+        return None
+    return (Ticket.objects.filter(event_id=ticket.event_id, plate_key=key, state__in=ACTIVE_STATES)
+            .exclude(pk=ticket.pk).order_by("id").first())
+
+
+def apply_vehicle(ticket, entry: VehicleEntry) -> None:
+    ticket.vehicle_plate = entry.plate[:40]
+    ticket.plate_kind = entry.kind
+    ticket.plate_key = entry.key[:40]
+    ticket.vehicle_description = entry.description
+    ticket.vehicle_raw = " ".join(p for p in (entry.plate, entry.description) if p)[:500]
+    if entry.missing_reason:
+        ticket.vehicle_exception_reason = entry.missing_reason
+
+
+def register_with_guest(valet, guest_phone: str, entry: VehicleEntry, language: str = "ar", *, region: str = "SA",
+                        confirm_duplicate: bool = False, now=None) -> Ticket:
+    """Staff app, stage 1 (ADR-0011, ADR-0013): the customer's number and the car, then the ticket is queued. One
+    transaction registers the car in the valet's custody, records the vehicle, binds the customer and queues their
+    WhatsApp ticket; a refused number, plate or unconfirmed possible duplicate leaves nothing behind."""
     now = now or timezone.now()
     if language not in ("ar", "en"):
         raise DomainError("invalid_input")
-    try:
-        parsed = parse_phone(guest_phone)
-    except PhoneInvalid as exc:
-        raise DomainError("phone_invalid") from exc
-    if len((vehicle or "").strip()) < 2:
-        raise DomainError("vehicle_unidentified")
+    parsed = guest_number(guest_phone, region)
     with transaction.atomic():
         ticket = register_vehicle(valet, now=now)
-        record_vehicle(valet, ticket, vehicle, now=now)
+        twin = possible_duplicate(ticket, entry.key)
+        if twin is not None and not confirm_duplicate:
+            mine = twin.tasks.filter(assignee=valet, status__in=LIVE_TASK_STATUSES).exists()
+            raise DomainError("possible_duplicate", ticket=f"#{twin.display_number:03d}", ticket_state=twin.state,
+                              mine=mine)
+        ticket = _lock_ticket(ticket)
+        apply_vehicle(ticket, entry)
+        _bump(ticket, "vehicle_plate", "plate_kind", "plate_key", "vehicle_description", "vehicle_raw",
+              "vehicle_exception_reason")
+        _audit("ticket.vehicle", valet, ticket, plate_kind=entry.kind, duplicate_confirmed=bool(twin))
         confirm_guest_phone(valet, ticket, parsed.e164, language=language, now=now)
     return Ticket.objects.get(pk=ticket.pk)
 
 
-def park(valet, ticket, zone_code: str, detail: str, hook_number: int, now=None) -> Ticket:
-    """Staff app, step 6: zone, spot and key hook recorded together on arrival. A refused hook changes nothing."""
+def park(valet, ticket, zone_code: str, detail: str, hook_number: int, now=None, *, floor: str = "", note: str = "",
+         pin=None) -> Ticket:
+    """Staff app, stage 3: the place (zone, spot, floor, description, optional confirmed pin) and the key hook,
+    recorded together on arrival. A refused hook changes nothing."""
     now = now or timezone.now()
     with transaction.atomic():
-        record_location(valet, ticket, zone_code, detail, now=now)
+        record_location(valet, ticket, zone_code, detail, now=now, floor=floor, note=note, pin=pin)
         return complete_parking(valet, ticket, hook_number, now=now)
 
 
@@ -196,8 +267,9 @@ def record_vehicle(valet, ticket, text: str, now=None) -> Ticket:
         match = _PLATE.match(text)
         ticket.vehicle_raw = text[:500]
         ticket.vehicle_plate = re.sub(r"\s+", " ", match.group(1)).upper()[:40] if match else ""
+        ticket.plate_key = search_key(ticket.vehicle_plate)[:40]  # free text (retired channel): kind stays unknown
         ticket.vehicle_description = (match.group(2) if match else text).strip()[:200]
-        _bump(ticket, "vehicle_raw", "vehicle_plate", "vehicle_description")
+        _bump(ticket, "vehicle_raw", "vehicle_plate", "plate_key", "vehicle_description")
         _audit("ticket.vehicle", valet, ticket)
     return ticket
 
@@ -256,7 +328,11 @@ def start_parking(valet, ticket, now=None) -> Ticket:
     return ticket
 
 
-def record_location(valet, ticket, zone_code: str, detail: str, now=None) -> Ticket:
+def record_location(valet, ticket, zone_code: str, detail: str, now=None, *, floor: str = "", note: str = "",
+                    pin=None) -> Ticket:
+    from ops.services.location import PLACE_FIELDS, apply_place
+
+    now = now or timezone.now()
     with transaction.atomic():
         ticket = _lock_ticket(ticket)
         _require_owner(valet, ticket)
@@ -266,10 +342,9 @@ def record_location(valet, ticket, zone_code: str, detail: str, now=None) -> Tic
                                           active=True).first()
         if zone is None:
             raise DomainError("zone_invalid")
-        ticket.location_zone = zone
-        ticket.location_detail = detail.strip()[:80]
-        _bump(ticket, "location_zone", "location_detail")
-        _audit("ticket.location", valet, ticket, zone=zone.code)
+        apply_place(ticket, zone=zone, spot=detail, floor=floor, note=note, pin=pin, now=now)
+        _bump(ticket, *PLACE_FIELDS)
+        _audit("ticket.location", valet, ticket, zone=zone.code, pin=pin.source if pin else None)
     return ticket
 
 

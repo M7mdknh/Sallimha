@@ -20,6 +20,7 @@ from core.audit import audit
 from core.crypto import encrypt_text, keyed_hash
 from core.errors import DomainError
 from core.phone import PhoneInvalid, parse_phone
+from core.plate import search_key
 from ops.models import (
     LIVE_TASK_STATUSES,
     AssistedVerification,
@@ -168,7 +169,7 @@ def relay_custody_ack(actor, transfer, *, confirmed_via: str, now=None) -> None:
 
 def record_intake(actor, event, *, valet, guest_phone: str, plate: str, description: str, zone_code: str,
                   detail: str, hook_number: int, reason: str, confirmed_via: str = "", outage=None,
-                  received_at=None, parked_at=None, evidence: str = "", now=None) -> Ticket:
+                  received_at=None, parked_at=None, evidence: str = "", region: str = "SA", now=None) -> Ticket:
     """Creates the ticket directly as PARKED with the valet as registrant and parker. Photos are excepted with the
     reason; the guest's contact is a supervisor-assisted fallback (no in-person receipt confirmation was possible),
     and the WhatsApp ticket is queued for delivery — queued, not delivered.
@@ -195,9 +196,9 @@ def record_intake(actor, event, *, valet, guest_phone: str, plate: str, descript
     if not (plate or "").strip():
         raise DomainError("vehicle_unidentified")
     try:
-        parsed = parse_phone(guest_phone)
+        parsed = parse_phone(guest_phone, region)
     except PhoneInvalid as exc:
-        raise DomainError("phone_invalid") from exc
+        raise DomainError(exc.code) from exc
     zone = ParkingZone.objects.filter(venue_id=event.venue_id, code__iexact=zone_code.strip(), active=True).first()
     if zone is None:
         raise DomainError("zone_invalid")
@@ -217,7 +218,8 @@ def record_intake(actor, event, *, valet, guest_phone: str, plate: str, descript
             ticket = Ticket.objects.create(
                 event=event, display_number=event.display_seq, registered_by=valet, created_at=received_at,
                 state=Ticket.State.PARKED, contact_state=Ticket.Contact.ASSISTED_FALLBACK,
-                vehicle_plate=plate.strip()[:40], vehicle_description=(description or "").strip()[:200],
+                vehicle_plate=plate.strip()[:40], plate_key=search_key(plate)[:40],
+                vehicle_description=(description or "").strip()[:200],
                 vehicle_raw=f"{plate} {description}".strip(), photos_exception_reason=f"outage: {why}"[:200],
                 location_zone=zone, location_detail=(detail or "").strip()[:80], phone_confirmed_at=received_at,
                 parking_started_at=received_at, parked_at=parked_at, parked_by=valet)
@@ -253,12 +255,12 @@ def _relay_audit(actor, ticket, step: str, valet, confirmed_via: str, **extra) -
            confirmed_via=confirmed_via, **extra)
 
 
-def start_intake(actor, event, *, valet, guest_phone: str, plate: str, description: str, confirmed_via: str,
-                 reason: str, now=None) -> Ticket:
+def start_intake(actor, event, *, valet, guest_phone: str, entry, confirmed_via: str, reason: str,
+                 region: str = "SA", confirm_duplicate: bool = False, now=None) -> Ticket:
     """The valet (on shift, free) has taken a car and reports it by radio or in person: the car is registered in
     their custody (RECEIVED, intake task theirs) and the guest's WhatsApp ticket is queued. It is NOT parked: photos
     (or an explicit exception) and a separate parking confirmation follow. Guest contact is a supervisor-assisted
-    fallback because the guest could not confirm receipt of the ticket."""
+    fallback. Same number, plate and duplicate rules as the valet's own registration (ADR-0013)."""
     from ops.services import intake
 
     now = now or timezone.now()
@@ -267,16 +269,9 @@ def start_intake(actor, event, *, valet, guest_phone: str, plate: str, descripti
         raise DomainError("reason_required")
     if not _event_valet(valet, event) or shifts.open_shift_for(valet, event) is None:
         raise DomainError("not_on_shift")
-    if not (plate or "").strip():
-        raise DomainError("vehicle_unidentified")
-    try:
-        parsed = parse_phone(guest_phone)
-    except PhoneInvalid as exc:
-        raise DomainError("phone_invalid") from exc
     with transaction.atomic():
-        ticket = intake.register_vehicle(valet, now=now)
-        intake.confirm_guest_phone(valet, ticket, parsed.e164, language="ar", now=now)
-        intake.record_vehicle(valet, ticket, f"{plate} {description or ''}".strip(), now=now)
+        ticket = intake.register_with_guest(valet, guest_phone, entry, "ar", region=region,
+                                            confirm_duplicate=confirm_duplicate, now=now)
         Ticket.objects.filter(pk=ticket.pk).update(contact_state=Ticket.Contact.ASSISTED_FALLBACK)
         ticket.refresh_from_db()
         _relay_audit(actor, ticket, "registered", valet, confirmed_via, reason=reason.strip()[:200])

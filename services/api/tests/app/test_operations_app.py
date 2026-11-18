@@ -153,7 +153,7 @@ def test_registering_and_parking_for_a_valet_without_a_device(ops):
 
     sup = login_as(ops.supervisor)
     valet = ops.valets[1]
-    body = {"valet_id": valet.id, "guest_phone": "0501239876", "plate": "QRS 4455", "description": "",
+    body = {"valet_id": valet.id, "guest_phone": "0501239876", "plate_kind": "OTHER", "plate_text": "QRS 4455",
             "reason": "Phone lost", "confirmed_via": "in_person"}
     refused = post(sup, f"/api/events/{ops.event.id}/intake-on-behalf", body)
     assert refused.status_code == 409 and refused.json()["code"] == "valet_not_assisted"

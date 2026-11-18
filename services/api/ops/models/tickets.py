@@ -27,7 +27,19 @@ class Ticket(models.Model):
     contact_state = models.CharField(max_length=20, choices=Contact.choices, default=Contact.UNCONFIRMED)
     guest_language = models.CharField(max_length=2, default="ar")
 
+    class PlateKind(models.TextChoices):
+        SAUDI = "SAUDI"   # three letters and 1-4 digits, kept in the script entered (ADR-0013)
+        OTHER = "OTHER"   # international, diplomatic, temporary: kept as typed
+        NONE = "NONE"     # missing or unreadable: description and reason required
+
+    class LocationSource(models.TextChoices):
+        GPS = "gps"       # the browser's geolocation beside the car, with its reported accuracy
+        PIN = "pin"       # the valet tapped or dragged the map pin
+
     vehicle_plate = models.CharField(max_length=40, blank=True)
+    plate_kind = models.CharField(max_length=5, choices=PlateKind.choices, blank=True)
+    plate_key = models.CharField(max_length=40, blank=True, db_index=True,
+                                 help_text="Search key (digits normalised, Saudi letters in Latin); never displayed")
     vehicle_description = models.CharField(max_length=200, blank=True)
     vehicle_raw = models.TextField(blank=True)
     vehicle_exception_reason = models.CharField(max_length=200, blank=True)
@@ -42,6 +54,15 @@ class Ticket(models.Model):
     )
     location_zone = models.ForeignKey("ops.ParkingZone", null=True, blank=True, on_delete=models.PROTECT)
     location_detail = models.CharField(max_length=80, blank=True)
+    location_floor = models.CharField(max_length=20, blank=True)
+    location_note = models.CharField(max_length=120, blank=True, help_text="Short description, e.g. beside pillar 12")
+    # A confirmed pin only (ADR-0013): never the venue centre, never invented. Set or cleared with zone and spot.
+    location_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    location_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    location_source = models.CharField(max_length=3, choices=LocationSource.choices, blank=True)
+    location_accuracy_m = models.FloatField(null=True, blank=True)
+    location_device_at = models.DateTimeField(null=True, blank=True, help_text="Capture time reported by the device")
+    location_recorded_at = models.DateTimeField(null=True, blank=True, help_text="Server time the pin was saved")
 
     created_at = models.DateTimeField()
     phone_confirmed_at = models.DateTimeField(null=True, blank=True)
@@ -59,6 +80,15 @@ class Ticket(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["event", "display_number"], name="uniq_display_number_per_event"),
             models.UniqueConstraint(fields=["event", "id"], name="uniq_ticket_event_id"),
+            # A pin is whole or absent: both coordinates and its source together; a GPS fix carries its accuracy.
+            models.CheckConstraint(
+                condition=(Q(location_lat__isnull=True, location_lng__isnull=True, location_source="")
+                           | (Q(location_lat__isnull=False, location_lng__isnull=False)
+                              & Q(location_source__in=["gps", "pin"]))),
+                name="location_pin_whole"),
+            models.CheckConstraint(
+                condition=~Q(location_source="gps") | Q(location_accuracy_m__isnull=False),
+                name="location_gps_has_accuracy"),
             # Cancellation is only possible before parking starts (ADR-0005 C4).
             models.CheckConstraint(
                 condition=~Q(state="CANCELLED") | Q(cancelled_at__isnull=False, parking_started_at__isnull=True),

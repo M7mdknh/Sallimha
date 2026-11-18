@@ -303,7 +303,8 @@ class TransferIntake(TicketCommand):
 @ticket_command(s.CorrectPhoneRequest, s.CorrectPhoneResponse)
 class CorrectPhone(TicketCommand):
     def run(self, actor, ticket, data):
-        binding = retrieval.correct_guest_phone(actor, ticket, data["phone"], data["reason"])
+        binding = retrieval.correct_guest_phone(actor, ticket, data["phone"], data["reason"],
+                                                region=data.get("guest_region") or "SA")
         return {"masked": binding.phone_masked, "revision": binding.revision}
 
 
@@ -312,6 +313,17 @@ class ConfirmReceipt(TicketCommand):
     def run(self, actor, ticket, data):
         ticket = intake.confirm_guest_receipt(actor, ticket, data["received"])
         return {"id": ticket.id, "contact_state": ticket.contact_state}
+
+
+@ticket_command(None, s.IdResponse)
+class ResendTicket(TicketCommand):
+    """Queue the customer's ticket message again after it failed or its outcome is unknown (ADR-0013)."""
+
+    def run(self, actor, ticket, data):
+        from ops.services import guest_messages
+
+        guest_messages.resend_ticket(actor, ticket)
+        return {"id": ticket.id}
 
 
 @ticket_command(s.ExceptIntakeRequest, s.IdResponse)

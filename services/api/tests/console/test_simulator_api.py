@@ -84,3 +84,14 @@ def test_simulated_outage_refuses_inbound_and_reports_degraded(as_supervisor, wo
     assert refused.status_code == 409 and refused.json()["code"] == "simulated_outage"
     assert as_supervisor.get(f"/api/events/{world.event.id}/live").json()["health"]["whatsapp"] == "degraded"
     assert as_supervisor.post("/api/dev/sim/outage", {"down": False}, format="json").json() == {"down": False}
+
+
+def test_next_send_can_be_made_to_fail_for_a_rehearsal(world):
+    """SIMULATED: the next outbound send fails permanently (supervisor+, simulator builds only)."""
+    from messaging.models import SimulatorControl
+    from tests.console.conftest import login_as
+
+    client = login_as(world.supervisor)
+    response = client.post("/api/dev/sim/next-send", {"mode": "permanent"}, format="json")
+    assert response.status_code == 200 and SimulatorControl.take() == "permanent"
+    assert client.post("/api/dev/sim/next-send", {"mode": "explode"}, format="json").status_code == 400

@@ -125,7 +125,10 @@ def test_relayed_move_acceptance(ops):
 
 
 def _start_intake(ops, **over):
-    args = dict(valet=ops.valets[1], guest_phone="0501239876", plate="QRS 4455", description="Tahoe black",
+    from ops.services.intake import vehicle_entry
+
+    args = dict(valet=ops.valets[1], guest_phone="0501239876",
+                entry=vehicle_entry("OTHER", text="QRS 4455", description="Tahoe black"),
                 confirmed_via="in_person", reason="WhatsApp down")
     args.update(over)
     return outage.start_intake(ops.supervisor, ops.event, **args)

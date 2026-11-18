@@ -45,7 +45,7 @@ Tests must verify observable behavior, invariants and failure recovery, not mirr
 ### Added 15 Nov 2026 (approved by the user)
 | ID | Scenario | Required outcome |
 |---|---|---|
-| AT-35 | Valet confirms or denies that the guest received the ticket | CONFIRMED_IN_PERSON only by staff confirmation; denial/no answer leaves the visible exception; provider DELIVERED/READ alone never confirms |
+| AT-35 | ~~Valet confirms or denies that the guest received the ticket~~ — **retired 18 Nov 2026 (ADR-0013)**, replaced by AT-73/AT-74 | CONFIRMED_IN_PERSON only by explicit staff confirmation; provider DELIVERED/READ alone never confirms |
 | AT-36 | Photo outside intake with 0/1/many open incidents; invalid type or size | Explicit incident selection; never “latest incident”; invalid files rejected |
 | AT-37 | Intake started by A, parked by B | Custody transfer recorded; `parked_by` = B; retrieval affinity follows B |
 | AT-38 | Every guest message, both languages | Queued never claims retrieval; no ETA; language preserved; identifiers isolated LTR |
@@ -86,7 +86,19 @@ Tests must verify observable behavior, invariants and failure recovery, not mirr
 | AT-69 | One admin tries to obtain another admin's credentials in the app (directly, or demote → reset → promote) | No setup code and no second factor for an admin from the app; a pending code is cancelled when a role change involves ADMIN; the detour ends at a sign-in that needs the controlled procedure |
 | AT-70 | Controlled admin access (first access, lockout, lost phone) | Requesting admin and a different approver, a reason, the operator named; password and second factor reset together; sessions end; lock cleared; first-admin only when nobody else could approve; record shown on the Team page; secrets never in the audit |
 | AT-71 | Every main screen of the three roles at 360, 390, 768 and 1024 px, Arabic and English | No sideways overflow; screenshots reviewed by eye |
-| AT-72 | Real phones and tablets (Gate 4 rehearsal): camera capture, locked screen, missed offer, connectivity loss and recovery | Manual checklist in docs/staging/real-device-checklist.md passes; NOT RUN until the rehearsal |
+| AT-72 | Real phones and tablets (Gate 4 rehearsal): camera capture, locked screen, missed offer, connectivity loss and recovery, geolocation accuracy in the car park, plate letter order, the map with a real key | Manual checklist in docs/staging/real-device-checklist.md passes; NOT RUN until the rehearsal |
+
+### Added 18 Nov 2026 (ADR-0013 usability: intake, phone, plate, location, dashboards)
+| ID | Scenario | Required outcome |
+|---|---|---|
+| AT-73 | Registration without a receipt question | Photos lead straight to Start parking; no transition waits for an answer; CONFIRMED_IN_PERSON never set automatically |
+| AT-74 | Ticket message status from provider events; a failure or dead letter; an unknown outcome | Queued ≠ sent ≠ delivered; unknown is neither; one deduplicated supervisor issue per ticket and binding with correct-number and resend; resend refused unless failed or unknown; correction still revokes old credentials |
+| AT-75 | Phone entry: local, international, spaces, hyphens, Arabic and Persian digits, a country selector; too short, too long, wrong country, letters | Canonical E.164 stored; specific inline refusals; input kept; nothing guessed or truncated; one number may have several tickets |
+| AT-76 | Saudi plate in Arabic or Latin; keyboard variants; unknown letters; digit counts; other plate; no readable plate | Stored as entered; reading order kept in both layouts; refusals never guess; other plates as typed; missing plate needs description and reason; search works in either script |
+| AT-77 | The same plate active again in the operation; a later visit after delivery or cancellation | Possible duplicate shown with the existing ticket before anything is registered; explicit "different car" path; finished tickets never block |
+| AT-78 | Location: permission denied, no fix, stale fix, inaccurate fix, good fix, manual pin, no map key, map load failure, no connection | Parking always possible with zone/spot/description; only confirmed pins saved (gps ≤ 150 m or placed); accuracy, source and both times stored; venue centre never saved |
+| AT-79 | Retrieval and relocation with a saved pin | Place and description shown first; map on request; Open in Google Maps with coordinates only; the old pin stays until the move completes and never outlives its place |
+| AT-80 | Dashboards on phone and tablet, Arabic and English | Admin: operation period, four counts, hourly activity from recorded times (or a stated empty state), team, problems, Add staff; supervisor: problems first, queue by longest wait with plate, valet and elapsed time, search and team at hand |
 
 ## Verification layers
 - Unit: phone normalization, state guards, candidate ordering, permissions, formatting and deadline calculations.

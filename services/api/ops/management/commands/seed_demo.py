@@ -50,7 +50,8 @@ class Command(BaseCommand):
             call_command("flush", "--noinput", verbosity=0)
         org = Organization.objects.create(name="Sallimha demo (synthetic)")
         venue = Venue.objects.create(org=org, name="قاعة العرض التجريبية", pickup_point_ar="المدخل الرئيسي",
-                                     pickup_point_en="the main entrance")
+                                     pickup_point_en="the main entrance",
+                                     latitude="24.764600", longitude="46.640200")  # synthetic: central Riyadh
         for code, ar, en in (("A", "المنطقة أ", "Zone A"), ("B", "المنطقة ب", "Zone B"), ("C", "المنطقة ج", "Zone C")):
             ParkingZone.objects.create(venue=venue, code=code, label_ar=ar, label_en=en)
         KeyStation.objects.create(venue=venue, name="Key board", hook_count=300)

@@ -69,7 +69,7 @@ def test_intake_on_behalf_over_http(ops):
     people = sup.get(f"/api/events/{ops.event.id}/people").json()
     assert {p["role"] for p in people} >= {"VALET", "SUPERVISOR"}
     resp = post(sup, f"/api/events/{ops.event.id}/intake-on-behalf", {
-        "valet_id": ops.valets[1].id, "guest_phone": "0501239876", "plate": "QRS 4455", "description": "",
+        "valet_id": ops.valets[1].id, "guest_phone": "0501239876", "plate_kind": "OTHER", "plate_text": "QRS 4455",
         "reason": "WhatsApp down", "confirmed_via": "in_person"})
     assert resp.status_code == 200
     ticket_id = resp.json()["id"]
@@ -129,7 +129,7 @@ def test_oversize_relayed_photo_is_refused_before_it_is_read(ops, settings, monk
     sup = login_as(ops.supervisor)
     post(login_as(ops.manager), "/api/outages/whatsapp/declare", {"reason": "Provider incident"})
     ticket_id = post(sup, f"/api/events/{ops.event.id}/intake-on-behalf", {
-        "valet_id": ops.valets[1].id, "guest_phone": "0501239876", "plate": "QRS 4455", "description": "",
+        "valet_id": ops.valets[1].id, "guest_phone": "0501239876", "plate_kind": "OTHER", "plate_text": "QRS 4455",
         "reason": "WhatsApp down", "confirmed_via": "in_person"}).json()["id"]
     from ops.services import outage
 

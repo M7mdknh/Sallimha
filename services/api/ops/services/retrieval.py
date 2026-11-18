@@ -115,7 +115,7 @@ def withdraw_request(actor, req, reason: str, now=None) -> RetrievalRequest:
     return req
 
 
-def correct_guest_phone(actor, ticket, raw_phone: str, reason: str, now=None):
+def correct_guest_phone(actor, ticket, raw_phone: str, reason: str, now=None, region: str = "SA"):
     """After a ticket was sent: supervisor verification, revoke old credentials, reissue (docs/04)."""
     from core.phone import PhoneInvalid, parse_phone
     from ops.services.intake import _create_binding, send_ticket
@@ -125,9 +125,9 @@ def correct_guest_phone(actor, ticket, raw_phone: str, reason: str, now=None):
     if not reason.strip():
         raise DomainError("reason_required")
     try:
-        parsed = parse_phone(raw_phone)
+        parsed = parse_phone(raw_phone, region)
     except PhoneInvalid as exc:
-        raise DomainError("phone_invalid") from exc
+        raise DomainError(exc.code) from exc
     with transaction.atomic():
         ticket = Ticket.objects.select_for_update(no_key=True).get(pk=ticket.pk)
         if ticket.state not in (Ticket.State.RECEIVED, Ticket.State.PARKED, Ticket.State.RETRIEVING,
@@ -152,6 +152,9 @@ def correct_guest_phone(actor, ticket, raw_phone: str, reason: str, now=None):
             from ops.services.handover import issue_code
 
             issue_code(ticket, binding, now)
+        from ops.services.guest_messages import close_issue_after_correction
+
+        close_issue_after_correction(actor, ticket, now)
         _audit("guest.phone_corrected", actor, ticket, "console", old=old.phone_masked if old else "",
                new=binding.phone_masked, reason=reason.strip()[:200])
     return binding

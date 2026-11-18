@@ -23,6 +23,7 @@ from console.common import (
     validated,
 )
 from console.views import IDEMPOTENCY, REFUSALS, TicketCommand, command_schema, ticket_command
+from console.views_valet import vehicle_from
 from core.errors import DomainError
 from ops.models import CustodyTransfer, EventAssignment, OutageWindow, Role, Staff, Task
 from ops.permissions import can_access_event
@@ -129,7 +130,7 @@ def event_people(request, event_id):
 def _intake_args(actor, data):
     return dict(valet=_staff(actor, data["valet_id"]), guest_phone=data["guest_phone"], plate=data["plate"],
                 description=data.get("description", ""), zone_code=data["zone_code"], detail=data.get("detail", ""),
-                hook_number=data["hook_number"], reason=data["reason"])
+                hook_number=data["hook_number"], reason=data["reason"], region=data.get("guest_region") or "SA")
 
 
 class IntakeOnBehalf(Command):
@@ -141,9 +142,10 @@ class IntakeOnBehalf(Command):
         event = scoped_event(actor, event_id)
         data = validated(s.IntakeOnBehalfRequest, request.data)
         ticket = outage.start_intake(actor, event, valet=_staff(actor, data["valet_id"]),
-                                     guest_phone=data["guest_phone"], plate=data["plate"],
-                                     description=data.get("description", ""), confirmed_via=data["confirmed_via"],
-                                     reason=data["reason"])
+                                     guest_phone=data["guest_phone"], entry=vehicle_from(data),
+                                     confirmed_via=data["confirmed_via"], reason=data["reason"],
+                                     region=data.get("guest_region") or "SA",
+                                     confirm_duplicate=data.get("confirm_duplicate", False))
         return out(s.IdResponse, {"id": ticket.id})
 
 

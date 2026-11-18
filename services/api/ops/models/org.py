@@ -11,6 +11,9 @@ class Venue(models.Model):
     timezone = models.CharField(max_length=64, default="Asia/Riyadh")
     pickup_point_ar = models.CharField(max_length=120, default="نقطة التسليم")
     pickup_point_en = models.CharField(max_length=120, default="the pickup point")
+    # Where the parking map opens (ADR-0013); shown as "venue centre — not the car", never saved as a car's position.
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
 
 class ParkingZone(models.Model):
