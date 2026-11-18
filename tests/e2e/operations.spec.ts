@@ -1,8 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import {
-  PHONE, VALETS, cameraPhoto, customerRequests, customerSays, customerThread, device, loginAs, loginValet, mainNav,
-  openTicket, registerAndPark, taskStep,
+  cameraPhoto, customerRequests, customerSays, customerThread, device, enterCar, loginAs, loginValet, mainNav, openTicket, PHONE, registerAndPark, taskStep, VALETS,
 } from "./helpers";
 
 // Supervisor and admin work around the staff app (ADR-0011). Customer messages are SIMULATED.
@@ -57,8 +56,7 @@ test("device not working: the supervisor registers and parks a car for that vale
 
   const form = page.locator("section", { hasText: "تسجيل سيارة عن فاليه جهازه لا يعمل" });
   await form.getByLabel("الموظف").selectOption({ label: VALETS.fahad.name });
-  await form.getByLabel("الجوال").fill(`05012399${n}1`);
-  await form.getByLabel("اللوحة").fill(`DEV ${n}500`);
+  await enterCar(form, `05012399${n}1`, `DEV ${n}500`);
   await form.getByLabel("طريقة التأكد").selectOption("radio");
   await form.getByLabel("السبب").fill("جهاز الفاليه لا يعمل");
   await form.getByRole("button", { name: "تسجيل الاستلام" }).click();
@@ -177,7 +175,7 @@ test("whole-system outage: an admin records the window and reconciles an offline
 
   const rec = forms.nth(1);
   await rec.getByLabel("الموظف").selectOption({ label: VALETS.sara.name });
-  await rec.getByLabel("الجوال").fill(`05012300${n}7`);
+  await rec.getByLabel("رقم جوال العميل").fill(`05012300${n}7`);
   await rec.getByLabel("اللوحة").fill(`OFL ${n}700`);
   await rec.getByLabel("المنطقة", { exact: true }).fill("A");
   await rec.getByLabel("رقم الخطاف").fill(`9${n}`);
@@ -208,9 +206,7 @@ test("a customer request made before parking ends waits, and the valet who is pa
   await loginValet(valet.page, "fahad");
   await valet.page.getByRole("link", { name: "تسجيل سيارة" }).click();
   const flow = valet.page.getByTestId("register");
-  await flow.getByLabel("رقم جوال العميل").fill("0501230555");
-  await flow.getByLabel("اللوحة أو وصف قصير").fill("EAR 5500");
-  await flow.getByRole("button", { name: "التالي" }).click();
+  await enterCar(flow, "0501230555", "EAR 5500");
   await flow.getByRole("button", { name: "إرسال التذكرة" }).click();
   await expect(flow).toHaveAttribute("data-step", "photos");
 
@@ -221,7 +217,6 @@ test("a customer request made before parking ends waits, and the valet who is pa
     await flow.locator("input[type=file]").setInputFiles(await cameraPhoto(valet.page, `early-${i}`));
     await expect(flow.locator(".photo-count")).toContainText(`${i}`);
   }
-  await flow.getByRole("button", { name: "نعم، وصلت" }).click();
   await flow.getByRole("button", { name: "بدء الركن" }).click();
   await flow.locator(".choice", { hasText: "A" }).click();
   await flow.getByLabel("رقم خطاف المفتاح").fill("255");

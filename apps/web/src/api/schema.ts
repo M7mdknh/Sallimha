@@ -213,6 +213,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dev/sim/next-send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Make the next outbound send fail permanently, or lose its response, to rehearse the failure path (SIMULATED). */
+        post: operations["dev_sim_next_send_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dev/sim/outage": {
         parameters: {
             query?: never;
@@ -577,6 +594,26 @@ export interface paths {
         };
         /** @description Super admin only. Shows readiness flags, never credential values; credentials live in the secret store. */
         get: operations["integrations_whatsapp_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maps/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The browser key and Map ID for the parking map, served at run time so no key is built into the app. Empty
+         *     when unconfigured: the app then labels the map as not configured and keeps the structured location (ADR-0013).
+         */
+        get: operations["maps_config_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1240,6 +1277,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tickets/{ticket_id}/resend-ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Queue the customer's ticket message again after it failed or its outcome is unknown (ADR-0013). */
+        post: operations["tickets_resend_ticket_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tickets/{ticket_id}/withdraw": {
         parameters: {
             query?: never;
@@ -1473,22 +1527,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/valet/tickets/{ticket_id}/receipt": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["valet_tickets_receipt_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/valet/tickets/{ticket_id}/start-parking": {
         parameters: {
             query?: never;
@@ -1538,10 +1576,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/venues/{venue_id}/map-centre": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Where the parking map opens for this venue (ADR-0013). Admin only; audited. */
+        post: operations["venues_map_centre_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ActivityHour: {
+            /**
+             * Format: date-time
+             * @description Start of the hour, venue time
+             */
+            hour: string;
+            received: number;
+            requested: number;
+            delivered: number;
+        };
         /** @description The last time an admin's sign-in was set up or recovered by the controlled procedure, from the server. */
         AdminAccessRecord: {
             /** Format: date-time */
@@ -1581,6 +1646,8 @@ export interface components {
         AvailabilityResponse: {
             availability: components["schemas"]["AvailabilityEnum"];
         };
+        /** @enum {unknown} */
+        BlankEnum: "";
         CarryoverRow: {
             id: number;
             ticket: string;
@@ -1661,10 +1728,6 @@ export interface components {
          * @enum {string}
          */
         ContactStateEnum: "UNCONFIRMED" | "CONFIRMED_IN_PERSON" | "CORRECTION_REQUIRED" | "ASSISTED_FALLBACK";
-        ContactStateResponse: {
-            id: number;
-            contact_state: components["schemas"]["ContactStateEnum"];
-        };
         CreateEventRequestRequest: {
             venue_id: number;
             name: string;
@@ -1691,9 +1754,11 @@ export interface components {
          */
         CustomerMessagesEnum: "ok" | "delayed";
         Dashboard: {
-            event: components["schemas"]["EventBrief"];
+            event: components["schemas"]["DashboardEvent"];
             /** Format: date-time */
             generated_at: string;
+            /** @description Per hour, from recorded times; empty when nothing happened yet */
+            activity: components["schemas"]["ActivityHour"][];
             cars: components["schemas"]["DashboardCars"];
             /** @description Requested and not yet accepted by a valet */
             waiting_requests: number;
@@ -1712,6 +1777,14 @@ export interface components {
             retrieving: number;
             ready: number;
             delivered: number;
+        };
+        DashboardEvent: {
+            id: number;
+            name: string;
+            status: components["schemas"]["EventStatusEnum"];
+            venue: string;
+            time_zone: string;
+            period: components["schemas"]["EventPeriod"];
         };
         DashboardMember: {
             staff_id: number;
@@ -1774,6 +1847,15 @@ export interface components {
             venue: string;
             time_zone: string;
         };
+        EventPeriod: {
+            /** Format: date-time */
+            start: string;
+            /**
+             * Format: date-time
+             * @description Closed or planned end; null while open-ended
+             */
+            end: string | null;
+        };
         EventReport: {
             event_id: number;
             outcomes: {
@@ -1808,6 +1890,13 @@ export interface components {
             text: string;
             /** Format: date-time */
             received_at: string;
+        };
+        /** @description Queued is not sent; sent is not delivered; unknown is neither (ADR-0013). */
+        GuestMessageStatus: {
+            status: components["schemas"]["MessageStatusEnum"];
+            /** Format: date-time */
+            queued_at: string;
+            error: string;
         };
         Health: {
             worker: components["schemas"]["WorkerEnum"];
@@ -1882,11 +1971,26 @@ export interface components {
         /** @description Registers the car in the valet's custody (RECEIVED). Parking is confirmed separately (relay-parked). */
         IntakeOnBehalfRequestRequest: {
             reason: string;
+            plate_kind: components["schemas"]["PlateKindEnum"];
+            /** @description Saudi plate: three letters, Arabic or Latin, in reading order */
+            plate_letters?: string;
+            /** @description Saudi plate: one to four digits, any digit shapes */
+            plate_digits?: string;
+            /** @description Other plate, as written on it */
+            plate_text?: string;
+            /** @description Make, colour, marks; required when there is no plate */
+            vehicle_description?: string;
+            plate_missing_reason?: string;
             valet_id: number;
             guest_phone: string;
-            plate: string;
-            description?: string;
+            /**
+             * @description Country the number is read in when it has no + (ISO 3166-1 alpha-2)
+             * @default SA
+             */
+            guest_region: string;
             confirmed_via: components["schemas"]["ConfirmedViaEnum"];
+            /** @default false */
+            confirm_duplicate: boolean;
         };
         /**
          * @description * `ar` - ar
@@ -1894,11 +1998,20 @@ export interface components {
          * @enum {string}
          */
         LanguageEnum: "ar" | "en";
+        LatLng: {
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lng: number;
+        };
         LiveRequest: {
             request_id: number;
             ticket_id: number;
             ticket: string;
             vehicle: string;
+            /** @description As entered (ADR-0013) */
+            plate: string;
+            description: string;
             state: components["schemas"]["RequestStateEnum"];
             ticket_state: components["schemas"]["TicketStateEnum"];
             /** Format: date-time */
@@ -1913,6 +2026,10 @@ export interface components {
             event: components["schemas"]["EventBrief"];
             /** @description Declared customer WhatsApp outage */
             outage: components["schemas"]["OutageBrief"] | null;
+            /** @description A request waiting longer is late */
+            wait_warning_s: number;
+            /** @description A request waiting longer is critical */
+            wait_critical_s: number;
             /** Format: date-time */
             generated_at: string;
             health: components["schemas"]["Health"];
@@ -1936,6 +2053,12 @@ export interface components {
             role?: components["schemas"]["RoleEnum"];
             mfa_required?: boolean;
         };
+        /** @description The browser key is restricted to approved sites and the Maps JavaScript API (docs/staging/google-maps.md). */
+        MapsConfig: {
+            configured: boolean;
+            api_key: string;
+            map_id: string;
+        };
         MeResponse: {
             id: number;
             name: string;
@@ -1957,12 +2080,30 @@ export interface components {
          */
         MediaBriefKindEnum: "INTAKE" | "INCIDENT";
         /**
+         * @description * `queued` - queued
+         *     * `sent` - sent
+         *     * `delivered` - delivered
+         *     * `read` - read
+         *     * `failed` - failed
+         *     * `unknown` - unknown
+         *     * `not_sent` - not_sent
+         * @enum {string}
+         */
+        MessageStatusEnum: "queued" | "sent" | "delivered" | "read" | "failed" | "unknown" | "not_sent";
+        /**
          * @description * `in_person_check` - in_person_check
          *     * `known_guest` - known_guest
          *     * `other` - other
          * @enum {string}
          */
         MethodEnum: "in_person_check" | "known_guest" | "other";
+        /**
+         * @description * `permanent` - permanent
+         *     * `unknown` - unknown
+         *     * `transient` - transient
+         * @enum {string}
+         */
+        ModeEnum: "permanent" | "unknown" | "transient";
         MoveBrief: {
             status: components["schemas"]["MoveBriefStatusEnum"];
             valet: string;
@@ -1976,6 +2117,8 @@ export interface components {
         NoteRequestRequest: {
             text: string;
         };
+        /** @enum {unknown} */
+        NullEnum: null;
         OfferShownResponse: {
             outcome: components["schemas"]["OfferShownResponseOutcomeEnum"];
             /**
@@ -2043,10 +2186,37 @@ export interface components {
         OutcomeResponse: {
             outcome: string;
         };
+        /** @description The place and the key hook (ADR-0013). The pin is optional and only ever a confirmed one. */
         ParkRequestRequest: {
             zone_code: string;
+            /** @description Spot */
             detail?: string;
+            floor?: string;
+            /** @description Short description, e.g. beside pillar 12 */
+            note?: string;
             hook_number: number;
+            /** Format: double */
+            lat?: number | null;
+            /** Format: double */
+            lng?: number | null;
+            /**
+             * @description gps: the device beside the car; pin: placed on the map
+             *
+             *     * `gps` - gps
+             *     * `pin` - pin
+             * @default
+             */
+            location_source: components["schemas"]["PinSourceEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * Format: double
+             * @description As the browser reported it (gps only)
+             */
+            accuracy_m?: number | null;
+            /**
+             * Format: date-time
+             * @description Capture time reported by the device
+             */
+            location_device_at?: string | null;
         };
         PersonRow: {
             id: number;
@@ -2057,11 +2227,40 @@ export interface components {
             count: number;
             required: number;
         };
+        /**
+         * @description * `gps` - gps
+         *     * `pin` - pin
+         * @enum {string}
+         */
+        PinSourceEnum: "gps" | "pin";
+        /** @description Zone and spot are always there; floor and description if given; a pin only if one was confirmed. */
+        Place: {
+            zone: string;
+            spot: string;
+            floor: string;
+            note: string;
+            pin: components["schemas"]["PlacePin"] | null;
+        };
+        PlacePin: {
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lng: number;
+            source: components["schemas"]["PinSourceEnum"];
+            /** Format: double */
+            accuracy_m: number | null;
+            /** Format: date-time */
+            recorded_at: string;
+        };
+        /**
+         * @description * `SAUDI` - SAUDI
+         *     * `OTHER` - OTHER
+         *     * `NONE` - NONE
+         * @enum {string}
+         */
+        PlateKindEnum: "SAUDI" | "OTHER" | "NONE";
         ReasonRequestRequest: {
             reason: string;
-        };
-        ReceiptRequestRequest: {
-            received: boolean;
         };
         ReconcileHandoverRequestRequest: {
             reason: string;
@@ -2076,6 +2275,11 @@ export interface components {
             reason: string;
             valet_id: number;
             guest_phone: string;
+            /**
+             * @description Country the number is read in when it has no + (ISO 3166-1 alpha-2)
+             * @default SA
+             */
+            guest_region: string;
             plate: string;
             description?: string;
             zone_code: string;
@@ -2172,6 +2376,12 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        SimNextSendRequest: {
+            mode: components["schemas"]["ModeEnum"];
+        };
+        SimNextSendRequestRequest: {
+            mode: components["schemas"]["ModeEnum"];
+        };
         SimOutage: {
             /** @description SIMULATED provider outage in progress */
             down: boolean;
@@ -2235,7 +2445,6 @@ export interface components {
         };
         /**
          * @description * `photos` - photos
-         *     * `receipt` - receipt
          *     * `start_parking` - start_parking
          *     * `park` - park
          *     * `offer` - offer
@@ -2246,7 +2455,7 @@ export interface components {
          *     * `move` - move
          * @enum {string}
          */
-        StepEnum: "photos" | "receipt" | "start_parking" | "park" | "offer" | "custody_ack" | "bring" | "code" | "deliver" | "move";
+        StepEnum: "photos" | "start_parking" | "park" | "offer" | "custody_ack" | "bring" | "code" | "deliver" | "move";
         SystemOutageRequestRequest: {
             reason: string;
             /** @description Venue wall-clock time, e.g. 2026-11-16T20:30 */
@@ -2334,6 +2543,9 @@ export interface components {
             guest_messages: components["schemas"]["GuestMessageOut"][];
             /** @description A number exists and may be opened (audited) */
             can_contact: boolean;
+            /** @description The customer's ticket message, from the provider */
+            guest_message: components["schemas"]["GuestMessageStatus"] | null;
+            place: components["schemas"]["Place"] | null;
         };
         TicketRequestBrief: {
             id: number;
@@ -2404,12 +2616,31 @@ export interface components {
             name: string;
             venue: string;
         };
+        /** @description How the car is identified (ADR-0013). The server validates and normalises; nothing is transliterated. */
         ValetIntakeRequestRequest: {
+            plate_kind: components["schemas"]["PlateKindEnum"];
+            /** @description Saudi plate: three letters, Arabic or Latin, in reading order */
+            plate_letters?: string;
+            /** @description Saudi plate: one to four digits, any digit shapes */
+            plate_digits?: string;
+            /** @description Other plate, as written on it */
+            plate_text?: string;
+            /** @description Make, colour, marks; required when there is no plate */
+            vehicle_description?: string;
+            plate_missing_reason?: string;
             guest_phone: string;
-            /** @description Plate and/or a short description */
-            vehicle: string;
+            /**
+             * @description Country the number is read in when it has no + (ISO 3166-1 alpha-2)
+             * @default SA
+             */
+            guest_region: string;
             /** @default ar */
             language: components["schemas"]["LanguageEnum"];
+            /**
+             * @description Register although the same plate is active here
+             * @default false
+             */
+            confirm_duplicate: boolean;
         };
         ValetIntakeResponse: {
             id: number;
@@ -2444,7 +2675,6 @@ export interface components {
              * @description The valet's next action
              *
              *     * `photos` - photos
-             *     * `receipt` - receipt
              *     * `start_parking` - start_parking
              *     * `park` - park
              *     * `offer` - offer
@@ -2488,11 +2718,26 @@ export interface components {
             state: components["schemas"]["TicketStateEnum"];
             /** @description The customer already asked for the car */
             early_request: boolean;
+            /**
+             * @description The customer's ticket message, as the provider reports it
+             *
+             *     * `queued` - queued
+             *     * `sent` - sent
+             *     * `delivered` - delivered
+             *     * `read` - read
+             *     * `failed` - failed
+             *     * `unknown` - unknown
+             *     * `not_sent` - not_sent
+             */
+            message: (components["schemas"]["MessageStatusEnum"] | components["schemas"]["NullEnum"]) | null;
+            place: components["schemas"]["Place"] | null;
             handover_blocked: boolean;
         };
         ValetVenue: {
             zones: components["schemas"]["ZoneOut"][];
             hook_count: number;
+            /** @description Where the map opens; never a car's position */
+            centre: components["schemas"]["LatLng"] | null;
         };
         ValetWork: {
             /** Format: date-time */
@@ -2505,12 +2750,20 @@ export interface components {
             task: components["schemas"]["ValetTask"] | null;
             recent: components["schemas"]["ValetRecent"][];
         };
+        VenueCentreRequestRequest: {
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lng: number;
+        };
         VenueRow: {
             id: number;
             name: string;
             time_zone: string;
             zones: string[];
             key_hooks: number;
+            /** @description Where the parking map opens */
+            centre: components["schemas"]["LatLng"] | null;
         };
         WhatsAppIntegration: {
             status: components["schemas"]["WhatsAppStatusEnum"];
@@ -3098,6 +3351,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SimMessage"][];
+                };
+            };
+        };
+    };
+    dev_sim_next_send_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimNextSendRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SimNextSendRequestRequest"];
+                "multipart/form-data": components["schemas"]["SimNextSendRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimNextSendRequest"];
                 };
             };
         };
@@ -4166,6 +4444,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    maps_config_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapsConfig"];
+                };
             };
         };
     };
@@ -6744,6 +7041,75 @@ export interface operations {
             };
         };
     };
+    tickets_resend_ticket_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconcileHandoverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReconcileHandoverRequestRequest"];
+                "multipart/form-data": components["schemas"]["ReconcileHandoverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     tickets_withdraw_create: {
         parameters: {
             query?: never;
@@ -7668,75 +8034,6 @@ export interface operations {
             };
         };
     };
-    valet_tickets_receipt_create: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Unique per intended action; a repeat replays the stored result */
-                "Idempotency-Key": string;
-            };
-            path: {
-                ticket_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReceiptRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ReceiptRequestRequest"];
-                "multipart/form-data": components["schemas"]["ReceiptRequestRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContactStateResponse"];
-                };
-            };
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not found or out of scope */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            428: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
     valet_tickets_start_parking_create: {
         parameters: {
             query?: never;
@@ -7850,6 +8147,75 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    venues_map_centre_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per intended action; a repeat replays the stored result */
+                "Idempotency-Key": string;
+            };
+            path: {
+                venue_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VenueCentreRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["VenueCentreRequestRequest"];
+                "multipart/form-data": components["schemas"]["VenueCentreRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found or out of scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };

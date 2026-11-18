@@ -2,52 +2,92 @@ import { type FormEvent, useRef, useState } from "react";
 
 import { ApiError, api, newKey, type ValetTask, type ValetWork } from "../api/client";
 import { Icon } from "../components/Icon";
+import { PhoneField, readablePhone } from "../components/PhoneField";
+import { PlateField, plateBody } from "../components/PlateField";
 import { Id } from "../components/States";
 import { navigate } from "../router";
-import { useT } from "../strings";
+import { useT, type StringKey } from "../strings";
 import { clearDraft, readDraft, saveDraft, type Draft } from "./draft";
+import { LocationPicker } from "./Location";
 import { preparePhoto } from "./photo";
-import { LocationForm } from "./TaskCard";
 import { useAction } from "./useAction";
 
-const STEPS = 6;
-const SERVER_STEP: Record<string, number> = { photos: 3, receipt: 4, start_parking: 5, park: 6 };
+const STAGES: StringKey[] = ["stageCustomer", "stagePhotos", "stagePark"];
+const SERVER_STAGE: Record<string, number> = { photos: 2, start_parking: 2, park: 3, custody_ack: 2 };
 
-function Progress({ step }: { step: number }) {
+function Stages({ stage }: { stage: number }) {
   const { t } = useT();
   return (
-    <div className="progress" aria-label={`${step} ${t("stepOf")} ${STEPS}`}>
-      <span className="progress-text"><Id>{step}</Id> {t("stepOf")} <Id>{STEPS}</Id></span>
-      <ol className="progress-bar" aria-hidden="true">
-        {Array.from({ length: STEPS }, (_, i) => <li key={i} className={i < step ? "is-done" : ""} />)}
-      </ol>
-    </div>
+    <ol className="stages" aria-label={`${stage} ${t("stepOf")} ${STAGES.length}`}>
+      {STAGES.map((key, i) => (
+        <li key={key} className={i + 1 < stage ? "is-done" : i + 1 === stage ? "is-current" : ""}
+          aria-current={i + 1 === stage ? "step" : undefined}>
+          <span className="stage-n"><Id>{i + 1}</Id></span> <span className="stage-label">{t(key)}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
-/** Steps 1–2: entered on this device, sent to the server together once the valet confirms the number. */
-function DetailsStep({ onNext }: { onNext: (d: Draft) => void }) {
-  const { t, verror } = useT();
+const PHONE_CODES = /^phone_/;
+const PLATE_CODES = /^(plate_|vehicle_unidentified|reason_required)/;
+type Duplicate = { ticket: string; state: string; mine: boolean };
+
+/** Stage 1: the customer's number and the car, then the ticket is sent at once. The number as it will be read sits
+ *  beside the Send button, so the valet reads it back to the customer; nothing else asks for confirmation. */
+function CustomerStage({ refresh }: { refresh: () => Promise<void> }) {
+  const { t, verror, state } = useT();
   const [d, setD] = useState<Draft>(readDraft);
-  const [problem, setProblem] = useState("");
-  const set = (patch: Partial<Draft>) => setD((prev) => { const next = { ...prev, ...patch }; saveDraft(next); return next; });
+  const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<{ phone?: string; plate?: string; other?: string }>({});
+  const [duplicate, setDuplicate] = useState<Duplicate | null>(null);
+  const phoneInput = useRef<HTMLDivElement>(null);
+  // One key per exact request: a double tap repeats nothing; a corrected request is a new action.
+  const sent = useRef<{ body: string; key: string } | null>(null);
+  const set = (patch: Partial<Draft>) => setD((prev) => {
+    const next = { ...prev, ...patch };
+    saveDraft(next);
+    return next;
+  });
+  const readable = readablePhone(d.phone);
+
+  async function send(confirmDuplicate = false) {
+    if (busy) return;
+    const body = { guest_phone: d.phone.raw, guest_region: d.phone.region, language: d.language,
+      ...plateBody(d.plate, d.description), confirm_duplicate: confirmDuplicate };
+    const fingerprint = JSON.stringify(body);
+    if (sent.current?.body !== fingerprint) sent.current = { body: fingerprint, key: newKey() };
+    setBusy(true);
+    setErrors({});
+    try {
+      await api.valet.intake(body, sent.current.key);
+      sent.current = null;
+      clearDraft();
+      setDuplicate(null);
+      await refresh();
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : "generic";
+      if (code === "possible_duplicate" && err instanceof ApiError) {
+        setDuplicate({ ticket: String(err.detail.ticket ?? ""), state: String(err.detail.ticket_state ?? ""),
+          mine: Boolean(err.detail.mine) });
+      } else if (PHONE_CODES.test(code)) setErrors({ phone: verror(code) });
+      else if (PLATE_CODES.test(code)) setErrors({ plate: verror(code) });
+      else setErrors({ other: verror(code) });
+      if (err instanceof ApiError && err.status >= 400 && err.status < 500) sent.current = null;
+    } finally {
+      setBusy(false);
+    }
+  }
   function submit(e: FormEvent) {
     e.preventDefault();
-    const digits = d.phone.replace(/[^\d+٠-٩]/g, "");
-    if (digits.replace(/\D/g, "").length < 9 && !/[٠-٩]{9,}/.test(digits)) return setProblem(verror("phone_invalid"));
-    if (d.vehicle.trim().length < 2) return setProblem(verror("vehicle_unidentified"));
-    setProblem("");
-    onNext(d);
+    void send(false);
   }
+
   return (
-    <form className="task-form" onSubmit={submit} noValidate>
-      <label className="field"><span>{t("customerPhone")}</span>
-        <input dir="ltr" type="tel" inputMode="tel" autoComplete="off" value={d.phone} placeholder="05x xxx xxxx"
-          onChange={(e) => set({ phone: e.target.value })} enterKeyHint="next" /></label>
-      <label className="field"><span>{t("vehicleField")}</span>
-        <input value={d.vehicle} autoComplete="off" maxLength={200} onChange={(e) => set({ vehicle: e.target.value })}
-          enterKeyHint="next" aria-describedby="vehicle-hint" />
-        <small id="vehicle-hint" className="muted">{t("vehicleHint")}</small></label>
+    <form className="task-form" onSubmit={submit} noValidate data-stage="customer">
+      <div ref={phoneInput}>
+        <PhoneField value={d.phone} onChange={(phone) => set({ phone })} error={errors.phone} autoFocus />
+      </div>
       <fieldset className="choices choices-inline">
         <legend>{t("messageLanguage")}</legend>
         {(["ar", "en"] as const).map((l) => (
@@ -57,45 +97,59 @@ function DetailsStep({ onNext }: { onNext: (d: Draft) => void }) {
           </label>
         ))}
       </fieldset>
-      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
-      <button type="submit" className="btn btn-primary btn-big"><Icon name="chevron" /> {t("next")}</button>
-    </form>
-  );
-}
+      <PlateField value={d.plate} onChange={(plate) => set({ plate })} error={errors.plate} />
+      <label className="field"><span>{t("vehicleDescription")}</span>
+        <input value={d.description} onChange={(e) => set({ description: e.target.value })} autoComplete="off"
+          maxLength={200} enterKeyHint="done" aria-describedby="desc-hint" />
+        <small id="desc-hint" className="muted">{t("vehicleDescriptionHint")}</small></label>
 
-function ConfirmStep({ draft, onBack, onSent }: { draft: Draft; onBack: () => void; onSent: () => Promise<void> }) {
-  const { t } = useT();
-  const { run, busy, problem } = useAction(onSent);
-  return (
-    <div className="task-form">
-      <p className="task-say"><Icon name="user" /> {t("confirmNumber")}</p>
-      <p className="phone-confirm"><Id>{draft.phone.trim()}</Id></p>
-      <p className="task-vehicle">{draft.vehicle.trim()}</p>
-      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
-      <button type="button" className="btn btn-primary btn-big" disabled={busy !== null}
-        onClick={() => run(`intake:${draft.phone}:${draft.vehicle}:${draft.language}`,
-          (key) => api.valet.intake({ guest_phone: draft.phone.trim(), vehicle: draft.vehicle.trim(),
-            language: draft.language }, key),
-          () => clearDraft())}>
-        <Icon name="send" /> {busy ? t("sending") : t("sendTicket")}
-      </button>
-      <button type="button" className="btn btn-secondary" onClick={onBack} disabled={busy !== null}>{t("editNumber")}</button>
-    </div>
+      {duplicate ? (
+        <div className="notice notice-warning duplicate" role="alert" data-testid="possible-duplicate">
+          <p><strong>{t("duplicateTitle")}</strong> <Id>{duplicate.ticket}</Id> · {state(duplicate.state)}</p>
+          <p>{duplicate.mine ? t("duplicateMine") : t("duplicateAsk")}</p>
+          {duplicate.mine ? (
+            <button type="button" className="btn btn-primary" onClick={() => navigate("/work")}>{t("navMyWork")}</button>
+          ) : (
+            <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => void send(true)}>
+              {t("duplicateAnyway")}
+            </button>
+          )}
+        </div>
+      ) : null}
+      {errors.other ? <p className="form-error" role="alert">{errors.other}</p> : null}
+
+      <div className="send-row">
+        <p className="send-to" aria-live="polite">
+          <span className="muted">{readable ? t("ticketGoesTo") : t("ticketGoesToNone")}</span>
+          {readable ? <bdi dir="ltr" className="phone-confirm">{readable}</bdi> : null}
+          {readable ? (
+            <button type="button" className="btn btn-quiet"
+              onClick={() => phoneInput.current?.querySelector("input")?.focus()}>{t("editPhone")}</button>
+          ) : null}
+        </p>
+        <button type="submit" className="btn btn-primary btn-big" disabled={busy}>
+          <Icon name="send" /> {busy ? t("sending") : t("sendTicket")}
+        </button>
+      </div>
+    </form>
   );
 }
 
 type Upload = { id: string; url: string; status: "uploading" | "done" | "failed"; file: File; key: string };
 
-/** Each photo is uploaded on its own with its own key; a photo counts only once the server has stored it. */
-function PhotosStep({ task, refresh }: { task: ValetTask; refresh: () => Promise<void> }) {
+/** Stage 2: four photos, then Start parking (the car may move only after this). The customer's ticket message is
+ *  shown as the provider reports it; there is no question about it. */
+function PhotosStage({ task, refresh }: { task: ValetTask; refresh: () => Promise<void> }) {
   const { t, verror } = useT();
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [problem, setProblem] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  const { run, busy, problem: startProblem } = useAction(refresh);
   const stored = task.ticket.photos;
   const required = task.ticket.photos_required;
+  const ready = task.step === "start_parking";
 
-  async function send(u: Upload) {
+  async function upload(u: Upload) {
     setUploads((all) => all.map((x) => (x.id === u.id ? { ...x, status: "uploading" } : x)));
     try {
       await api.valet.photo(task.ticket.id, await preparePhoto(u.file), u.key);
@@ -113,97 +167,70 @@ function PhotosStep({ task, refresh }: { task: ValetTask; refresh: () => Promise
     for (const file of list) {
       const u: Upload = { id: newKey(), url: URL.createObjectURL(file), status: "uploading", file, key: newKey() };
       setUploads((all) => [...all, u]);
-      await send(u); // one at a time: the counter always matches what the server holds
+      await upload(u); // one at a time: the counter always matches what the server holds
     }
   }
   return (
-    <div className="task-form">
-      <p className="task-say"><Icon name="camera" /> {t("photosTitle")}</p>
-      <p className="muted">{t("photosHint")}</p>
-      <p className="photo-count" aria-live="polite"><Id>{Math.min(stored, required)}</Id> / <Id>{required}</Id></p>
-      <ul className="thumbs">
-        {uploads.map((u) => (
-          <li key={u.id} className={`thumb is-${u.status}`}>
-            <img src={u.url} alt="" />
-            {u.status === "uploading" ? <span className="thumb-state">{t("uploading")}</span> : null}
-            {u.status === "failed" ? (
-              <button type="button" className="thumb-state" onClick={() => void send(u)}>
-                <Icon name="refresh" size={16} /> {t("retry")}
-              </button>
-            ) : null}
-            {u.status === "done" ? <span className="thumb-ok"><Icon name="check" size={16} /></span> : null}
-          </li>
-        ))}
-      </ul>
+    <div className="task-form" data-stage="photos">
+      <p className="task-say"><Icon name="camera" /> {t("photosTitle")} <span className="photo-count" aria-live="polite">
+        <Id>{Math.min(stored, required)}</Id> / <Id>{required}</Id></span></p>
+      {!ready ? <p className="muted">{t("photosHint")}</p> : null}
+      {uploads.length ? (
+        <ul className="thumbs">
+          {uploads.map((u) => (
+            <li key={u.id} className={`thumb is-${u.status}`}>
+              <img src={u.url} alt="" />
+              {u.status === "uploading" ? <span className="thumb-state">{t("uploading")}</span> : null}
+              {u.status === "failed" ? (
+                <button type="button" className="thumb-state" onClick={() => void upload(u)}>
+                  <Icon name="refresh" size={16} /> {t("retry")}
+                </button>
+              ) : null}
+              {u.status === "done" ? <span className="thumb-ok"><Icon name="check" size={16} /></span> : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {problem ? <p className="form-error" role="alert">{problem}</p> : null}
-      <label className="btn btn-primary btn-big file-button">
-        <Icon name="camera" /> {t("takePhoto")}
-        <input ref={input} type="file" accept="image/*" capture="environment" multiple
-          onChange={(e) => void picked(e.target.files)} />
-      </label>
+      {!ready ? (
+        <label className="btn btn-primary btn-big file-button">
+          <Icon name="camera" /> {t("takePhoto")}
+          <input ref={input} type="file" accept="image/*" capture="environment" multiple
+            onChange={(e) => void picked(e.target.files)} />
+        </label>
+      ) : (
+        <>
+          <p className="muted">{t("photosThenPark")}</p>
+          {startProblem ? <p className="form-error" role="alert">{startProblem}</p> : null}
+          <button type="button" className="btn btn-primary btn-big" disabled={busy !== null}
+            onClick={() => run("start-parking", (key) => api.valet.startParking(task.ticket.id, key))}>
+            <Icon name="car" /> {t("startParking")}
+          </button>
+        </>
+      )}
     </div>
   );
 }
 
-function ReceiptStep({ task, refresh }: { task: ValetTask; refresh: () => Promise<void> }) {
+function MessageLine({ task }: { task: ValetTask }) {
   const { t } = useT();
-  const { run, busy, problem } = useAction(refresh);
+  const status = task.ticket.message;
+  if (!status) return null;
+  const tone = status === "failed" || status === "unknown" ? "warning" : status === "delivered" || status === "read"
+    ? "success" : "neutral";
   return (
-    <div className="task-form">
-      <p className="task-say"><Icon name="message" /> {t("receiptTitle")}</p>
-      {task.ticket.phone_masked ? <p className="muted"><Id>{task.ticket.phone_masked}</Id></p> : null}
-      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
-      <button type="button" className="btn btn-primary btn-big" disabled={busy !== null}
-        onClick={() => run("receipt-yes", (key) => api.valet.receipt(task.ticket.id, true, key))}>
-        <Icon name="check" /> {t("receiptYes")}
-      </button>
-      <button type="button" className="btn btn-secondary" disabled={busy !== null}
-        onClick={() => run("receipt-no", (key) => api.valet.receipt(task.ticket.id, false, key))}>
-        {t("receiptNo")}
-      </button>
-      <p className="muted">{t("receiptNoHint")}</p>
-    </div>
+    <p className={`message-line is-${tone}`} data-testid="message-status" data-status={status}>
+      <Icon name="message" size={16} /> {t("msgLabel")}: {t(`msg_${status}` as StringKey)}
+    </p>
   );
 }
 
-function StartParkingStep({ task, refresh }: { task: ValetTask; refresh: () => Promise<void> }) {
-  const { t } = useT();
-  const { run, busy, problem } = useAction(refresh);
-  return (
-    <div className="task-form">
-      <p className="task-say"><Icon name="car" /> {t("startParkingTitle")}</p>
-      <p className="muted">{t("startParkingHint")}</p>
-      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
-      <button type="button" className="btn btn-primary btn-big" disabled={busy !== null}
-        onClick={() => run("start-parking", (key) => api.valet.startParking(task.ticket.id, key))}>
-        <Icon name="car" /> {t("startParking")}
-      </button>
-    </div>
-  );
-}
-
-function ParkStep({ task, work, refresh, onParked }: { task: ValetTask; work: ValetWork;
-  refresh: () => Promise<void>; onParked: (ticket: string) => void }) {
-  const { t } = useT();
-  const { run, busy, problem } = useAction(refresh);
-  return (
-    <>
-      <p className="task-say"><Icon name="pin" /> {t("parkTitle")}</p>
-      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
-      <LocationForm work={work} submitLabel={t("confirmParked")} busy={busy !== null}
-        onSubmit={(body) => run(`park:${JSON.stringify(body)}`, (key) => api.valet.park(task.ticket.id, body, key),
-          () => onParked(task.ticket.number))} />
-    </>
-  );
-}
-
-/** Register car: a short guided flow. Steps 1–2 live on this screen; from step 3 the server's record decides the
- *  step, so a reload, a second tab or a supervisor's intervention always resumes at the right place. */
+/** Register car in three stages. Stage 1 lives on this screen; from stage 2 the server's record decides, so a reload,
+ *  a second tab or a supervisor's intervention always resumes at the right place. */
 export function Register({ work, refresh }: { work: ValetWork; refresh: () => Promise<void> }) {
   const { t } = useT();
-  const [local, setLocal] = useState<"details" | "confirm">("details");
-  const [draft, setDraft] = useState<Draft>(readDraft);
   const [parked, setParked] = useState<string | null>(null);
+  const { run, busy, problem } = useAction(refresh);
   const task = work.task;
 
   if (parked) {
@@ -213,9 +240,7 @@ export function Register({ work, refresh }: { work: ValetWork; refresh: () => Pr
           <p className="done-mark"><Icon name="check" size={32} /></p>
           <h2>{t("parkedDone")} <Id>{parked}</Id></h2>
           <button type="button" className="btn btn-primary btn-big" onClick={() => navigate("/work")}>{t("navMyWork")}</button>
-          <button type="button" className="btn btn-secondary" onClick={() => { setParked(null); setLocal("details"); }}>
-            {t("registerCar")}
-          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => setParked(null)}>{t("registerCar")}</button>
         </section>
       </main>
     );
@@ -231,31 +256,34 @@ export function Register({ work, refresh }: { work: ValetWork; refresh: () => Pr
   }
   if (!task && !work.shift) return <main className="valet-page"><p className="state-block">{t("noShiftBody")}</p></main>;
 
-  const step = task ? (task.step === "custody_ack" ? 3 : SERVER_STEP[task.step] ?? 3) : local === "details" ? 1 : 2;
+  const stage = task ? SERVER_STAGE[task.step] ?? 2 : 1;
   return (
     <main className="valet-page">
-      <section className="card task-card flow" aria-labelledby="reg-h" data-testid="register" data-step={task?.step ?? local}>
+      <section className="card task-card flow" aria-labelledby="reg-h" data-testid="register" data-step={task?.step ?? "customer"}>
         <header className="task-head">
           <h2 id="reg-h">{t("registerCar")}</h2>
           {task ? <span className="ticket-no"><Id>{task.ticket.number}</Id></span> : null}
         </header>
-        <Progress step={step} />
+        <Stages stage={stage} />
         {task ? <p className="task-vehicle">{task.ticket.vehicle}</p> : null}
+        {task ? <MessageLine task={task} /> : null}
         {task?.ticket.early_request ? <p className="notice notice-warning"><Icon name="clock" /> {t("earlyRequest")}</p> : null}
-        {step >= 3 && task?.step === "photos" ? <p className="notice notice-success"><Icon name="send" /> {t("ticketSent")}</p> : null}
 
-        {!task && local === "details" ? <DetailsStep onNext={(d) => { setDraft(d); setLocal("confirm"); }} /> : null}
-        {!task && local === "confirm" ? (
-          <ConfirmStep draft={draft} onBack={() => setLocal("details")} onSent={refresh} />
+        {!task ? <CustomerStage refresh={refresh} /> : null}
+        {task?.step === "photos" || task?.step === "start_parking" ? <PhotosStage task={task} refresh={refresh} /> : null}
+        {task?.step === "park" ? (
+          <>
+            <p className="task-say"><Icon name="pin" /> {t("parkTitle")}</p>
+            {problem ? <p className="form-error" role="alert">{problem}</p> : null}
+            <LocationPicker work={work} submitLabel={t("confirmParked")} busy={busy !== null}
+              onSubmit={(body) => run(`park:${JSON.stringify(body)}`, (key) => api.valet.park(task.ticket.id, body, key),
+                () => setParked(task.ticket.number))} />
+          </>
         ) : null}
-        {task?.step === "photos" ? <PhotosStep task={task} refresh={refresh} /> : null}
-        {task?.step === "receipt" ? <ReceiptStep task={task} refresh={refresh} /> : null}
-        {task?.step === "start_parking" ? <StartParkingStep task={task} refresh={refresh} /> : null}
-        {task?.step === "park" ? <ParkStep task={task} work={work} refresh={refresh} onParked={setParked} /> : null}
         {task?.step === "custody_ack" ? (
           <button type="button" className="btn btn-primary btn-big" onClick={() => navigate("/work")}>{t("navMyWork")}</button>
         ) : null}
-        {task && task.ticket.state === "RECEIVED" && step < 6 ? <p className="muted small">{t("wrongCar")}</p> : null}
+        {task && task.ticket.state === "RECEIVED" && stage < 3 ? <p className="muted small">{t("wrongCar")}</p> : null}
       </section>
     </main>
   );

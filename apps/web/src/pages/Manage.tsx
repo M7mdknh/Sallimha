@@ -51,6 +51,49 @@ function NewEvent({ disabled, onDone }: { disabled: boolean; onDone: () => void 
   );
 }
 
+/** Where the parking map opens for each venue (ADR-0013): shown as "venue centre — not the car", never saved as a car's
+ *  position. Decimal degrees, e.g. 24.7646 and 46.6402. */
+function VenueCentres({ disabled }: { disabled: boolean }) {
+  const { t } = useT();
+  const venues = usePoll(api.venues, 60_000, []);
+  const [form, setForm] = useState<Record<number, { lat: string; lng: string }>>({});
+  const { run, busy, problem, done } = useCommand();
+  return (
+    <details className="card disclosure" data-testid="venue-centres">
+      <summary><Icon name="pin" /> {t("venueCentreTitle")}</summary>
+      <p className="muted">{t("venueCentreHint")}</p>
+      <PageData poll={venues} rows={1}>
+        {(list) => (
+          <ul className="rows">
+            {list.map((v) => {
+              const value = form[v.id] ?? { lat: v.centre ? String(v.centre.lat) : "", lng: v.centre ? String(v.centre.lng) : "" };
+              const set = (patch: Partial<typeof value>) => setForm((f) => ({ ...f, [v.id]: { ...value, ...patch } }));
+              return (
+                <li key={v.id} className="row">
+                  <form className="inline-form" onSubmit={(e) => {
+                    e.preventDefault();
+                    void run((key) => api.venueCentre(v.id, { lat: Number(value.lat), lng: Number(value.lng) }, key),
+                      () => void venues.refresh());
+                  }}>
+                    <span className="row-title">{v.name}</span>
+                    <label className="field"><span>{t("latitude")}</span>
+                      <input dir="ltr" inputMode="decimal" value={value.lat} onChange={(e) => set({ lat: e.target.value })} /></label>
+                    <label className="field"><span>{t("longitude")}</span>
+                      <input dir="ltr" inputMode="decimal" value={value.lng} onChange={(e) => set({ lng: e.target.value })} /></label>
+                    <button type="submit" className="btn btn-secondary" data-mutation disabled={disabled || busy}>{t("save")}</button>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </PageData>
+      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
+      {done && !problem ? <p className="muted" role="status">{t("saved")}</p> : null}
+    </details>
+  );
+}
+
 function CloseEvent({ eventId, disabled, onDone }: { eventId: number; disabled: boolean; onDone: () => void }) {
   const { t } = useT();
   const [confirming, setConfirming] = useState(false);
@@ -87,6 +130,7 @@ export function Manage({ me }: { me: Me }) {
         {(rows) => (
           <>
             <NewEvent disabled={poll.stale} onDone={poll.refresh} />
+            <VenueCentres disabled={poll.stale} />
             <section className="card" aria-labelledby="events-h">
               <h2 id="events-h" className="visually-hidden">{t("events")}</h2>
               {rows.length === 0 ? <Empty text={t("noEvents")} /> : null}

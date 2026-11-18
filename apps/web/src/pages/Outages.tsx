@@ -2,6 +2,8 @@ import { type FormEvent, useState } from "react";
 
 import { api, isAdmin, type Me, type Schemas } from "../api/client";
 import { Icon } from "../components/Icon";
+import { EMPTY_PHONE, PhoneField, type PhoneValue } from "../components/PhoneField";
+import { EMPTY_PLATE, PlateField, plateBody, type PlateValue } from "../components/PlateField";
 import { Empty, Id, PageData, StaleBanner, StatusPill } from "../components/States";
 import { useT, type StringKey } from "../strings";
 import { useCommand } from "../useCommand";
@@ -9,8 +11,8 @@ import { usePoll } from "../usePoll";
 import { OpsTabs } from "./Ops";
 import { currentZone, venueTime } from "../venueTime";
 
-export type Field = { name: string; label: StringKey; kind?: "text" | "number" | "datetime" | "textarea" | "valet" | "via";
-  required?: boolean; ltr?: boolean };
+export type Field = { name: string; label: StringKey;
+  kind?: "text" | "number" | "datetime" | "textarea" | "valet" | "via" | "phone" | "plate"; required?: boolean; ltr?: boolean };
 
 /** A small form whose fields map 1:1 to a command body. Local times are the venue's (labelled with the zone). */
 export function CommandForm({ fields, submitLabel, valets, zone, disabled, destructive, send, onDone }: {
@@ -18,24 +20,43 @@ export function CommandForm({ fields, submitLabel, valets, zone, disabled, destr
   destructive?: boolean; send: (body: Record<string, unknown>, key: string) => Promise<unknown>; onDone: () => void }) {
   const { t, error } = useT();
   const [values, setValues] = useState<Record<string, string>>({});
+  const [phone, setPhone] = useState<PhoneValue>(EMPTY_PHONE);
+  const [plate, setPlate] = useState<PlateValue>(EMPTY_PLATE);
+  const [description, setDescription] = useState("");
   const { run, busy, problem, done, setProblem } = useCommand();
   const set = (name: string, value: string) => setValues((v) => ({ ...v, [name]: value }));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const missing = fields.find((f) => f.required !== false && !String(values[f.name] ?? "").trim());
+    const missing = fields.find((f) => f.kind !== "phone" && f.kind !== "plate" && f.required !== false &&
+      !String(values[f.name] ?? "").trim());
     if (missing) return setProblem(error("invalid_input"));
     const body: Record<string, unknown> = {};
     for (const f of fields) {
       const v = (values[f.name] ?? "").trim();
-      body[f.name] = f.kind === "number" || f.kind === "valet" ? Number(v) : v;
+      if (f.kind === "phone") Object.assign(body, { [f.name]: phone.raw, guest_region: phone.region });
+      else if (f.kind === "plate") Object.assign(body, plateBody(plate, description));
+      else body[f.name] = f.kind === "number" || f.kind === "valet" ? Number(v) : v;
     }
-    if (await run((key) => send(body, key), onDone)) setValues({});
+    if (await run((key) => send(body, key), onDone)) {
+      setValues({});
+      setPhone(EMPTY_PHONE);
+      setPlate(EMPTY_PLATE);
+      setDescription("");
+    }
   }
 
   return (
     <form className="form-grid" onSubmit={submit} noValidate>
-      {fields.map((f) => (
+      {fields.map((f) => f.kind === "phone" ? (
+        <div key={f.name} className="span-all"><PhoneField id={`cf-${f.name}`} value={phone} onChange={setPhone} /></div>
+      ) : f.kind === "plate" ? (
+        <div key={f.name} className="span-all">
+          <PlateField value={plate} onChange={setPlate} />
+          <label className="field"><span>{t("vehicleDescription")}</span>
+            <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={200} /></label>
+        </div>
+      ) : (
         <label key={f.name} className={`field ${f.kind === "textarea" ? "span-all" : ""}`}>
           <span>{t(f.label)}{f.kind === "datetime" ? ` (${zone})` : ""}</span>
           {f.kind === "textarea" ? (
@@ -69,11 +90,11 @@ export function CommandForm({ fields, submitLabel, valets, zone, disabled, destr
 }
 
 export const LIVE_INTAKE: Field[] = [
-  { name: "valet_id", label: "valetLabel", kind: "valet" }, { name: "guest_phone", label: "phone", ltr: true },
-  { name: "plate", label: "plateLabel", ltr: true }, { name: "description", label: "vehicle", required: false }];
+  { name: "valet_id", label: "valetLabel", kind: "valet" }, { name: "guest_phone", label: "phone", kind: "phone" },
+  { name: "plate", label: "plateLabel", kind: "plate" }];
 
 const INTAKE: Field[] = [
-  { name: "valet_id", label: "valetLabel", kind: "valet" }, { name: "guest_phone", label: "phone", ltr: true },
+  { name: "valet_id", label: "valetLabel", kind: "valet" }, { name: "guest_phone", label: "phone", kind: "phone" },
   { name: "plate", label: "plateLabel", ltr: true }, { name: "description", label: "vehicle", required: false },
   { name: "zone_code", label: "zone", ltr: true }, { name: "detail", label: "spot", required: false },
   { name: "hook_number", label: "hook", kind: "number" }];

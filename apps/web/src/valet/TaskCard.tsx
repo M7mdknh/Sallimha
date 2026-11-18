@@ -1,24 +1,14 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { api, newKey, type ValetTask, type ValetWork } from "../api/client";
 import { Icon } from "../components/Icon";
 import { Id } from "../components/States";
 import { navigate } from "../router";
 import { useT } from "../strings";
+import { LocationPicker, PlaceView } from "./Location";
 import { useAction } from "./useAction";
 
 type Refresh = () => Promise<void>;
-
-/** Zone, spot and key hook as the valet reads them while walking: large, left-to-right identifiers. */
-export function WhereBlock({ location, hook }: { location: string; hook: number | null }) {
-  const { t } = useT();
-  return (
-    <dl className="where">
-      <div><dt><Icon name="pin" size={18} /> {t("location")}</dt><dd><Id>{location || "—"}</Id></dd></div>
-      <div><dt><Icon name="key" size={18} /> {t("key")}</dt><dd><Id>{hook ?? "—"}</Id></dd></div>
-    </dl>
-  );
-}
 
 function Countdown({ deadline, serverNow }: { deadline: string; serverNow: () => number }) {
   const { t } = useT();
@@ -36,51 +26,6 @@ function Countdown({ deadline, serverNow }: { deadline: string; serverNow: () =>
 }
 
 /** Zone as large choices (no typing), spot as short text, hook with the number keypad. */
-export function LocationForm({ work, submitLabel, busy, onSubmit }: { work: ValetWork; submitLabel: string; busy: boolean;
-  onSubmit: (body: { zone_code: string; detail: string; hook_number: number }) => void }) {
-  const { t, verror } = useT();
-  const zones = work.venue?.zones ?? [];
-  const [zone, setZone] = useState(zones.length === 1 ? zones[0].code : "");
-  const [spot, setSpot] = useState("");
-  const [hook, setHook] = useState("");
-  const [problem, setProblem] = useState("");
-  const { lang } = useT();
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    const digits = hook.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).trim();
-    if (!zone) return setProblem(verror("zone_invalid"));
-    if (!/^\d+$/.test(digits) || Number(digits) < 1) return setProblem(verror("hook_invalid"));
-    setProblem("");
-    onSubmit({ zone_code: zone, detail: spot.trim(), hook_number: Number(digits) });
-  }
-  return (
-    <form className="task-form" onSubmit={submit} noValidate>
-      <fieldset className="choices">
-        <legend>{t("zoneField")}</legend>
-        {zones.map((z) => (
-          <label key={z.code} className={`choice ${zone === z.code ? "is-on" : ""}`}>
-            <input type="radio" name="zone" value={z.code} checked={zone === z.code} onChange={() => setZone(z.code)} />
-            <span className="choice-code"><Id>{z.code}</Id></span>
-            <span className="choice-label">{lang === "ar" ? z.label_ar : z.label_en}</span>
-          </label>
-        ))}
-      </fieldset>
-      <div className="pair">
-        <label className="field"><span>{t("spotField")}</span>
-          <input dir="ltr" value={spot} onChange={(e) => setSpot(e.target.value)} autoComplete="off" maxLength={80}
-            enterKeyHint="next" /></label>
-        <label className="field"><span>{t("hookField")}</span>
-          <input dir="ltr" inputMode="numeric" pattern="[0-9]*" value={hook} onChange={(e) => setHook(e.target.value)}
-            autoComplete="off" maxLength={4} enterKeyHint="done" /></label>
-      </div>
-      {problem ? <p className="form-error" role="alert">{problem}</p> : null}
-      <button type="submit" className="btn btn-primary btn-big" disabled={busy}>
-        <Icon name="check" /> {submitLabel}
-      </button>
-    </form>
-  );
-}
-
 function CodeForm({ task, refresh }: { task: ValetTask; refresh: Refresh }) {
   const { t } = useT();
   const [code, setCode] = useState("");
@@ -173,7 +118,7 @@ function MoveForm({ task, work, refresh }: { task: ValetTask; work: ValetWork; r
     <>
       <p className="task-say"><Icon name="car" /> {t("moveNow")}</p>
       {problem ? <p className="form-error" role="alert">{problem}</p> : null}
-      <LocationForm work={work} submitLabel={t("moved")} busy={busy !== null}
+      <LocationPicker work={work} submitLabel={t("moved")} busy={busy !== null}
         onSubmit={(body) => run(`moved:${JSON.stringify(body)}`, (key) => api.valet.moved(task.id, body, key))} />
     </>
   );
@@ -213,7 +158,7 @@ export function TaskCard({ task, work, refresh, serverNow }: { task: ValetTask; 
         <span className="ticket-no"><Id>{ticket.number}</Id></span>
       </header>
       <p className="task-vehicle">{ticket.vehicle}</p>
-      {task.type !== "INTAKE" ? <WhereBlock location={ticket.location} hook={ticket.hook} /> : null}
+      {task.type !== "INTAKE" ? <PlaceView place={ticket.place} location={ticket.location} hook={ticket.hook} /> : null}
       {task.reason ? <p className="muted">{t("moveReason")}: {task.reason}</p> : null}
       {ticket.early_request ? <p className="notice notice-warning"><Icon name="clock" /> {t("earlyRequest")}</p> : null}
       {ticket.handover_blocked ? (

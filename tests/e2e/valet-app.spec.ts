@@ -1,8 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  PHONE, SMALL_PHONE, VALETS, cameraPhoto, customerCode, customerRequests, device, loginAs, loginValet, mainNav,
-  noHorizontalOverflow, openTicket, registerAndPark, taskStep,
+  cameraPhoto, customerCode, customerRequests, device, enterCar, loginAs, loginValet, mainNav, noHorizontalOverflow, openTicket, PHONE, registerAndPark, SMALL_PHONE, taskStep, VALETS,
 } from "./helpers";
 
 // The valet app (ADR-0011): the valet works on a phone; the customer's WhatsApp is the development simulator
@@ -61,15 +60,13 @@ test("double taps and a second tab never repeat a registration, and the flow res
   await loginValet(valet.page, "sara");
   await valet.page.getByRole("link", { name: "تسجيل سيارة" }).click();
   const flow = valet.page.getByTestId("register");
-  await flow.getByLabel("رقم جوال العميل").fill("0501230077");
-  await flow.getByLabel("اللوحة أو وصف قصير").fill("DUP 7007");
+  await enterCar(flow, "0501230077", "DUP 7007");
   // Moving away and back keeps what was typed (in memory only).
   await valet.page.getByRole("link", { name: "مهامي" }).click();
   await valet.page.getByRole("link", { name: "تسجيل سيارة" }).click();
   await expect(flow.getByLabel("رقم جوال العميل")).toHaveValue("0501230077");
   expect(await valet.page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage })))
     .not.toContain("0501230077"); // never written to the device
-  await flow.getByRole("button", { name: "التالي" }).click();
   await flow.getByRole("button", { name: "إرسال التذكرة" }).dblclick();
   await expect(flow).toHaveAttribute("data-step", "photos");
   const number = (await flow.locator(".ticket-no").textContent())!.trim();
@@ -83,8 +80,7 @@ test("double taps and a second tab never repeat a registration, and the flow res
     await second.getByTestId("register").locator("input[type=file]").setInputFiles(await cameraPhoto(second, `dup-${i}`));
     await expect(second.getByTestId("register").locator(".photo-count")).toContainText(`${i}`);
   }
-  await expect(flow).toHaveAttribute("data-step", "receipt", { timeout: 15_000 }); // the first tab follows
-  await flow.getByRole("button", { name: "نعم، وصلت" }).click();
+  await expect(flow).toHaveAttribute("data-step", "start_parking", { timeout: 15_000 }); // the first tab follows
   await flow.getByRole("button", { name: "بدء الركن" }).click();
   await flow.locator(".choice", { hasText: "B" }).click();
   await flow.getByLabel("الموقف").fill("7");

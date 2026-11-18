@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { type Browser, type BrowserContext, expect, type Page } from "@playwright/test";
+import { type Browser, type BrowserContext, expect, type Locator, type Page } from "@playwright/test";
 
 // Demo accounts are synthetic and local-only (services/api/ops/management/commands/seed_demo.py).
 // Valets sign in with their mobile number; supervisors and admins with a username.
@@ -95,34 +95,48 @@ export async function cameraPhoto(page: Page, label: string): Promise<{ name: st
   return { name: `${label}.jpg`, mimeType: "image/jpeg", buffer: Buffer.from(base64, "base64") };
 }
 
-/** The valet registers a car through the app: number and vehicle, confirm, four photos, receipt, park. */
+/** Stage 1 inputs: the customer's number and the car. Test plates are typed as "Other plate" (as written), the rest of
+ *  the text as the make and colour. */
+export async function enterCar(flow: Locator, guest: string, vehicle: string) {
+  await flow.getByLabel(/^(رقم جوال العميل|Customer's mobile number)$/).fill(guest);
+  const [, plate, rest] = vehicle.match(/^(\S+ \S+)\s*(.*)$/) ?? [vehicle, vehicle, ""];
+  await flow.locator(".segment", { hasText: /لوحة أخرى|Other plate/ }).click();
+  await flow.getByLabel(/اللوحة كما هي مكتوبة|Plate as written/).fill(plate);
+  await flow.getByLabel(/النوع واللون|Make and colour/).fill(rest || "سيارة");
+}
+
+/** The valet registers a car in three stages: customer and car (ticket sent), photos then Start parking, place and
+ *  key hook. No receipt question (ADR-0013). */
 export async function registerAndPark(page: Page, car: { guest: string; vehicle: string; zone: string; spot: string;
-  hook: string; receipt?: boolean }) {
+  hook: string; note?: string }) {
   await page.getByRole("navigation", { name: /التنقل الرئيسي|Main navigation/ }).getByRole("link", { name: /تسجيل سيارة|Register car/ }).click();
   const flow = page.getByTestId("register");
-  await flow.getByLabel(/رقم جوال العميل|Customer's mobile number/).fill(car.guest);
-  await flow.getByLabel(/اللوحة أو وصف قصير|Plate or a short description/).fill(car.vehicle);
-  await flow.getByRole("button", { name: /التالي|Next/ }).click();
-  await expect(flow.locator(".phone-confirm")).toHaveText(car.guest);
+  await enterCar(flow, car.guest, car.vehicle);
+  await expect(flow.locator(".send-to .phone-confirm")).toContainText(car.guest.slice(-4));
   await flow.getByRole("button", { name: /إرسال التذكرة|Send ticket/ }).click();
   await expect(flow).toHaveAttribute("data-step", "photos");
   for (let i = 1; i <= 4; i += 1) {
     await flow.locator("input[type=file]").setInputFiles(await cameraPhoto(page, `car-${i}`));
     await expect(flow.locator(".photo-count")).toContainText(`${i}`);
   }
-  await expect(flow).toHaveAttribute("data-step", "receipt");
-  await flow.getByRole("button", { name: car.receipt === false ? /لم تصل|Not received/ : /نعم، وصلت|Yes, received/ }).click();
   await expect(flow).toHaveAttribute("data-step", "start_parking");
   await flow.getByRole("button", { name: /بدء الركن|Start parking/ }).click();
   await expect(flow).toHaveAttribute("data-step", "park");
-  await flow.locator(".choice", { hasText: car.zone }).click();
-  await flow.getByLabel(/^(الموقف|Spot)$/).fill(car.spot);
-  await flow.getByLabel(/رقم خطاف المفتاح|Key hook number/).fill(car.hook);
-  await flow.getByRole("button", { name: /^(تم الركن|Parked)$/ }).click();
+  await parkHere(flow, car);
   await expect(page.getByTestId("parked-done")).toBeVisible();
   const ticket = (await page.getByTestId("parked-done").locator("bdi").textContent())!.trim();
   await page.getByTestId("parked-done").getByRole("button", { name: /مهامي|My work/ }).click();
   return ticket;
+}
+
+/** Stage 3 without a pin: zone, spot, description and key hook (the map is not configured in tests). */
+export async function parkHere(flow: Locator, car: { zone: string; spot: string; hook: string; note?: string },
+  submit: RegExp = /^(تم الركن|Parked)$/) {
+  await flow.locator(".choice", { hasText: car.zone }).click();
+  await flow.getByLabel(/^(الموقف|Spot)$/).fill(car.spot);
+  if (car.note) await flow.getByLabel(/وصف قصير|Short description/).fill(car.note);
+  await flow.getByLabel(/رقم خطاف المفتاح|Key hook number/).fill(car.hook);
+  await flow.getByRole("button", { name: submit }).click();
 }
 
 /** The valet's current task card (waits for the server's step). */

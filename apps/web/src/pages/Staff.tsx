@@ -22,7 +22,8 @@ function AddPerson({ eventId, disabled, onDone }: { eventId?: number; disabled: 
     await run((key) => api.createStaff(body, key), (r) => { setForm(empty); onDone(r.id); });
   }
   return (
-    <details className="card disclosure" data-testid="add-person">
+    <details className="card disclosure" data-testid="add-person" id="add-person"
+      open={window.location.hash === "#add-person" ? true : undefined}>
       <summary><Icon name="user" /> {t("addPerson")}</summary>
       <form className="form-grid" onSubmit={submit} noValidate>
         <label className="field"><span>{t("fullName")}</span>

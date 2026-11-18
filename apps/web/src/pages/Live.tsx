@@ -2,7 +2,7 @@ import { type FormEvent, useRef, useState } from "react";
 
 import { ApiError, api, newKey, type LiveSnapshot, type Me, type Schemas } from "../api/client";
 import { Icon } from "../components/Icon";
-import { Empty, Id, LoadFailed, SkeletonRows, StaleBanner, StatusPill } from "../components/States";
+import { Id, LoadFailed, SkeletonRows, StaleBanner, StatusPill } from "../components/States";
 import { TicketPanel } from "../components/TicketPanel";
 import { navigate } from "../router";
 import { useT } from "../strings";
@@ -30,17 +30,17 @@ function TicketFinder({ eventId, current, onOpen }: { eventId: number; current?:
     }
   }
   return (
-    <section className="card" aria-labelledby="find-h">
-      <h2 id="find-h"><Icon name="key" /> {t("findTicket")}</h2>
+    <div className="ops-search">
       <form className="inline-form" role="search" onSubmit={submit}>
         <label className="field grow">
-          <span>{t("findTicketHint")}</span>
-          <input type="search" dir="ltr" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
+          <span className="visually-hidden">{t("findTicketHint")}</span>
+          <input type="search" dir="auto" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off"
+            aria-label={t("findTicketHint")} placeholder={t("findTicketHint")} />
         </label>
-        <button type="submit" className="btn btn-secondary">{t("find")}</button>
+        <button type="submit" className="btn btn-secondary"><Icon name="key" /> {t("find")}</button>
       </form>
       {problem ? <p className="form-error" role="alert">{problem}</p> : null}
-      {rows && rows.length === 0 ? <Empty text={t("findNone")} /> : null}
+      {rows && rows.length === 0 ? <p className="muted">{t("findNone")}</p> : null}
       {rows && rows.length ? (
         <ul className="rows">
           {rows.map((r) => (
@@ -55,7 +55,7 @@ function TicketFinder({ eventId, current, onOpen }: { eventId: number; current?:
           ))}
         </ul>
       ) : null}
-    </section>
+    </div>
   );
 }
 
@@ -63,17 +63,10 @@ function TicketFinder({ eventId, current, onOpen }: { eventId: number; current?:
 function OpeningCheck({ eventId }: { eventId: number }) {
   const { t } = useT();
   const { data } = usePoll(() => api.openingCheck(eventId), 30_000, [eventId]);
-  if (!data) return null;
+  if (!data || data.ok) return null; // all clear: nothing technical on the operational view
   return (
-    <details className="card disclosure" open={!data.ok} data-testid="opening-check">
-      <summary>
-        <span>{t("openingCheck")}</span>
-        <StatusPill tone={data.ok ? "success" : "warning"} icon={data.ok ? "check" : "alert"}
-          label={data.ok ? t("openingOk") : t("openingNotOk")} />
-      </summary>
-      {data.causes.length ? (
-        <ul className="causes">{data.causes.map((c) => <li key={c}>{t(`cause_${c}` as never) ?? c}</li>)}</ul>
-      ) : null}
+    <details className="notice notice-warning opening-line" data-testid="opening-check">
+      <summary><Icon name="alert" /> {t("openingNotOk")}: {data.causes.map((c) => t(`cause_${c}` as never) ?? c).join(" · ")}</summary>
       <dl className="facts">
         {CHECK_FIELDS.map(([field, label]) => (
           <div key={field}><dt>{t(label)}</dt><dd><Id>{data[field]}</Id></dd></div>
@@ -117,35 +110,66 @@ function useMutation() {
 }
 
 type Row = Schemas["LiveRequest"];
+type Stage = "waiting" | "retrieving" | "ready";
+const stageOf = (r: Row): Stage => r.ticket_state === "READY" ? "ready"
+  : r.state === "ACCEPTED" ? "retrieving" : "waiting";
 
-/** One car in a list: what a supervisor scans for — ticket, car, how long the customer has waited, who has it. */
-function CarRow({ r, current, onOpen }: { r: Row; current?: number; onOpen: (id: number) => void }) {
+/** One car in the queue, read at a glance: how long the customer has waited (with a word when late, not colour
+ *  alone), the ticket and plate, the stage and who has it, and where the car and key are. */
+function QueueRow({ r, warn, critical, current, onOpen }: { r: Row; warn: number; critical: number; current?: number;
+  onOpen: (id: number) => void }) {
   const { t, state } = useT();
-  const [tone, icon] = TONE[r.state] ?? ["neutral", "clock"];
-  const late = r.elapsed_s >= 240;
+  const stage = stageOf(r);
+  const late = r.elapsed_s >= critical ? "critical" : r.elapsed_s >= warn ? "late" : "";
+  const [tone, icon] = stage === "ready" ? ["success", "check"] : TONE[r.state] ?? ["neutral", "clock"];
   return (
     <li>
-      <button type="button" className="row row-button car-row" onClick={() => onOpen(r.ticket_id)}
-        aria-current={current === r.ticket_id ? "true" : undefined}>
-        <span className="row-title"><Id>{r.ticket}</Id> <span className="muted">{r.vehicle}</span></span>
-        <span className={`elapsed ${late ? "is-late" : ""}`} title={t("waited")}>
-          <Icon name="clock" size={16} /> <Id>{formatElapsed(r.elapsed_s)}</Id>
+      <button type="button" className={`queue-row ${late ? `is-${late}` : ""}`} onClick={() => onOpen(r.ticket_id)}
+        aria-current={current === r.ticket_id ? "true" : undefined} data-stage={stage}>
+        <span className="q-wait" title={t("waited")}>
+          <Id>{formatElapsed(r.elapsed_s)}</Id>
+          {late ? <span className="q-late">{t(late === "critical" ? "waitCritical" : "waitLate")}</span> : null}
         </span>
-        {r.ticket_state === "READY" ? null : <StatusPill tone={tone} icon={icon} label={state(r.state)} />}
-        <span className="row-meta"><Icon name="user" size={16} /> {r.assignee ?? t("unassigned")}</span>
-        <span className="row-meta"><Icon name="pin" size={16} /> <Id>{r.location || "—"}</Id> · <Icon name="key" size={16} /> <Id>{r.hook ?? "—"}</Id></span>
+        <span className="q-car">
+          <span className="q-id"><Id>{r.ticket}</Id> {r.plate ? <bdi className="q-plate" dir="auto">{r.plate}</bdi> : null}</span>
+          <span className="q-desc">{r.description || (r.plate ? "" : r.vehicle)}</span>
+        </span>
+        <span className="q-who">
+          <StatusPill tone={tone} icon={icon} label={stage === "ready" ? state("READY") : state(r.state)} />
+          <span className="q-valet"><Icon name="user" size={16} /> {r.assignee ?? t("unassigned")}</span>
+          <span className="q-where"><Icon name="pin" size={14} /> <Id>{r.location || "—"}</Id> · <Icon name="key" size={14} /> <Id>{r.hook ?? "—"}</Id></span>
+        </span>
       </button>
     </li>
   );
 }
 
-function CarList({ id, title, icon, empty, rows, current, onOpen }: { id: string; title: string; icon: string;
-  empty: string; rows: Row[]; current?: number; onOpen: (id: number) => void }) {
+function Queue({ rows, warn, critical, current, onOpen }: { rows: Row[]; warn: number; critical: number;
+  current?: number; onOpen: (id: number) => void }) {
+  const { t } = useT();
+  const [filter, setFilter] = useState<Stage | "all">("all");
+  const sorted = [...rows].sort((a, b) => b.elapsed_s - a.elapsed_s); // the longest wait first
+  const count = (s: Stage) => rows.filter((r) => stageOf(r) === s).length;
+  const shown = filter === "all" ? sorted : sorted.filter((r) => stageOf(r) === filter);
+  const FILTERS: [Stage | "all", string][] = [["all", t("queueAll")], ["waiting", t("waitingCars")],
+    ["retrieving", t("retrievingCars")], ["ready", t("readyCars")]];
   return (
-    <section className="card car-list" aria-labelledby={`${id}-h`} data-testid={`list-${id}`}>
-      <h2 id={`${id}-h`}><Icon name={icon} /> {title} <span className="count-badge"><Id>{rows.length}</Id></span></h2>
-      {rows.length === 0 ? <Empty text={empty} /> : <ul className="rows">{rows.map((r) => (
-        <CarRow key={r.request_id} r={r} current={current} onOpen={onOpen} />))}</ul>}
+    <section className="queue" aria-labelledby="queue-h" data-testid="queue">
+      <div className="queue-head">
+        <h2 id="queue-h">{t("queueTitle")} <span className="count-badge"><Id>{rows.length}</Id></span></h2>
+        <div className="filters" role="group" aria-label={t("queueFilter")}>
+          {FILTERS.map(([key, label]) => (
+            <button key={key} type="button" className="filter" aria-pressed={filter === key}
+              data-testid={key === "all" ? "filter-all" : `list-${key}`} onClick={() => setFilter(key)}>
+              {label} <Id>{key === "all" ? rows.length : count(key)}</Id>
+            </button>
+          ))}
+        </div>
+      </div>
+      {shown.length === 0 ? <p className="quiet-ok">{rows.length ? t("queueNoneHere") : t("queueEmpty")}</p> : (
+        <ol className="queue-rows">{shown.map((r) => (
+          <QueueRow key={r.request_id} r={r} warn={warn} critical={critical} current={current} onOpen={onOpen} />))}</ol>
+      )}
     </section>
   );
 }
@@ -169,22 +193,27 @@ export function Live({ me, eventId, ticketId }: { me: Me; eventId: number; ticke
   const snapshot: LiveSnapshot = data;
   rememberZone(snapshot.event.time_zone);
   const time = (iso: string | number) => venueClock(iso, lang, snapshot.event.time_zone);
-  const waiting = snapshot.requests.filter((r) => ["WAITING_FOR_PARKING", "QUEUED", "OFFERED"].includes(r.state));
-  const onTheWay = snapshot.requests.filter((r) => r.state === "ACCEPTED" && r.ticket_state !== "READY");
-  const ready = snapshot.requests.filter((r) => r.ticket_state === "READY");
   const tally = (status: string) => snapshot.team.filter((m) => m.status === status).length;
   const degraded = snapshot.health.whatsapp === "degraded";
 
   return (
     <main className={`page live ${ticketId ? "has-panel" : ""}`}>
-      <div className="live-head">
-        <h1>{snapshot.event.name}</h1>
-        <p className="freshness">
-          <span>{snapshot.event.venue}</span>
-          <span>{t("lastUpdate")} <Id>{lastSuccess ? time(lastSuccess) : "—"}</Id></span>
-          {snapshot.health.worker !== "ok" ? <span className="is-bad">{t("worker")}: {t(`health_${snapshot.health.worker}` as never)}</span> : null}
-        </p>
-      </div>
+      <header className="live-head">
+        <div>
+          <h1>{snapshot.event.name}</h1>
+          <p className="freshness">
+            <span>{snapshot.event.venue}</span>
+            <span>{t("lastUpdate")} <Id>{lastSuccess ? time(lastSuccess) : "—"}</Id></span>
+            {snapshot.health.worker !== "ok" ? <span className="is-bad">{t("worker")}: {t(`health_${snapshot.health.worker}` as never)}</span> : null}
+          </p>
+        </div>
+        <a className="team-glance" href="/team" data-testid="team-glance"
+          onClick={(e) => { e.preventDefault(); navigate("/team"); }} aria-label={t("navTeam")}>
+          <StatusPill tone="success" icon="check" label={`${state("available")} ${tally("available")}`} />
+          <StatusPill tone="info" icon="car" label={`${state("busy")} ${tally("busy")}`} />
+          <StatusPill tone="neutral" icon="clock" label={`${state("unavailable")} ${tally("unavailable")}`} />
+        </a>
+      </header>
       <OpsTabs me={me} eventId={eventId} />
       <StaleBanner show={stale} />
       {snapshot.outage || degraded ? (
@@ -198,56 +227,41 @@ export function Live({ me, eventId, ticketId }: { me: Me; eventId: number; ticke
 
       <div className="live-grid">
         <div className="live-main">
-          <section className="card" aria-labelledby="attention-h" data-testid="problems">
-            <h2 id="attention-h"><Icon name="alert" /> {t("problems")}
-              {snapshot.attention.length ? <span className="count-badge is-alert"><Id>{snapshot.attention.length}</Id></span> : null}</h2>
-            {snapshot.attention.length === 0 ? <Empty text={t("problemsEmpty")} /> : null}
-            <ul className="rows">
-              {snapshot.attention.map((a) => (
-                <li key={a.id} className={`row attention-${a.severity}`}>
-                  <StatusPill tone={a.severity === "critical" ? "danger" : "warning"} icon={a.severity === "critical" ? "alert" : "clock"} label={alert(a.kind)} />
-                  {a.ticket ? <span className="row-meta">{t("ticket")} <Id>{a.ticket}</Id></span> : null}
-                  <span className="row-meta"><Id>{time(a.created_at)}</Id></span>
-                  <span className="row-actions">
-                    {a.ticket_id ? (
-                      <button type="button" className="btn btn-secondary" onClick={() => openTicket(a.ticket_id!)}>{t("open")}</button>
-                    ) : null}
-                    <button type="button" className="btn btn-quiet" data-mutation disabled={disabled}
-                      onClick={() => run(`ack-${a.id}`, (k) => api.ackAlert(a.id, k), refresh)}>
-                      <Icon name="check" /> {t("acknowledge")}
-                    </button>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
           <TicketFinder eventId={eventId} current={ticketId} onOpen={openTicket} />
 
-          <div className="car-lists">
-            <CarList id="waiting" title={t("waitingCars")} icon="clock" empty={t("noneWaiting")} rows={waiting}
-              current={ticketId} onOpen={openTicket} />
-            <CarList id="retrieving" title={t("retrievingCars")} icon="car" empty={t("noneRetrieving")} rows={onTheWay}
-              current={ticketId} onOpen={openTicket} />
-            <CarList id="ready" title={t("readyCars")} icon="check" empty={t("noneReady")} rows={ready}
-              current={ticketId} onOpen={openTicket} />
-          </div>
+          <section className="needs-you" aria-labelledby="attention-h" data-testid="problems">
+            <h2 id="attention-h">{t("problems")}
+              {snapshot.attention.length ? <span className="count-badge is-alert"><Id>{snapshot.attention.length}</Id></span> : null}</h2>
+            {snapshot.attention.length === 0 ? <p className="quiet-ok"><Icon name="check" size={18} /> {t("problemsEmpty")}</p> : (
+              <ul className="rows">
+                {snapshot.attention.map((a) => (
+                  <li key={a.id} className={`row attention-${a.severity}`}>
+                    <StatusPill tone={a.severity === "critical" ? "danger" : "warning"} icon={a.severity === "critical" ? "alert" : "clock"} label={alert(a.kind)} />
+                    {a.ticket ? <span className="row-meta">{t("ticket")} <Id>{a.ticket}</Id></span> : null}
+                    <span className="row-meta"><Id>{time(a.created_at)}</Id></span>
+                    <span className="row-actions">
+                      {a.ticket_id ? (
+                        <button type="button" className="btn btn-secondary" onClick={() => openTicket(a.ticket_id!)}>{t("open")}</button>
+                      ) : null}
+                      <button type="button" className="btn btn-quiet" data-mutation disabled={disabled}
+                        onClick={() => run(`ack-${a.id}`, (k) => api.ackAlert(a.id, k), refresh)}>
+                        <Icon name="check" /> {t("acknowledge")}
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-          <ul className="counts" aria-label={t("opsCars")}>
+          <Queue rows={snapshot.requests} warn={snapshot.wait_warning_s} critical={snapshot.wait_critical_s}
+            current={ticketId} onOpen={openTicket} />
+
+          <dl className="state-strip" aria-label={t("opsCars")}>
             {["RECEIVED", "PARKED", "RETRIEVING", "READY", "DELIVERED"].map((s) => (
-              <li key={s} className="count" data-testid={`count-${s}`}>
-                <span className="count-n">{snapshot.counts[s] ?? 0}</span>
-                <span className="count-label">{state(s)}</span>
-              </li>
+              <div key={s} data-testid={`count-${s}`}><dt>{state(s)}</dt><dd><Id>{snapshot.counts[s] ?? 0}</Id></dd></div>
             ))}
-          </ul>
-
-          <a className="row-link team-line" href="/team" onClick={(e) => { e.preventDefault(); navigate("/team"); }}>
-            <Icon name="users" /> <span className="row-title">{t("navTeam")}</span>
-            <StatusPill tone="success" icon="check" label={`${state("available")} ${tally("available")}`} />
-            <StatusPill tone="info" icon="car" label={`${state("busy")} ${tally("busy")}`} />
-            <StatusPill tone="neutral" icon="clock" label={`${state("unavailable")} ${tally("unavailable")}`} />
-          </a>
+          </dl>
           <OpeningCheck eventId={eventId} />
         </div>
 

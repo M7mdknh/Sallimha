@@ -26,6 +26,21 @@ function SimOutageSwitch() {
   );
 }
 
+/** SIMULATED: the next outgoing message fails permanently, to rehearse the failure issue and resend (ADR-0013). */
+function SimNextFailure() {
+  const { t } = useT();
+  const [armed, setArmed] = useState(false);
+  return (
+    <div className="sim-outage" role="status">
+      <span>{armed ? t("simNextFailArmed") : t("simNextFailHint")}</span>
+      <button type="button" className="btn btn-secondary" disabled={armed}
+        onClick={async () => { await api.simNextSend("permanent").then(() => setArmed(true)).catch(() => undefined); }}>
+        {t("simNextFail")}
+      </button>
+    </div>
+  );
+}
+
 export function Simulator({ me }: { me: Me }) {
   const { t, error } = useT();
   const phones = usePoll(api.simPhones, 3_000, []);
@@ -73,6 +88,7 @@ export function Simulator({ me }: { me: Me }) {
       <SettingsTabs me={me} />
       <p className="sim-banner" role="note"><Icon name="shield" /> {t("simLabel")}</p>
       <SimOutageSwitch />
+      <SimNextFailure />
       <div className="sim-grid">
         <section className="card" aria-labelledby="phones-h">
           <h2 id="phones-h">{t("simPhones")}</h2>

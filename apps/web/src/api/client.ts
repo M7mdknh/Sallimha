@@ -24,6 +24,7 @@ export class ApiError extends Error {
     public status: number,
     public code: string,
     public fields?: Record<string, string[]>,
+    public detail: Record<string, unknown> = {},  // extra facts the server attached to a refusal
   ) {
     super(code);
   }
@@ -62,7 +63,8 @@ async function call<T>(method: string, url: string, body?: unknown, idempotencyK
   }
   const data = response.headers.get("content-type")?.includes("json") ? await response.json() : null;
   if (!response.ok) {
-    throw new ApiError(response.status, data?.code ?? (response.status === 404 ? "not_found" : "generic"), data?.fields);
+    throw new ApiError(response.status, data?.code ?? (response.status === 404 ? "not_found" : "generic"), data?.fields,
+      data ?? {});
   }
   return data as T;
 }
@@ -102,8 +104,6 @@ export const api = {
       form.append("photo", photo, "car.jpg");
       return callForm<Schemas["PhotoCountResponse"]>(`/api/valet/tickets/${ticketId}/photo`, form, key);
     },
-    receipt: (ticketId: number, received: boolean, key: string) =>
-      call<Schemas["ContactStateResponse"]>("POST", `/api/valet/tickets/${ticketId}/receipt`, { received }, key),
     startParking: (ticketId: number, key: string) =>
       call<Schemas["OkResponse"]>("POST", `/api/valet/tickets/${ticketId}/start-parking`, {}, key),
     park: (ticketId: number, body: Schemas["ParkRequestRequest"], key: string) =>
@@ -177,6 +177,9 @@ export const api = {
     call<Schemas["IdResponse"]>("POST", `/api/staff/${id}/${action}`, body, key),
   // Not replay-stored on the server: the URI is a secret shown once.
   venues: () => call<Schemas["VenueRow"][]>("GET", "/api/venues"),
+  venueCentre: (venueId: number, body: Schemas["VenueCentreRequestRequest"], key: string) =>
+    call<Schemas["IdResponse"]>("POST", `/api/venues/${venueId}/map-centre`, body, key),
+  mapsConfig: () => call<Schemas["MapsConfig"]>("GET", "/api/maps/config"),
   createEvent: (body: Schemas["CreateEventRequestRequest"], key: string) =>
     call<Schemas["IdResponse"]>("POST", "/api/events", body, key),
   closeEvent: (id: number, key: string) => call<Schemas["IdResponse"]>("POST", `/api/events/${id}/close`, {}, key),
@@ -199,6 +202,8 @@ export const api = {
   exportUrl: (eventId: number, kind: "tickets" | "guest-phones") => `/api/events/${eventId}/export/${kind}.csv`,
   simOutage: () => call<Schemas["SimOutage"]>("GET", "/api/dev/sim/outage"),
   setSimOutage: (down: boolean) => call<Schemas["SimOutage"]>("POST", "/api/dev/sim/outage", { down }),
+  simNextSend: (mode: "permanent" | "unknown" | "transient") =>
+    call<Schemas["SimNextSendRequest"]>("POST", "/api/dev/sim/next-send", { mode }),
   simPhones: () => call<SimPhone[]>("GET", "/api/dev/sim/phones"),
   simMessages: (phone: string) => call<SimMessage[]>("GET", `/api/dev/sim/messages?phone=${encodeURIComponent(phone)}`),
   simSend: (body: Schemas["SimSendRequestRequest"]) => call<Schemas["SimSendResponse"]>("POST", "/api/dev/sim/send", body),

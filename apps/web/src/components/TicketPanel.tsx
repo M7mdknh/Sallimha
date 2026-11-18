@@ -2,13 +2,16 @@ import { type FormEvent, useRef, useState } from "react";
 
 import { ApiError, api, newKey, type Schemas } from "../api/client";
 import { navigate } from "../router";
+import { PhoneField } from "./PhoneField";
+import { mapsLink } from "../valet/Location";
+import type { CountryCode } from "libphonenumber-js/min";
 import { useT, type StringKey } from "../strings";
 import { usePoll } from "../usePoll";
 import { currentZone, venueClock, venueHM } from "../venueTime";
 import { Icon } from "./Icon";
 import { Id, LoadFailed, SkeletonRows, StatusPill } from "./States";
 
-type Field = { name: string; label: StringKey; kind: "text" | "textarea" | "number" | "staff" | "check" | "select" | "hold"
+type Field = { name: string; label: StringKey; kind: "text" | "textarea" | "number" | "staff" | "check" | "select" | "hold" | "phone"
     | "datetime" | "valet" | "verifier";
   options?: [string, StringKey][]; required?: boolean; initial?: boolean; max?: number };
 
@@ -17,6 +20,10 @@ export const INCIDENT_CATEGORIES = ["missing_vehicle", "key_issue", "damage", "i
 const REASON: Field = { name: "reason", label: "reason", kind: "textarea", required: true };
 const VIA: Field = { name: "confirmed_via", label: "confirmedVia", kind: "select", required: true,
   options: [["in_person", "via_in_person"], ["radio", "via_radio"]] };
+
+const MESSAGE_TONE: Record<string, "success" | "warning" | "danger" | "neutral" | "info"> = {
+  queued: "neutral", sent: "info", delivered: "success", read: "success", failed: "danger", unknown: "warning",
+  not_sent: "neutral" };
 
 // Each action maps to a console command; the server re-checks permission, scope and state.
 const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Field[]; destructive?: boolean }> = {
@@ -38,8 +45,9 @@ const ACTIONS: Record<string, { endpoint: string; hint?: StringKey; fields: Fiel
     { name: "to_staff_id", label: "toStaff", kind: "staff", required: true },
     { name: "reason", label: "reason", kind: "textarea", required: true }] },
   correct_phone: { endpoint: "correct-phone", hint: "action_correct_phone_hint", fields: [
-    { name: "phone", label: "newPhone", kind: "text", required: true },
+    { name: "phone", label: "newPhone", kind: "phone", required: true },
     { name: "reason", label: "reason", kind: "textarea", required: true }] },
+  resend_ticket: { endpoint: "resend-ticket", hint: "action_resend_ticket_hint", fields: [] },
   confirm_receipt: { endpoint: "confirm-receipt", fields: [
     { name: "received", label: "received", kind: "check" }] },
   except_intake: { endpoint: "except-intake", fields: [
@@ -163,6 +171,7 @@ function ActionForm({ action, ticketId, team, holds, people, disabled, onDone }:
       const v = values[f.name];
       body[f.name] = f.kind === "check" ? Boolean(v)
         : ["number", "staff", "hold", "valet", "verifier"].includes(f.kind) ? Number(v) : String(v ?? "").trim();
+      if (f.kind === "phone") body.guest_region = String(values[`${f.name}__region`] || "SA");
     }
     try {
       await api.ticketAction(ticketId, spec.endpoint, body, key.current);
@@ -181,7 +190,11 @@ function ActionForm({ action, ticketId, team, holds, people, disabled, onDone }:
   return (
     <form className="action-form" onSubmit={submit} noValidate>
       {spec.hint ? <p className="muted">{t(spec.hint)}</p> : null}
-      {spec.fields.map((f) => (
+      {spec.fields.map((f) => f.kind === "phone" ? (
+        <PhoneField key={f.name} id={`${action}-${f.name}`}
+          value={{ raw: String(values[f.name] ?? ""), region: (values[`${f.name}__region`] || "SA") as CountryCode }}
+          onChange={(p) => setValues((v) => ({ ...v, [f.name]: p.raw, [`${f.name}__region`]: p.region }))} />
+      ) : (
         <label key={f.name} className={f.kind === "check" ? "check" : "field"}>
           {f.kind === "check" ? (
             <>
@@ -318,8 +331,14 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
         <>
           <div className="pills">
             <StatusPill tone="info" icon="car" label={state(data.state)} />
-            <StatusPill tone={data.contact_state === "CONFIRMED_IN_PERSON" ? "success" : "warning"}
-              icon={data.contact_state === "CONFIRMED_IN_PERSON" ? "check" : "alert"} label={state(data.contact_state)} />
+            {data.guest_message ? (
+              <StatusPill tone={MESSAGE_TONE[data.guest_message.status]} icon="message"
+                label={`${t("msgLabel")}: ${t(`msg_${data.guest_message.status}` as StringKey)}`} />
+            ) : null}
+            {data.contact_state !== "UNCONFIRMED" ? (
+              <StatusPill tone={data.contact_state === "CONFIRMED_IN_PERSON" ? "success" : "warning"}
+                icon={data.contact_state === "CONFIRMED_IN_PERSON" ? "check" : "alert"} label={state(data.contact_state)} />
+            ) : null}
             {data.request ? <StatusPill tone="neutral" icon="clock" label={state(data.request.state)} /> : null}
             {data.offered_to ? <StatusPill tone="warning" icon="user" label={<>{t("offeredTo")}: <bdi>{data.offered_to}</bdi></>} /> : null}
             {data.move ? (
@@ -330,7 +349,14 @@ export function TicketPanel({ ticketId, eventId, team, disabled, onClose, onChan
           <dl className="facts">
             <div><dt>{t("vehicle")}</dt><dd>{data.vehicle}</dd></div>
             <div><dt>{t("phone")}</dt><dd><Id>{data.phone_masked ?? "—"}</Id></dd></div>
-            <div><dt>{t("location")}</dt><dd><Id>{data.location || "—"}</Id></dd></div>
+            <div><dt>{t("location")}</dt><dd>
+              <Id>{data.place ? [data.place.zone, data.place.floor, data.place.spot].filter(Boolean).join(" · ") : data.location || "—"}</Id>
+              {data.place?.note ? <span className="block muted">{data.place.note}</span> : null}
+              {data.place?.pin ? (
+                <a className="block" href={mapsLink(data.place.pin)} target="_blank" rel="noopener noreferrer">
+                  {t("openInMaps")}</a>
+              ) : null}
+            </dd></div>
             <div><dt>{t("key")}</dt><dd><Id>{data.hook ?? "—"}</Id></dd></div>
             <div><dt>{t("registeredBy")}</dt><dd>{data.registered_by}</dd></div>
             <div><dt>{t("parkedBy")}</dt><dd>{data.parked_by ?? "—"}</dd></div>
