@@ -31,7 +31,7 @@ test("a valet registers, parks and delivers a car in the app; the customer is se
   const offer = await taskStep(valet.page, "offer");
   await expect(offer).toContainText(ticket);
   await expect(offer.getByRole("timer")).toBeVisible();
-  await expect(offer).toContainText("A 12");
+  await expect(offer).toContainText("A · 12");
   await expect(offer).toContainText(`1${n}1`);
   await offer.getByRole("button", { name: "قبول" }).click();
   const bring = await taskStep(valet.page, "bring");
@@ -133,7 +133,7 @@ test("a supervisor's move is offered, accepted and recorded in the valet's app",
   await loginValet(mover.page, "fahad");
   const offer = await taskStep(mover.page, "offer");
   await expect(offer).toContainText("تفريغ مسار الطوارئ");
-  await expect(offer).toContainText("B 4");
+  await expect(offer).toContainText("B · 4");
   await offer.getByRole("button", { name: "قبول" }).click();
   const move = await taskStep(mover.page, "move");
   await move.locator(".choice", { hasText: "C" }).click();
@@ -143,7 +143,7 @@ test("a supervisor's move is offered, accepted and recorded in the valet's app",
   await taskStep(mover.page, "none");
   await mover.context.close();
 
-  await expect(panel).toContainText("C 3", { timeout: 15_000 });
+  await expect(panel).toContainText("C · 3", { timeout: 15_000 });
   await expect(panel).toContainText(`2${n}9`);
   await expect(panel.getByText(/قيد النقل|نقل بانتظار القبول/)).toHaveCount(0);
   await expect(mainNav(page)).toBeVisible();

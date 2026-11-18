@@ -38,7 +38,7 @@ test("an admin has Dashboard, Operations, Team and Settings, with technical tool
   await loginAs(page, "admin");
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(mainNav(page).getByRole("link")).toHaveText(["لوحة المتابعة", "التشغيل", "الفريق", "الإعدادات"]);
-  await expect(page.getByTestId("request-to-ready")).toContainText(/من طلب العميل حتى يبلّغ الفاليه/);
+  await expect(page.getByTestId("request-to-ready-def")).toContainText(/من طلب العميل حتى يبلّغ الفاليه/);
   await mainNav(page).getByRole("link", { name: "الإعدادات" }).click();
   const tabs = page.getByRole("navigation", { name: "الإعدادات" });
   await expect(tabs).toContainText("متقدم");

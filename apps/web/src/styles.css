@@ -535,7 +535,8 @@ html[lang="ar"] .plate-input:lang(ar) { letter-spacing: normal; }
 .figure-label { font-size: 14px; color: var(--sl-muted); }
 .figure-n { font-size: 32px; font-weight: 700; line-height: 1.2; color: var(--sl-plum); font-variant-numeric: tabular-nums; }
 .figure-sub { font-size: 13px; color: var(--sl-muted); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; }
-.figure-def { font-size: 12px; color: var(--sl-muted); line-height: 1.5; padding-block-start: 4px; }
+.figure-def { font-size: 13px; color: var(--sl-muted); line-height: 1.6; max-width: 75ch; margin-block-start: -8px; }
+.figure-def strong { color: var(--sl-ink); }
 .figures .is-attention .figure-n { color: var(--sl-warning); }
 .figures .is-late .figure-n, .figures .is-late .figure-sub { color: var(--sl-danger); }
 .dash-section { display: grid; gap: 10px; align-content: start; }
@@ -557,7 +558,7 @@ html[lang="ar"] .plate-input:lang(ar) { letter-spacing: normal; }
 .chart-area .crosshair { stroke: var(--sl-control-border); stroke-width: 1; stroke-dasharray: 3 3; }
 .chart-area .end-label text { fill: var(--sl-ink); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .chart-area .hit { fill: transparent; cursor: crosshair; }
-.chart-area .hit:focus-visible { outline: none; fill: rgb(98 66 155 / 6%); }
+.chart-area .hit:focus-visible { outline: none; fill: rgb(98 66 155 / 10%); stroke: var(--sl-purple); stroke-width: 2; }
 .chart-tip { position: absolute; top: 0; transform: translateX(-50%); display: grid; gap: 2px; padding: 8px 10px;
   background: var(--sl-plum); color: var(--sl-surface); border-radius: var(--sl-radius-input); font-size: 13px;
   pointer-events: none; white-space: nowrap; box-shadow: 0 4px 12px rgb(37 27 53 / 20%); }

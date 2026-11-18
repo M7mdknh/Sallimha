@@ -49,7 +49,6 @@ function Figures({ d }: { d: Board }) {
         <span className="figure-sub">{r2r.count
           ? <>{t("dashMedian")} · {t("dashP95")} <Duration seconds={r2r.p95_s} /> · <Id>{r2r.count}</Id> {t("dashRequests")}</>
           : t("dashNoData")}</span>
-        <span className="figure-def">{t("dashRequestToReadyDef")}</span>
       </li>
     </ul>
   );
@@ -124,10 +123,11 @@ function Body({ d }: { d: Board }) {
   return (
     <>
       <p className="dash-scope">
-        <strong>{d.event.name}</strong> · {d.event.venue} · <Id>{start}</Id> – <Id>{end}</Id>
+        <strong>{d.event.name}</strong> · {d.event.venue} · <bdi>{start}</bdi> – <bdi>{end}</bdi>
         <span className="muted"> · {t("lastUpdate")} <Id>{venueClock(d.generated_at, lang, zone)}</Id></span>
       </p>
       <Figures d={d} />
+      <p className="figure-def" data-testid="request-to-ready-def"><strong>{t("dashRequestToReady")}:</strong> {t("dashRequestToReadyDef")}</p>
       <section className="dash-section" aria-labelledby="act-h" data-testid="activity">
         <h2 id="act-h">{t("activityTitle")}</h2>
         <ActivityChart hours={d.activity} zone={zone} />
@@ -165,9 +165,10 @@ export function Dashboard({ me: _me, eventHint }: { me: Me; eventHint?: number }
               </select>
             </label>
           ) : null}
-          <button type="button" className="btn btn-primary" onClick={() => navigate("/team#add-person")}>
+          <a className="btn btn-primary" href="/team#add-person" data-testid="add-staff"
+            onClick={(e) => { e.preventDefault(); navigate("/team#add-person"); }}>
             <Icon name="user" /> {t("addStaff")}
-          </button>
+          </a>
         </div>
       </header>
       <StaleBanner show={poll.stale} />

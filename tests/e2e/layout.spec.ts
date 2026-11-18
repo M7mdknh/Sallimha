@@ -31,9 +31,25 @@ async function capture(page: Page, lang: string, name: string) {
   await page.screenshot({ path: path.join(OUT, lang, `${size.width}-${name}.png`), fullPage: true });
 }
 
+/** Admin timings through the API (same rules and audit as Settings → Timings). */
+async function setOfferTimings(p: Page, window: number, hard: number) {
+  const csrf = (await p.context().cookies()).find((c) => c.name === "csrftoken")?.value ?? "";
+  const { version } = await (await p.request.get("/api/config")).json();
+  const changed = await p.request.post("/api/config/timings", {
+    data: { version, timings: { offer_window_s: window, hard_limit_s: hard } },
+    headers: { "X-CSRFToken": csrf, "Content-Type": "application/json", "Idempotency-Key": `timings-${Date.now()}` } });
+  expect(changed.status()).toBe(200);
+}
+
 test("every main screen fits phones and tablets in Arabic and English", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "desktop", "sizes are set explicitly; runs once");
   test.setTimeout(420_000);
+
+  // The screenshots take minutes; an offer correctly lapses after its window, so this test lengthens the window for
+  // itself (admin timings, audited) and restores the defaults at the end.
+  const admin = await device(browser, { width: 1024, height: 768 });
+  await loginAs(admin.page, "admin");
+  await setOfferTimings(admin.page, 600, 1200);
 
   // A car the customer has asked for: an offer on the valet's phone and a waiting car in Operations.
   const valet = await device(browser, PHONE);
@@ -51,9 +67,6 @@ test("every main screen fits phones and tablets in Arabic and English", async ({
   await loginValet(registering.page, "sara");
   await registering.page.getByRole("link", { name: "تسجيل سيارة" }).click();
   await registering.page.getByLabel("رقم جوال العميل").fill("0501239902");
-
-  const admin = await device(browser, { width: 1024, height: 768 });
-  await loginAs(admin.page, "admin");
 
   for (const lang of ["ar", "en"] as const) {
     for (const p of [valet.page, registering.page, page, admin.page]) await setLang(p, lang);
@@ -89,5 +102,6 @@ test("every main screen fits phones and tablets in Arabic and English", async ({
   await ticket.locator(".action-form").getByLabel("السبب").fill("انتهاء مراجعة التصميم (تجريبي)");
   await ticket.locator(".action-form").getByRole("button", { name: "سحب طلب الإحضار", exact: true }).click();
   await taskStep(valet.page, "none");
+  await setOfferTimings(admin.page, 30, 60);
   for (const c of [valet.context, registering.context, admin.context]) await c.close();
 });

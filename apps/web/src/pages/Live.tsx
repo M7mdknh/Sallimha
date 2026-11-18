@@ -35,7 +35,7 @@ function TicketFinder({ eventId, current, onOpen }: { eventId: number; current?:
         <label className="field grow">
           <span className="visually-hidden">{t("findTicketHint")}</span>
           <input type="search" dir="auto" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off"
-            aria-label={t("findTicketHint")} placeholder={t("findTicketHint")} />
+            aria-label={t("findTicketHint")} placeholder={t("findShort")} />
         </label>
         <button type="submit" className="btn btn-secondary"><Icon name="key" /> {t("find")}</button>
       </form>
@@ -151,8 +151,8 @@ function Queue({ rows, warn, critical, current, onOpen }: { rows: Row[]; warn: n
   const sorted = [...rows].sort((a, b) => b.elapsed_s - a.elapsed_s); // the longest wait first
   const count = (s: Stage) => rows.filter((r) => stageOf(r) === s).length;
   const shown = filter === "all" ? sorted : sorted.filter((r) => stageOf(r) === filter);
-  const FILTERS: [Stage | "all", string][] = [["all", t("queueAll")], ["waiting", t("waitingCars")],
-    ["retrieving", t("retrievingCars")], ["ready", t("readyCars")]];
+  const FILTERS: [Stage | "all", string][] = [["all", t("queueAll")], ["waiting", t("queueWaiting")],
+    ["retrieving", t("queueOnTheWay")], ["ready", t("queueReady")]];
   return (
     <section className="queue" aria-labelledby="queue-h" data-testid="queue">
       <div className="queue-head">

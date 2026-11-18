@@ -164,7 +164,8 @@ export function LocationPicker({ work, submitLabel, busy, onSubmit }: { work: Va
             {pin.source === "gps"
               ? <>{(pin.accuracy ?? 0) > GOOD_M ? t("pinApproximate") : t("pinFromDevice")} <Id>±{Math.round(pin.accuracy ?? 0)} m</Id></>
               : t("pinPlaced")}
-            <button type="button" className="btn btn-quiet" onClick={() => setPin(null)}>{t("pinClear")}</button>
+            <button type="button" className="btn btn-quiet" onClick={() => setPin(null)}
+              aria-label={`${t("pinClear")}: ${t("pinPlaced")}`}>{t("pinClear")}</button>
           </p>
         ) : (
           <p className="pin-state muted"><Icon name="pin" size={18} /> {t("pinNone")}</p>
